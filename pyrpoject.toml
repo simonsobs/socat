@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "socat"
+version = "0.0.1a1"
+requires-python = ">=3.11"
+dependencies = [
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "testcontainers",
+    "coverage",
+    "pytest-cov",
+    "pytest-asyncio"
+]
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = [
+    "socat"
+]
