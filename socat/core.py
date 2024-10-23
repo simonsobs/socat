@@ -2,11 +2,14 @@
 Core functionality providing access to the database.
 """
 
-from socat.database import ExtragalacticSource, ExtragalacticSourceTable
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-async def create_source(ra: float, dec: float,  session: AsyncSession) -> ExtragalacticSource:
+from socat.database import ExtragalacticSource, ExtragalacticSourceTable
+
+
+async def create_source(
+    ra: float, dec: float, session: AsyncSession
+) -> ExtragalacticSource:
     """
     Create a new source in the database.
     """
@@ -15,8 +18,9 @@ async def create_source(ra: float, dec: float,  session: AsyncSession) -> Extrag
     async with session.begin():
         session.add(source)
         await session.commit()
-    
+
     return source.to_model()
+
 
 async def get_source(source_id: int, session: AsyncSession) -> ExtragalacticSource:
     """
@@ -29,7 +33,10 @@ async def get_source(source_id: int, session: AsyncSession) -> ExtragalacticSour
 
     return source.to_model()
 
-async def update_source(source_id: int, ra: float | None, dec: float | None, session: AsyncSession) -> ExtragalacticSource:
+
+async def update_source(
+    source_id: int, ra: float | None, dec: float | None, session: AsyncSession
+) -> ExtragalacticSource:
     """
     Update a source in the database.
     """
@@ -44,8 +51,9 @@ async def update_source(source_id: int, ra: float | None, dec: float | None, ses
         source.dec = dec if dec is not None else source.dec
 
         await session.commit()
-    
+
     return source.to_model()
+
 
 async def delete_source(source_id: int, session: AsyncSession) -> None:
     """
@@ -54,11 +62,11 @@ async def delete_source(source_id: int, session: AsyncSession) -> None:
 
     async with session.begin():
         source = await session.get(ExtragalacticSourceTable, source_id)
-        
+
         if source is None:
             raise ValueError(f"Source with ID {source_id} not found")
 
         await session.delete(source)
         await session.commit()
-    
-    return 
+
+    return
