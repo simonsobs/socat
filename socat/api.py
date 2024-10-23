@@ -5,7 +5,7 @@ The web API to access the socat database.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import socat.core as core
@@ -42,7 +42,11 @@ async def create_source(
             detail="RA and Dec must be provided",
         )
 
-    response = await core.create_source(model.ra, model.dec, session=session)
+    try:
+        response = await core.create_source(model.ra, model.dec, session=session)
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
+
     return response
 
 

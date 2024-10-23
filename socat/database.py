@@ -3,6 +3,7 @@ Core database tables storing information about sources.
 """
 
 from pydantic import BaseModel
+from pydantic import Field as PydanticField
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import Field, SQLModel
 
@@ -15,8 +16,8 @@ class ExtragalacticSource(BaseModel):
     """
 
     id: int
-    ra: float
-    dec: float
+    ra: float = PydanticField(ge=-180.0, le=180.0)
+    dec: float = PydanticField(ge=-90.0, le=90.0)
 
     def __repr__(self):
         return f"ExtragalacticSource(id={self.id}, ra={self.ra}, dec={self.dec})"
@@ -38,7 +39,6 @@ class ExtragalacticSourceTable(ExtragalacticSource, SQLModel, table=True):
 
 
 ALL_TABLES = [ExtragalacticSourceTable]
-
 
 async_engine = create_async_engine(settings.database_url, echo=True, future=True)
 
