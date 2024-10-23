@@ -7,6 +7,13 @@ name = "socat"
 version = "0.0.1a1"
 requires-python = ">=3.11"
 dependencies = [
+    "sqlmodel",
+    "fastapi",
+    "sqlalchemy[asyncio]",
+    "uvicorn",
+    "aiosqlite",
+    "alembic",
+    "pydantic_settings"
 ]
 
 [project.optional-dependencies]
