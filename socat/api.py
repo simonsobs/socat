@@ -59,6 +59,38 @@ async def get_source(source_id: int, session: SessionDependency) -> Extragalacti
 
     return response
 
+@router.get("/source/")
+async def get_box(ra_min: float, ra_max:float, dec_min:float, dec_max: float, session: SessionDependency) -> list[ExtragalacticSource]:
+    """
+    Get all sources in a box bounded by ra_min, ra_max, dec_min, dec_max.
+
+    Parameters
+    ----------
+    
+    ra_min : float
+        Min ra of box
+    ra_max : float
+        Max ra of box
+    dec_min : float
+        Min dec of box
+    dec_max : float
+        Max dec of box
+    session : SessionDependency
+        SQAlchemy session
+
+    Returns
+    -------
+    response : list[ExtragalacticSource]
+        List of sources in box
+    """
+    try:
+        response = await core.get_box(ra_min, ra_max, dec_min, dec_max, session=session)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    
+    return response
+
+
 
 @router.post("/source/{source_id}")
 async def update_source(
