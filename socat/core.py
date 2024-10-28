@@ -62,8 +62,7 @@ async def get_box(ra_min: float, ra_max:float, dec_min:float, dec_max: float, se
 
     source_list = []
     for source in sources.scalars():
-        print(type(source))
-        source_list.append(source.to_model)
+        source_list.append(source.to_model())
     return source_list
 
 async def update_source(
