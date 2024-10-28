@@ -66,7 +66,6 @@ async def get_box(
 
     Parameters
     ----------
-
     box : BoxRequest
         BoxRequest class containing ra_min,
         ra_max, dec_min, dec_max
