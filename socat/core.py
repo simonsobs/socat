@@ -41,10 +41,10 @@ async def get_source(source_id: int, session: AsyncSession) -> ExtragalacticSour
 
 
 async def get_box(
-    ra_min: float | None,
-    ra_max: float | None,
-    dec_min: float | None,
-    dec_max: float | None,
+    ra_min: float, 
+    ra_max: float,
+    dec_min: float,
+    dec_max: float,
     session: AsyncSession,
 ) -> list[ExtragalacticSource]:
     """
