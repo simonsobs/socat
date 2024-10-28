@@ -2,6 +2,7 @@
 Core functionality providing access to the database.
 """
 
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socat.database import ExtragalacticSource, ExtragalacticSourceTable
@@ -25,6 +26,11 @@ async def create_source(
 async def get_source(source_id: int, session: AsyncSession) -> ExtragalacticSource:
     """
     Get a source from the database.
+
+    Raises
+    ------
+    ValueError
+        If the source is not found.
     """
     source = await session.get(ExtragalacticSourceTable, source_id)
 
@@ -32,6 +38,48 @@ async def get_source(source_id: int, session: AsyncSession) -> ExtragalacticSour
         raise ValueError(f"Source with ID {source_id} not found")
 
     return source.to_model()
+
+
+async def get_box(
+    ra_min: float, 
+    ra_max: float,
+    dec_min: float,
+    dec_max: float,
+    session: AsyncSession,
+) -> list[ExtragalacticSource]:
+    """
+    Get all sources in a box bounded by ra_min, ra_max, dec_min, dec_max.
+
+    Parameters
+    ----------
+    ra_min : float
+        Min ra of box
+    ra_max : float
+        Max ra of box
+    dec_min : float
+        Min dec of box
+    dec_max : float
+        Max dec of box
+    session : SessionDependency
+        SQAlchemy session
+
+    Returns
+    -------
+    response : list[ExtragalacticSource]
+        List of sources in box
+    """
+    sources = await session.execute(
+        select(ExtragalacticSourceTable).where(
+            and_(
+                ra_min <= ExtragalacticSourceTable.ra <= ra_max,
+                dec_min <= ExtragalacticSourceTable.dec <= dec_max,
+            )
+        )
+    )
+
+    source_list = [s.to_model() for s in sources.scalars()]
+
+    return source_list
 
 
 async def update_source(
