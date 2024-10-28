@@ -33,10 +33,10 @@ class SourceModificationRequest(BaseModel):
 
 
 class BoxRequest(BaseModel):
-    ra_min: float | None
-    ra_max: float | None
-    dec_min: float | None
-    dec_max: float | None
+    ra_min: float
+    ra_max: float
+    dec_min: float
+    dec_max: float
 
 
 @router.put("/source/new")
@@ -45,7 +45,7 @@ async def create_source(
 ) -> ExtragalacticSource:
     if model.ra is None or model.dec is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="RA and Dec must be provided",
         )
 
@@ -53,16 +53,6 @@ async def create_source(
         response = await core.create_source(model.ra, model.dec, session=session)
     except ValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
-
-    return response
-
-
-@router.get("/source/{source_id}")
-async def get_source(source_id: int, session: SessionDependency) -> ExtragalacticSource:
-    try:
-        response = await core.get_source(source_id, session=session)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     return response
 
@@ -88,20 +78,19 @@ async def get_box(
     response : list[ExtragalacticSource]
         List of sources in box
     """
-    if (
-        box.ra_min is None
-        or box.ra_max is None
-        or box.dec_min is None
-        or box.dec_max is None
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Min and max RA and Dec must be provided",
-        )
-
     response = await core.get_box(
         box.ra_min, box.ra_max, box.dec_min, box.dec_max, session=session
     )
+
+    return response
+
+
+@router.get("/source/{source_id}")
+async def get_source(source_id: int, session: SessionDependency) -> ExtragalacticSource:
+    try:
+        response = await core.get_source(source_id, session=session)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     return response
 
