@@ -26,6 +26,11 @@ async def create_source(
 async def get_source(source_id: int, session: AsyncSession) -> ExtragalacticSource:
     """
     Get a source from the database.
+
+    Raises
+    ------
+    ValueError
+        If the source is not found.
     """
     source = await session.get(ExtragalacticSourceTable, source_id)
 
