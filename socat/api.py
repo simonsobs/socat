@@ -32,6 +32,13 @@ class SourceModificationRequest(BaseModel):
     dec: float | None
 
 
+class BoxRequest(BaseModel):
+    ra_min: float | None
+    ra_max: float | None
+    dec_min: float | None
+    dec_max: float | None
+
+
 @router.put("/source/new")
 async def create_source(
     model: SourceModificationRequest, session: SessionDependency
@@ -59,37 +66,44 @@ async def get_source(source_id: int, session: SessionDependency) -> Extragalacti
 
     return response
 
-@router.get("/source/")
-async def get_box(ra_min: float, ra_max:float, dec_min:float, dec_max: float, session: SessionDependency) -> list[ExtragalacticSource]:
+
+@router.get("/source/box")
+async def get_box(
+    box: BoxRequest, session: SessionDependency
+) -> list[ExtragalacticSource]:
     """
     Get all sources in a box bounded by ra_min, ra_max, dec_min, dec_max.
 
     Parameters
     ----------
-    
-    ra_min : float
-        Min ra of box
-    ra_max : float
-        Max ra of box
-    dec_min : float
-        Min dec of box
-    dec_max : float
-        Max dec of box
-    session : SessionDependency
-        SQAlchemy session
+
+    box : BoxRequest
+        BoxRequest class containing ra_min,
+        ra_max, dec_min, dec_max
+    session : SessionDependeny
+        Session to use
 
     Returns
     -------
     response : list[ExtragalacticSource]
         List of sources in box
     """
-    try:
-        response = await core.get_box(ra_min, ra_max, dec_min, dec_max, session=session)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    
-    return response
+    if (
+        box.ra_min is None
+        or box.ra_max is None
+        or box.dec_min is None
+        or box.dec_max is None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Min and max RA and Dec must be provided",
+        )
 
+    response = await core.get_box(
+        box.ra_min, box.ra_max, box.dec_min, box.dec_max, session=session
+    )
+
+    return response
 
 
 @router.post("/source/{source_id}")

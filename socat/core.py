@@ -1,7 +1,8 @@
 """
 Core functionality providing access to the database.
 """
-from sqlalchemy import select
+
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socat.database import ExtragalacticSource, ExtragalacticSourceTable
@@ -33,7 +34,14 @@ async def get_source(source_id: int, session: AsyncSession) -> ExtragalacticSour
 
     return source.to_model()
 
-async def get_box(ra_min: float, ra_max:float, dec_min:float, dec_max: float, session: AsyncSession) -> list[ExtragalacticSource]:
+
+async def get_box(
+    ra_min: float | None,
+    ra_max: float | None,
+    dec_min: float | None,
+    dec_max: float | None,
+    session: AsyncSession,
+) -> list[ExtragalacticSource]:
     """
     Get all sources in a box bounded by ra_min, ra_max, dec_min, dec_max.
 
@@ -55,15 +63,19 @@ async def get_box(ra_min: float, ra_max:float, dec_min:float, dec_max: float, se
     response : list[ExtragalacticSource]
         List of sources in box
     """
-    sources = await session.execute(select(ExtragalacticSourceTable).where(ra_min <= ExtragalacticSourceTable.ra).where(ExtragalacticSourceTable.ra <= ra_max)
-                                   .where(dec_min <= ExtragalacticSourceTable.dec).where(ExtragalacticSourceTable.dec<= dec_max))
-    if sources is None:
-        raise ValueError(f"No sources found in {ra_min}<= ra <={ra_max}, {dec_min}<= dec <= {dec_max}")
+    sources = await session.execute(
+        select(ExtragalacticSourceTable).where(
+            and_(
+                ra_min <= ExtragalacticSourceTable.ra <= ra_max,
+                dec_min <= ExtragalacticSourceTable.dec <= dec_max,
+            )
+        )
+    )
 
-    source_list = []
-    for source in sources.scalars():
-        source_list.append(source.to_model())
+    source_list = [s.to_model() for s in sources.scalars()]
+
     return source_list
+
 
 async def update_source(
     source_id: int, ra: float | None, dec: float | None, session: AsyncSession
