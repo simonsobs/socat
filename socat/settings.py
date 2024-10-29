@@ -1,14 +1,15 @@
 from typing import Literal
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     database_name: str = "socat.db"
     database_type: Literal["sqlite", "postgresql"] = "sqlite"
 
-    class Config:
-        env_prefix = "socat_"
+    model_config: SettingsConfigDict = {
+        "env_prefix": "socat_model_",
+    }
 
     @property
     def database_url(self) -> str:

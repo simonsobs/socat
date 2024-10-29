@@ -24,7 +24,10 @@ target_metadata = None
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-config.set_main_option("sqlalchemy.url", settings.sync_database_url)
+if config.get_main_option("sqlalchemy.url") == "SET_IN_ENVIRONMENT_VARIABLE":
+    # Need to do this test as in the test environment the database URL is set
+    # in the configuration manually.
+    config.set_main_option("sqlalchemy.url", settings.sync_database_url)
 
 
 def run_migrations_offline() -> None:
