@@ -41,7 +41,7 @@ async def get_source(source_id: int, session: AsyncSession) -> ExtragalacticSour
 
 
 async def get_box(
-    ra_min: float, 
+    ra_min: float,
     ra_max: float,
     dec_min: float,
     dec_max: float,
@@ -87,6 +87,11 @@ async def update_source(
 ) -> ExtragalacticSource:
     """
     Update a source in the database.
+
+    Raises
+    ------
+    ValueError
+        If the source is not found.
     """
 
     async with session.begin():
@@ -106,6 +111,11 @@ async def update_source(
 async def delete_source(source_id: int, session: AsyncSession) -> None:
     """
     Delete a source from the database.
+
+    Raises
+    ------
+    ValueError
+        If the source is not found.
     """
 
     async with session.begin():

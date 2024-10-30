@@ -31,7 +31,12 @@ dev = [
 ]
 
 [tool.ruff.lint]
-extend-select = ["I"]
+preview = true
+extend-select = ["I", "DOC501"]
+# ignore = ["D417", "D400", "D200", "D103", "D102", "D101", "D100"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
