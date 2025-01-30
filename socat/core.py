@@ -2,7 +2,7 @@
 Core functionality providing access to the database.
 """
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socat.database import ExtragalacticSource, ExtragalacticSourceTable
@@ -70,10 +70,10 @@ async def get_box(
     """
     sources = await session.execute(
         select(ExtragalacticSourceTable).where(
-            and_(
-                ra_min <= ExtragalacticSourceTable.ra <= ra_max,
-                dec_min <= ExtragalacticSourceTable.dec <= dec_max,
-            )
+            ra_min <= ExtragalacticSourceTable.ra,
+            ExtragalacticSourceTable.ra <= ra_max,
+            dec_min <= ExtragalacticSourceTable.dec,
+            ExtragalacticSourceTable.dec <= dec_max,
         )
     )
 

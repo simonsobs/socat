@@ -57,7 +57,7 @@ async def create_source(
     return response
 
 
-@router.get("/source/box")
+@router.post("/source/box")
 async def get_box(
     box: BoxRequest, session: SessionDependency
 ) -> list[ExtragalacticSource]:
