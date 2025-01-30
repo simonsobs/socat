@@ -20,7 +20,7 @@ class ExtragalacticSource(BaseModel):
     dec: float = PydanticField(ge=-90.0, le=90.0)
 
     def __repr__(self):
-        return f"ExtragalacticSource(id={self.id}, ra={self.ra}, dec={self.dec})"
+        return f"ExtragalacticSource(id={self.id}, ra={self.ra}, dec={self.dec})"  # pragma: no cover
 
 
 class ExtragalacticSourceTable(ExtragalacticSource, SQLModel, table=True):
