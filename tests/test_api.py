@@ -1,3 +1,7 @@
+import pytest
+from fastapi import HTTPException
+
+
 def test_add_and_retrieve(client):
     response = client.put("api/v1/source/new", json={"ra": 0.0, "dec": 0.0})
 
@@ -80,7 +84,16 @@ def test_update(client):
 
 
 def test_bad_id(client):
-    response = client.put("api/v1/source/new", json={"bad": "json"})
+    response = client.put("api/v1/source/new", json={"ra": None})
+    assert response.status_code == 422
+
+    with pytest.raises(HTTPException):
+        response = client.get("api/v1/source/{}".format(999999))
+
+    response = client.post(
+        "api/v1/source/box",
+        json={"ra_min": 1, "ra_max": 0, "dec_min": 1, "dec_max": 0},
+    )
     assert response.status_code == 422
 
     # with pytest.raises(ValidationError):
