@@ -10,17 +10,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import socat.core as core
 
-from .database import ExtragalacticSource, async_engine, get_async_session
+from .database import ExtragalacticSource, async_engine, get_async_session, ALL_TABLES
 
 
-async def lifetime(f: FastAPI):
+async def lifespan(f: FastAPI):
     # Use SQLModel to create the tables.
-    for table in core.ALL_TABLES:
-        await table.metadata.create_all(async_engine)
+    print("Creating tables")
+    for table in ALL_TABLES:
+        print("Creating table", table)
+        async with async_engine.begin() as conn:
+            await conn.run_sync(table.metadata.create_all)
     yield
 
 
-app = FastAPI(lifetime=lifetime)
+app = FastAPI(lifespan=lifespan)
 
 router = APIRouter(prefix="/api/v1")
 
