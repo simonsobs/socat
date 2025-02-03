@@ -1,6 +1,7 @@
+import os
+
 import pytest
 import pytest_asyncio
-import os
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 

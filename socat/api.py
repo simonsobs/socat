@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import socat.core as core
 
-from .database import ExtragalacticSource, async_engine, get_async_session, ALL_TABLES
+from .database import ALL_TABLES, ExtragalacticSource, async_engine, get_async_session
 
 
 async def lifespan(f: FastAPI):
@@ -80,17 +80,16 @@ async def get_box(
     response : list[ExtragalacticSource]
         List of sources in box
 
-    Raises:
+    Raises
     ------
-    HTTPException :
+    HTTPException
         If unphysical box bounds
     """
-    #    TODO: This raises DOC501 from ruff despite being in the docstring
-    #    if box.ra_min > box.ra_max or box.dec_min > box.dec_max:
-    #        raise HTTPException(
-    #            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-    #            detail="RA/Dec min must be <= max",
-    #        )
+    if box.ra_min > box.ra_max or box.dec_min > box.dec_max:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="RA/Dec min must be <= max",
+        )
 
     response = await core.get_box(
         box.ra_min, box.ra_max, box.dec_min, box.dec_max, session=session
