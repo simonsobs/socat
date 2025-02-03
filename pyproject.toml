@@ -28,7 +28,8 @@ dev = [
     "pytest-cov",
     "pytest-asyncio",
     "pre-commit",
-    "httpx"
+    "httpx",
+    "gevent"
 ]
 
 [tool.ruff.lint]
@@ -46,10 +47,4 @@ asyncio_mode = "auto"
 source = [
     "socat"
 ]
-
-[tool.coverage.report]
-# Return values are not covered by tests when using async endpoints so
-# we will just ignore them from the coverage report.
-exclude_lines = [
-    "return .*"
-]
+concurrency = ["gevent", "thread"]
