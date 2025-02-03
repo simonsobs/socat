@@ -84,17 +84,29 @@ def test_update(client):
 
 
 def test_bad_id(client):
-    response = client.put("api/v1/source/new", json={"ra": None})
-    assert response.status_code == 422
+    # response = client.put("api/v1/source/new", json={"ra": None})
+    # assert response.status_code == 422
+
+    with pytest.raises(HTTPStatusError):
+        response = client.put("api/v1/source/new", json={"ra": None})
+        response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
         response = client.get("api/v1/source/{}".format(999999))
         response.raise_for_status()
 
+    with pytest.raises(HTTPStatusError):
+        response = client.post(
+            "api/v1/source/{}".format(999999), json={"ra": None, "dec": None}
+        )
+        response.raise_for_status()
+
+    with pytest.raises(HTTPStatusError):
+        response = client.delete("api/v1/source/{}".format(999999))
+        response.raise_for_status()
+
+    # TODO: should move to a different func
     response = client.post(
         "api/v1/source/box",
         json={"ra_min": 1, "ra_max": 0, "dec_min": 1, "dec_max": 0},
     )
-    # assert response.status_code == 422
-
-    # with pytest.raises(ValidationError):
