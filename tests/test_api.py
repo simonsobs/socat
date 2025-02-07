@@ -84,9 +84,6 @@ def test_update(client):
 
 
 def test_bad_id(client):
-    # response = client.put("api/v1/source/new", json={"ra": None})
-    # assert response.status_code == 422
-
     with pytest.raises(HTTPStatusError):
         response = client.put("api/v1/source/new", json={"ra": None})
         response.raise_for_status()
