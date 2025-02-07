@@ -126,7 +126,7 @@ async def update_source(
     Returns
     -------
     source.to_mode() : ExtragalacticSource
-        Source that has been created
+        Source that has been updated
 
     Raises
     ------
