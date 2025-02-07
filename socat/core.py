@@ -13,6 +13,20 @@ async def create_source(
 ) -> ExtragalacticSource:
     """
     Create a new source in the database.
+
+    Parameters
+    ----------
+    ra : float
+        RA of source
+    dec : float
+        Dec of source
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    source.to_mode() : ExtragalacticSource
+        Source that has been created
     """
     source = ExtragalacticSourceTable(ra=ra, dec=dec)
 
@@ -26,6 +40,18 @@ async def create_source(
 async def get_source(source_id: int, session: AsyncSession) -> ExtragalacticSource:
     """
     Get a source from the database.
+
+    Parameters
+    ----------
+    id : int
+        ID of source of interest
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    source.to_mode() : ExtragalacticSource
+        Source that has been created
 
     Raises
     ------
@@ -60,12 +86,12 @@ async def get_box(
         Min dec of box
     dec_max : float
         Max dec of box
-    session : SessionDependency
-        SQAlchemy session
+    session : AsyncSession
+        Asynchronous session to use
 
     Returns
     -------
-    response : list[ExtragalacticSource]
+    source_list : list[ExtragalacticSource]
         List of sources in box
     """
     sources = await session.execute(
@@ -87,6 +113,20 @@ async def update_source(
 ) -> ExtragalacticSource:
     """
     Update a source in the database.
+
+    Parameters
+    ----------
+    ra : float
+        RA of source
+    dec : float
+        Dec of source
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    source.to_mode() : ExtragalacticSource
+        Source that has been created
 
     Raises
     ------
@@ -111,6 +151,17 @@ async def update_source(
 async def delete_source(source_id: int, session: AsyncSession) -> None:
     """
     Delete a source from the database.
+
+    Parameters
+    ----------
+    id : int
+        ID of source to delete
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    None
 
     Raises
     ------
