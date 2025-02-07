@@ -31,11 +31,37 @@ SessionDependency = Annotated[AsyncSession, Depends(get_async_session)]
 
 
 class SourceModificationRequest(BaseModel):
+    """
+    Class which defines which atributes are available to modify
+
+    Attributes
+    ----------
+    ra : float | None
+        RA of source
+    dec : float | None
+        Dec of source
+    """
+
     ra: float | None
     dec: float | None
 
 
 class BoxRequest(BaseModel):
+    """
+    Class which defines attributes of box requests
+
+    Attributes
+    ----------
+    ra_min : float
+        Minimum RA of box
+    ra_max : float
+        Maximum RA of box
+    dec_min : float
+        Minimum dec of box
+    dec_max : float
+        Maximum dec of box
+    """
+
     ra_min: float
     ra_max: float
     dec_min: float
@@ -46,6 +72,25 @@ class BoxRequest(BaseModel):
 async def create_source(
     model: SourceModificationRequest, session: SessionDependency
 ) -> ExtragalacticSource:
+    """
+    Create a new source in the catalog
+
+    Parameters
+    ----------
+    model : SourceModificationRequest
+        Object which contains all attributes of source
+    session : SessionDependencey
+        Asynchronous session to be used
+
+    Returns
+    -------
+    response : ExtragalacticSource
+        socat.database.ExtragalacticSource object which was added to the catalog.
+    Raises
+    ------
+    HTTPException
+        If the model does not contain required info or api response is malformed
+    """
     if model.ra is None or model.dec is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -54,7 +99,7 @@ async def create_source(
 
     try:
         response = await core.create_source(model.ra, model.dec, session=session)
-    except ValidationError as e:
+    except ValidationError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
 
     return response
@@ -73,12 +118,12 @@ async def get_box(
         BoxRequest class containing ra_min,
         ra_max, dec_min, dec_max
     session : SessionDependeny
-        Session to use
+        Asynchronous session to use
 
     Returns
     -------
     response : list[ExtragalacticSource]
-        List of sources in box
+        List of socat.database.ExtragalacticSource sources in box
 
     Raises
     ------
@@ -100,6 +145,26 @@ async def get_box(
 
 @router.get("/source/{source_id}")
 async def get_source(source_id: int, session: SessionDependency) -> ExtragalacticSource:
+    """
+    Get a source by id from the database
+
+    Parameters
+    ----------
+    source_id : int
+        ID of source to querry
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns:
+    --------
+    response : ExtragalacticSource
+        socat.database.ExtragalacticSource corresponding to id
+
+    Raises
+    ------
+    HTTPException
+        If id does not correspond to any source
+    """
     try:
         response = await core.get_source(source_id, session=session)
     except ValueError as e:
@@ -112,6 +177,28 @@ async def get_source(source_id: int, session: SessionDependency) -> Extragalacti
 async def update_source(
     source_id: int, model: SourceModificationRequest, session: SessionDependency
 ) -> ExtragalacticSource:
+    """
+    Update source parameters by id
+
+    Parameters
+    ----------
+    source_id : int
+        ID of source to update
+    model : SourceModificationRequest
+        Parameters of model to modify
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns
+    -------
+    response :  ExtragalacticSource
+        socat.database.ExtragalacticSource that has been modified
+
+    Raises
+    ------
+    HTTPException
+        If id does not correspond to any source
+    """
     try:
         response = await core.update_source(
             source_id, model.ra, model.dec, session=session
@@ -124,6 +211,26 @@ async def update_source(
 
 @router.delete("/source/{source_id}")
 async def delete_source(source_id: int, session: SessionDependency) -> None:
+    """
+    Delete a source by id
+
+    Parameters
+    ----------
+    source_id : int
+        ID of source to delete
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns
+    -------
+    None
+
+
+    Raises
+    ------
+    HTTPException
+        If id does not correspond to any source
+    """
     try:
         await core.delete_source(source_id, session=session)
     except ValueError as e:
