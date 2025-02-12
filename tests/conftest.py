@@ -63,3 +63,13 @@ def client(tmp_path_factory):
     from socat.api import app
 
     yield TestClient(app)
+
+
+@pytest.fixture(scope="session")
+def mock_client(tmp_path_factory):
+    """
+    Create a test mock database client for mock test.
+    """
+    from socat.client import mock
+
+    yield mock.Client()
