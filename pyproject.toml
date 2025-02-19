@@ -27,7 +27,9 @@ dev = [
     "coverage",
     "pytest-cov",
     "pytest-asyncio",
-    "pre-commit"
+    "pre-commit",
+    "httpx",
+    "gevent"
 ]
 
 [tool.ruff.lint]
@@ -45,3 +47,4 @@ asyncio_mode = "auto"
 source = [
     "socat"
 ]
+concurrency = ["gevent", "thread"]

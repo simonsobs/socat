@@ -1,4 +1,8 @@
+import os
+
+import pytest
 import pytest_asyncio
+from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 
@@ -41,3 +45,31 @@ async def database_async_sesionmaker(tmp_path_factory):
 
     # Clean up the database (don't do this in case we want to inspect)
     # database_path.unlink()
+
+
+@pytest.fixture(scope="session")
+def client(tmp_path_factory):
+    """
+    Create a test client for the FastAPI app.
+    """
+    tmp_path = tmp_path_factory.mktemp("socat")
+    # Create a temporary SQLite database for testing.
+    database_path = tmp_path / "test.db"
+
+    run_migration(database_path)
+
+    os.environ["socat_model_database_name"] = str(database_path)
+
+    from socat.api import app
+
+    yield TestClient(app)
+
+
+@pytest.fixture(scope="session")
+def mock_client(tmp_path_factory):
+    """
+    Create a test mock database client for mock test.
+    """
+    from socat.client import mock
+
+    yield mock.Client()
