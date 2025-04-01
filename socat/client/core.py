@@ -10,7 +10,9 @@ from socat.database import ExtragalacticSource
 
 class ClientBase(ABC):
     @abstractmethod
-    def create(self, *, ra: float, dec: float) -> ExtragalacticSource:
+    def create(
+        self, *, ra: float, dec: float, name: str | None = None
+    ) -> ExtragalacticSource:
         """
         Create a new source in the catlaog.
         """
@@ -34,7 +36,12 @@ class ClientBase(ABC):
 
     @abstractmethod
     def update_source(
-        self, *, id: int, ra: float | None = None, dec: float | None = None
+        self,
+        *,
+        id: int,
+        ra: float | None = None,
+        dec: float | None = None,
+        name: str | None = None,
     ) -> ExtragalacticSource | None:
         """
         Update a source. If the source is updated, return its new value. Else, return None.
