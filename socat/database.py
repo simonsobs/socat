@@ -118,7 +118,7 @@ class ExtragalacticSourceTable(ExtragalacticSource, SQLModel, table=True):
         return ExtragalacticSource(id=self.id, ra=self.ra, dec=self.dec, name=self.name)
 
 
-ALL_TABLES = [ExtragalacticSourceTable]
+ALL_TABLES = [ExtragalacticSourceTable, AstroqueryServiceTable]
 
 async_engine = create_async_engine(settings.database_url, echo=True, future=True)
 
