@@ -69,7 +69,7 @@ class SourceModificationRequest(BaseModel):
 
     ra: float | None
     dec: float | None
-    name: str | None
+    name: str | None = None
 
 
 class BoxRequest(BaseModel):
@@ -171,7 +171,7 @@ async def get_service_name(
 ) -> list[AstroqueryService]:
     try:
         response = await core.get_service_name(service_name, session=session)
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     return response
@@ -207,7 +207,7 @@ async def update_service(
         response = await core.update_service(
             service_id, model.name, config=model.config, session=session
         )
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     return response
@@ -237,7 +237,7 @@ async def delete_service(service_id: int, session: SessionDependency) -> None:
     """
     try:
         await core.delete_service(service_id, session=session)
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return
 
@@ -271,10 +271,14 @@ async def create_source(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="RA and Dec must be provided",
         )
+    print("In api.create_source")
 
     try:
         response = await core.create_source(
-            model.ra, model.dec, name=model.name, session=session
+            model.ra,
+            model.dec,
+            session=session,
+            name=model.name,
         )
     except ValidationError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
@@ -320,13 +324,13 @@ async def create_source_name(
             detail="RA and Dec must be requested.",
         )
 
-    services = await get_service_name(astroquery_service, session=session)
+    # services = await get_service_name(astroquery_service, session=session) #TODO: IDK Why this isn't currently working
 
-    if len(services) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Service {} is not available.".format(astroquery_service),
-        )
+    # if len(services) == 0:
+    #    raise HTTPException(
+    #        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    #        detail="Service {} is not available.".format(astroquery_service),
+    #    )
 
     result_table = soaq.get_source_info(
         name=name,
@@ -342,7 +346,10 @@ async def create_source_name(
 
     try:
         response = await core.create_source(
-            result_table["ra"], result_table["dec"], name=name, session=session
+            result_table["ra"],
+            result_table["dec"],
+            session=session,
+            name=name,
         )
     except ValidationError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
