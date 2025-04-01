@@ -42,7 +42,9 @@ class Client(ClientBase):
         self.catalog = {}
         self.n = 0
 
-    def create(self, *, ra: float, dec: float) -> ExtragalacticSource:
+    def create(
+        self, *, ra: float, dec: float, name: str | None = None
+    ) -> ExtragalacticSource:
         """
         Create a new source and add it to the catalog.
 
@@ -52,13 +54,15 @@ class Client(ClientBase):
             RA of source
         dec : float
             Dec of source
+        name : str | None, Default: None
+            Name of source
 
         Returns
         -------
         source : ExtragalacticSource
             Extragalactic Source that was added
         """
-        source = ExtragalacticSource(id=self.n, ra=ra, dec=dec)
+        source = ExtragalacticSource(id=self.n, ra=ra, dec=dec, name=name)
         self.catalog[self.n] = source
         self.n += 1
 
@@ -115,19 +119,26 @@ class Client(ClientBase):
         return self.catalog.get(id, None)
 
     def update_source(
-        self, *, id: int, ra: float | None = None, dec: float | None = None
+        self,
+        *,
+        id: int,
+        ra: float | None = None,
+        dec: float | None = None,
+        name: str | None = None,
     ) -> ExtragalacticSource | None:
         """
         Update a source by id
 
         Parameters
         ----------
-        ra : float
+        ra : float | None, Default: None
             RA of source
-        dec : float
+        dec : float | None, Default: None
             Dec of source
         session : AsyncSession
             Asynchronous session to use
+        name : str | None, Default: None
+            Name of source
 
         Returns
         -------
@@ -143,6 +154,7 @@ class Client(ClientBase):
             id=current.id,
             ra=current.ra if ra is None else ra,
             dec=current.dec if dec is None else dec,
+            name=current.name if name is None else name,
         )
 
         self.catalog[id] = new
