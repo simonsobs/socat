@@ -185,7 +185,10 @@ async def delete_service(service_id: int, session: AsyncSession) -> None:
 
 
 async def create_source(
-    ra: float, dec: float, name: str | None, session: AsyncSession
+    ra: float,
+    dec: float,
+    session: AsyncSession,
+    name: str | None = None,
 ) -> ExtragalacticSource:
     """
     Create a new source in the database.
@@ -287,19 +290,25 @@ async def get_box(
 
 
 async def update_source(
-    source_id: int, ra: float | None, dec: float | None, session: AsyncSession
+    source_id: int,
+    ra: float | None,
+    dec: float | None,
+    session: AsyncSession,
+    name: str | None = None,
 ) -> ExtragalacticSource:
     """
     Update a source in the database.
 
     Parameters
     ----------
-    ra : float
+    ra : float | None
         RA of source
-    dec : float
+    dec : float | None
         Dec of source
     session : AsyncSession
         Asynchronous session to use
+    name : str | None
+        Name of source
 
     Returns
     -------
@@ -320,6 +329,7 @@ async def update_source(
 
         source.ra = ra if ra is not None else source.ra
         source.dec = dec if dec is not None else source.dec
+        source.name = name if name is not None else source.name
 
         await session.commit()
 
