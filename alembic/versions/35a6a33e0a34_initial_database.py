@@ -25,10 +25,19 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("ra", sa.Float, nullable=False),
         sa.Column("dec", sa.Float, nullable=False),
+        sa.Column("name", sa.String, nullable=True),
+    )
+
+    op.create_table(
+        "astroquery_services",
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("name", sa.String, nullable=False),
+        sa.Column("config", sa.String, nullable=False),
     )
     pass
 
 
 def downgrade() -> None:
     op.drop_table("extragalactic_sources")
+    op.drop_table("astroquery_services")
     pass
