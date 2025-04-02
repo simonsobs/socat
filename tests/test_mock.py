@@ -14,6 +14,27 @@ def test_add_and_remove(mock_client):
     mock_client.delete_source(id=0)
 
 
+def test_add_and_remove_by_name(mock_client):
+    source = mock_client.create_name(name="m1", astroquery_service="Simbad")
+    assert source.id == 1
+    assert source.ra == 83.6324
+    assert source.dec == 22.0174
+
+    mock_client.delete_source(id=1)
+
+    source = mock_client.create_name(name="m2", astroquery_service="Simbad")
+    assert source.id == 2
+    assert source.ra == -36.63741666666664
+    assert source.dec == -0.8232499999999998
+
+    mock_client.delete_source(id=2)
+
+
+def test_bad_create_name(mock_client):
+    source = mock_client.create_name(name="NOT_A_SOURCE", astroquery_service="Simbad")
+    assert source is None
+
+
 def test_bad_id(mock_client):
     source = mock_client.update_source(id=999999, ra=1.0, dec=1.0)
     assert source is None
