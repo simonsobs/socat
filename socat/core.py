@@ -92,16 +92,17 @@ async def get_service_name(
         If the source is not found.
     """
 
-    stmt = select(AstroqueryServiceTable).where(
-        AstroqueryServiceTable.name == service_name
-    )
+    async with session.begin():
+        stmt = select(AstroqueryServiceTable).where(
+            AstroqueryServiceTable.name == service_name
+        )
 
-    service = await session.execute(stmt)
+        service = await session.execute(stmt)
 
     if service is None:
         raise ValueError(f"Service with name {service_name} not found.")
 
-    service_list = [s.to_model() for s in service.scalars()]
+    service_list = [s.to_model() for s in service.scalars().all()]
 
     return service_list
 
