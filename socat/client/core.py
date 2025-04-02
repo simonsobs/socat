@@ -5,7 +5,7 @@ client.
 
 from abc import ABC, abstractmethod
 
-from socat.database import ExtragalacticSource
+from socat.database import AstroqueryService, ExtragalacticSource
 
 
 class ClientBase(ABC):
@@ -15,6 +15,15 @@ class ClientBase(ABC):
     ) -> ExtragalacticSource:
         """
         Create a new source in the catlaog.
+        """
+        return
+
+    @abstractmethod
+    def create_name(
+        self, *, name: float, astroquery_service: float
+    ) -> ExtragalacticSource:
+        """
+        Create a new source in the catalog by name.
         """
         return
 
@@ -52,5 +61,48 @@ class ClientBase(ABC):
     def delete_source(self, *, id: int) -> None:
         """
         Delete a source from the catalog.
+        """
+        return None
+
+
+class AstroqueryClientBase(ABC):
+    @abstractmethod
+    def create(self, *, name: str, config: str) -> AstroqueryService:
+        """
+        Create a new service in the catalog.
+        """
+        return
+
+    @abstractmethod
+    def get_service(self, *, id: int) -> AstroqueryService | None:
+        """
+        Get information about a specific service. If the service is not found, we return None.
+        """
+        return None
+
+    @abstractmethod
+    def get_service_name(self, *, name: str) -> list[AstroqueryService] | None:
+        """
+        Get information about a specific service by name. If the service is not found, we return None.
+        """
+        return []
+
+    @abstractmethod
+    def update_service(
+        self,
+        *,
+        id: int,
+        name: str | None = None,
+        config: str | None = None,
+    ) -> AstroqueryService | None:
+        """
+        Update a service. If the service is updated, return its new value. Else, return None.
+        """
+        return None
+
+    @abstractmethod
+    def delete_service(self, *, id: int) -> None:
+        """
+        Delete a service from the catalog.
         """
         return None
