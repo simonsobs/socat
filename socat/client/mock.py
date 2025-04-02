@@ -2,6 +2,10 @@
 Uses a local dictionary to implement the core.
 """
 
+from importlib import import_module
+
+from astroquery.query import BaseVOQuery
+
 from socat.database import ExtragalacticSource
 
 from .core import ClientBase
@@ -63,6 +67,50 @@ class Client(ClientBase):
             Extragalactic Source that was added
         """
         source = ExtragalacticSource(id=self.n, ra=ra, dec=dec, name=name)
+        self.catalog[self.n] = source
+        self.n += 1
+
+        return source
+
+    def create_name(self, *, name: str, astroquery_service: str) -> ExtragalacticSource:
+        """
+        Create a new source by name and add it to the catalog.
+
+        Parameters
+        ----------
+        name : str
+            name of source to add
+        astroquery_service : str
+            Name of astroquery service to use
+        """
+
+        service: BaseVOQuery = getattr(
+            import_module(f"astroquery.{astroquery_service.lower()}"),
+            astroquery_service,
+        )
+
+        requested_params = ["ra", "dec"]
+
+        result_table = service.query_object(name)
+
+        result_dict = {param: None for param in requested_params}
+        if len(result_table) == 0:
+            return None
+        for param in requested_params:
+            try:
+                result_dict[param] = result_table[param].value.data[
+                    0
+                ]  # TODO: currently only take first match.
+                if param == "ra" and result_dict[param] > 180:
+                    result_dict[param] = -1 * (
+                        360 - result_dict[param]
+                    )  # Astroquery uses a 0-360 standard vs -180 to 180
+            # Maybe should warn if more than one match?
+            except KeyError:  # pragma: no cover
+                continue
+        source = ExtragalacticSource(
+            id=self.n, ra=result_dict["ra"], dec=result_dict["dec"], name=name
+        )
         self.catalog[self.n] = source
         self.n += 1
 
