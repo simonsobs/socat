@@ -169,12 +169,10 @@ def test_update_service(client):
 
 
 def test_add_source_by_name(client):
-    response = client.put(
-        "api/v1/source/new?name={}&astroquery_service={}".format("m1", "Simbad"),
-        json={"requested_params": ["ra", "dec"]},
+    response = client.post(
+        "api/v1/source/new?name={}&astroquery_service={}".format("m1", "Simbad")
     )
 
-    print(response.json())
     id = response.json()["id"]
     assert response.status_code == 200
 
