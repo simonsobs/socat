@@ -99,10 +99,10 @@ async def get_service_name(
 
         service = await session.execute(stmt)
 
-    if service is None:
-        raise ValueError(f"Service with name {service_name} not found.")
-
     service_list = [s.to_model() for s in service.scalars().all()]
+
+    if len(service_list) == 0:
+        raise ValueError(f"Service with name {service_name} not found.")
 
     return service_list
 
@@ -177,7 +177,7 @@ async def delete_service(service_id: int, session: AsyncSession) -> None:
         source = await session.get(AstroqueryServiceTable, service_id)
 
         if source is None:
-            raise ValueError(f"Source with ID {service_id} not found")
+            raise ValueError(f"Service with ID {service_id} not found")
 
         await session.delete(source)
         await session.commit()
