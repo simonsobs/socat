@@ -40,13 +40,13 @@ async def get_source_info(
     result_table = await asyncify(service.query_object)(name)
 
     if len(result_table) > 1:
-        warnings.warn("More than one source resolved, returning first")
-    if len(result_table) == 0:
-        raise RuntimeError(
-            "Error: no source with name {name} resolved in {astroquery_service}"
-        )
+        warnings.warn(
+            "More than one source resolved, returning first"
+        )  # pragma: no cover
 
     result_dict = {param: None for param in requested_params}
+    if len(result_table) == 0:
+        return result_dict
     for param in requested_params:
         try:
             result_dict[param] = result_table[param].value.data[
@@ -57,7 +57,7 @@ async def get_source_info(
                     360 - result_dict[param]
                 )  # Astroquery uses a 0-360 standard vs -180 to 180
         # Maybe should warn if more than one match?
-        except KeyError:
+        except KeyError:  # pragma: no cover
             continue
 
     return result_dict
