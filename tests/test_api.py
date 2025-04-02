@@ -103,7 +103,7 @@ def test_bad_id(client):
         response.raise_for_status()
 
     # TODO: should move to a different func
-    # TODO: Is this doing anything?
+    # Testing invalid box bounds
     response = client.post(
         "api/v1/source/box",
         json={"ra_min": 1, "ra_max": 0, "dec_min": 1, "dec_max": 0},
@@ -168,6 +168,27 @@ def test_update_service(client):
     assert response.status_code == 200
 
 
+def test_bad_service(client):
+    with pytest.raises(HTTPStatusError):
+        response = client.delete("api/v1/service/{}".format(999999))
+        response.raise_for_status()
+
+    with pytest.raises(HTTPStatusError):
+        response = client.get("api/v1/service/?service_name={}".format("NOT_A_SERVICE"))
+        response.raise_for_status()
+
+    with pytest.raises(HTTPStatusError):
+        response = client.get("api/v1/service/{}".format(999999))
+        response.raise_for_status()
+
+    with pytest.raises(HTTPStatusError):
+        response = client.post(
+            "api/v1/service/{}".format(999999),
+            json={"name": "VizieR", "config": "test2"},
+        )
+        response.raise_for_status()
+
+
 def test_add_source_by_name(client):
     response = client.post(
         "api/v1/source/new?name={}&astroquery_service={}".format("m1", "Simbad")
@@ -192,3 +213,40 @@ def test_add_source_by_name(client):
     assert (
         response.status_code == 404
     )  # ID should be deleted, make sure we don't find it again
+
+    # Check RA wrapping
+    response = client.post(
+        "api/v1/source/new?name={}&astroquery_service={}".format("m2", "Simbad")
+    )
+
+    id = response.json()["id"]
+    assert response.status_code == 200
+
+    response = client.get("api/v1/source/{}".format(id))
+
+    assert response.status_code == 200
+    assert response.json()["ra"] == -36.63741666666664
+    assert response.json()["dec"] == -0.8232499999999998
+    assert response.json()["name"] == "m2"
+
+    response = client.delete("api/v1/source/{}".format(id))
+
+    assert response.status_code == 200
+
+
+def test_bad_request_service_by_name(client):
+    with pytest.raises(HTTPStatusError):
+        response = client.post(
+            "api/v1/source/new?name={}&astroquery_service={}".format(
+                "m1", "NOT_A_SERVICE"
+            )
+        )
+        response.raise_for_status()
+
+    with pytest.raises(HTTPStatusError):
+        response = client.post(
+            "api/v1/source/new?name={}&astroquery_service={}".format(
+                "NOT_A_SOURCE", "Simbad"
+            )
+        )
+        response.raise_for_status()
