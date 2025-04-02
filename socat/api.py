@@ -173,7 +173,6 @@ async def get_service_name(
         response = await core.get_service_name(service_name, session=session)
     except ValueError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-
     return response
 
 
@@ -271,8 +270,6 @@ async def create_source(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="RA and Dec must be provided",
         )
-    print("In api.create_source")
-
     try:
         response = await core.create_source(
             model.ra,
@@ -291,7 +288,6 @@ async def create_source_name(
     name: str,
     astroquery_service: str,
     session: SessionDependency,
-    requested_params: list[str] = ["ra", "dec"],
 ) -> ExtragalacticSource:
     """
     Create a new source by name, resolve using astroquery_service.
@@ -302,9 +298,6 @@ async def create_source_name(
         Name of source to resolve
     astroquery_service : str
         Name of astroquery service to use to resolve name
-    requested_params : list[str], Default: ["ra", "dec"]
-        Parameters of source to get.
-        Must match astrotable column names.
     session : SessionDependency
         Asynchronous session to be used
 
@@ -318,24 +311,18 @@ async def create_source_name(
     HTTPException
         If the astroquery service is not supported, if RA/dec aren't requested, or api response is malformed.
     """
-    if "ra" not in requested_params or "dec" not in requested_params:
+
+    services = await get_service_name(astroquery_service, session=session)
+
+    if len(services) == 0:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="RA and Dec must be requested.",
+            detail="Service {} is not available.".format(astroquery_service),
         )
 
-    # services = await get_service_name(astroquery_service, session=session) #TODO: IDK Why this isn't currently working
-
-    # if len(services) == 0:
-    #    raise HTTPException(
-    #        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-    #        detail="Service {} is not available.".format(astroquery_service),
-    #    )
-
-    result_table = soaq.get_source_info(
+    result_table = await soaq.get_source_info(
         name=name,
         astroquery_service=astroquery_service,
-        requested_params=requested_params,
     )
 
     if result_table["ra"] is None or result_table["dec"] is None:
