@@ -1,8 +1,11 @@
 import warnings
 from importlib import import_module
 
+from astroquery.query import BaseVOQuery
+from asyncer import asyncify
 
-def get_source_info(
+
+async def get_source_info(
     name: str, astroquery_service: str, requested_params: list[str] = ["ra", "dec"]
 ):
     """
@@ -29,11 +32,12 @@ def get_source_info(
         If no source found in astroquery_service
     """
 
-    service = getattr(
+    service: BaseVOQuery = getattr(
         import_module(f"astroquery.{astroquery_service.lower()}"),
         astroquery_service,
     )
-    result_table = service.query_object(name)
+
+    result_table = await asyncify(service.query_object)(name)
 
     if len(result_table) > 1:
         warnings.warn("More than one source resolved, returning first")
@@ -48,6 +52,10 @@ def get_source_info(
             result_dict[param] = result_table[param].value.data[
                 0
             ]  # TODO: currently only take first match.
+            if param == "ra" and result_dict[param] > 180:
+                result_dict[param] = -1 * (
+                    360 - result_dict[param]
+                )  # Astroquery uses a 0-360 standard vs -180 to 180
         # Maybe should warn if more than one match?
         except KeyError:
             continue
