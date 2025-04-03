@@ -114,28 +114,28 @@ async def update_service(
     session: AsyncSession,
 ) -> AstroqueryService:
     """
-    Create a new astroquery service in the database.
+    Update an astroquery service in the database.
 
-    Parameters
-    ----------
-    service_name : int
-        ID of service
-    name : str | None
-        Name of service
-    config: str | None
-        json to be deserialized to config options
-    session : AsyncSession
-        Asynchronous session to use
+     Parameters
+     ----------
+     service_name : int
+         ID of service
+     name : str | None
+         Name of service
+     config: str | None
+         json to be deserialized to config options
+     session : AsyncSession
+         Asynchronous session to use
 
-    Returns
-    -------
-    service.to_mode() : AstroqueryService
-        Requested astroquery service
+     Returns
+     -------
+     service.to_mode() : AstroqueryService
+         Requested astroquery service
 
-    Raises
-    ------
-    ValueError
-        If the source is not found.
+     Raises
+     ------
+     ValueError
+         If the source is not found.
     """
 
     async with session.begin():
