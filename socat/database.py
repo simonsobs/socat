@@ -86,7 +86,7 @@ class ExtragalacticSource(BaseModel):
     name: str | None
 
     def __repr__(self):
-        return f"ExtragalacticSource(id={self.id}, ra={self.ra}, dec={self.dec}, name={self.Name})"  # pragma: no cover
+        return f"ExtragalacticSource(id={self.id}, ra={self.ra}, dec={self.dec}, name={self.name})"  # pragma: no cover
 
 
 class ExtragalacticSourceTable(ExtragalacticSource, SQLModel, table=True):

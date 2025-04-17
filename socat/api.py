@@ -2,7 +2,7 @@
 The web API to access the socat database.
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel, ValidationError
@@ -50,7 +50,7 @@ class ServiceModificationRequestion(BaseModel):
     """
 
     name: str | None
-    config: str | None
+    config: dict[str, Any]
 
 
 class SourceModificationRequest(BaseModel):
@@ -119,12 +119,6 @@ async def create_service(
     HTTPException
         If the model does not contain required info or api response is malformed
     """
-    if model.name is None or model.config is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Name, config must be provided.",
-        )
-
     try:
         response = await core.create_service(
             name=model.name, config=model.config, session=session
@@ -138,24 +132,24 @@ async def create_service(
 @router.get("/service/{service_id}")
 async def get_service(service_id: int, session: SessionDependency) -> AstroqueryService:
     """
-    Get a astroquery service by id or name from the database
+    Get a astroquery service by id from the database
 
     Parameters
     ----------
-    service_id : str
-        ID of source to querry
+    service_id : int
+        ID of service to querry
     session : SessionDependency
         Asynchronous session to use
 
     Returns:
     --------
-    response : ExtragalacticSource
+    response : AstroqueryService
         socat.database.AstroqueryService corresponding to id
 
     Raises
     ------
     HTTPException
-        If id does not correspond to any source
+        If id does not correspond to any service
     """
     try:
         response = await core.get_service(service_id, session=session)
@@ -169,6 +163,26 @@ async def get_service(service_id: int, session: SessionDependency) -> Astroquery
 async def get_service_name(
     service_name: str, session: SessionDependency
 ) -> list[AstroqueryService]:
+    """
+    Get an astroquery service by name from the database.
+
+    Parameters
+    ----------
+    service_name : str
+        Name of service to query
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns:
+    --------
+    response : AstroqueryService
+        socat.database.AstroqueryService corresponding to name
+
+    Raises
+    ------
+    HTTPException
+        If name does not correspond to any service
+    """
     try:
         response = await core.get_service_name(service_name, session=session)
     except ValueError as e:  # pragma: no cover
