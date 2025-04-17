@@ -66,19 +66,19 @@ def test_box(mock_client):
 
 
 def test_add_and_remove_astroquery(mock_client_astroquery):
-    service = mock_client_astroquery.create(name="Simbad", config="test")
+    service = mock_client_astroquery.create(name="Simbad", config={"test": "test"})
     assert service.id == 0
     assert service.name == "Simbad"
-    assert service.config == "test"
+    assert service.config == {"test": "test"}
 
     service = mock_client_astroquery.get_service(id=service.id)
 
     service = mock_client_astroquery.update_service(
-        id=service.id, name="VizieR", config="test2"
+        id=service.id, name="VizieR", config={"test": "test2"}
     )
     service = mock_client_astroquery.get_service(id=service.id)
     assert service.name == "VizieR"
-    assert service.config == "test2"
+    assert service.config == {"test": "test2"}
 
     service_list = mock_client_astroquery.get_service_name(name="VizieR")
     assert len(service_list) == 1

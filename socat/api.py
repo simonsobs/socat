@@ -45,7 +45,7 @@ class ServiceModificationRequestion(BaseModel):
     ----------
     name : str | None
         Name of service
-    config: str | None
+    config: dict[str, Any]  | None
         json to be deserialized to config options
     """
 
@@ -119,6 +119,7 @@ async def create_service(
     HTTPException
         If the model does not contain required info or api response is malformed
     """
+
     try:
         response = await core.create_service(
             name=model.name, config=model.config, session=session

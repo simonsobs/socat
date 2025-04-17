@@ -32,7 +32,7 @@ def upgrade() -> None:
         "astroquery_services",
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("name", sa.String, nullable=False),
-        sa.Column("config", sa.String, nullable=False),
+        sa.Column("config", sa.JSON, nullable=False),
     )
     pass
 

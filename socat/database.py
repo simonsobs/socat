@@ -2,10 +2,12 @@
 Core database tables storing information about sources.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlmodel import Field, SQLModel
+from sqlmodel import JSON, Column, Field, SQLModel
 
 from .settings import settings
 
@@ -22,19 +24,19 @@ class AstroqueryService(BaseModel):
         Unique service identifier
     name : str
         Name of service
-    config: str
+    config: dict[str, Any]
         json to be deserialized to config options
     """
 
     id: int
     name: str
-    config: str
+    config: dict[str, Any]
 
     # def model_post_init():
     #    config = AstroqueryConfig.model_validate_json(config)
 
     def __repr__(self):
-        return f"AstroqueryService(id={self.id}, name={self.name}, common_api={self.common_api})"  # pragma: no cover
+        return f"AstroqueryService(id={self.id}, name={self.name})"  # pragma: no cover
 
 
 class AstroqueryServiceTable(AstroqueryService, SQLModel, table=True):
@@ -51,6 +53,7 @@ class AstroqueryServiceTable(AstroqueryService, SQLModel, table=True):
 
     id: int = Field(primary_key=True)
     name: str = Field(index=True)
+    config: dict[str, Any] = Field(sa_column=Column(JSON))
 
     def to_model(self) -> AstroqueryService:
         """

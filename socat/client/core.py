@@ -5,6 +5,7 @@ client.
 """
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 from socat.database import AstroqueryService, ExtragalacticSource
 
@@ -68,7 +69,7 @@ class ClientBase(ABC):
 
 class AstroqueryClientBase(ABC):
     @abstractmethod
-    def create(self, *, name: str, config: str) -> AstroqueryService:
+    def create(self, *, name: str, config: dict[str, Any]) -> AstroqueryService:
         """
         Create a new service in the catalog.
         """
@@ -94,7 +95,7 @@ class AstroqueryClientBase(ABC):
         *,
         id: int,
         name: str | None = None,
-        config: str | None = None,
+        config: dict[str, Any] | None = None,
     ) -> AstroqueryService | None:
         """
         Update a service. If the service is updated, return its new value. Else, return None.

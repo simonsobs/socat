@@ -3,6 +3,7 @@ Uses a local dictionary to implement the core.
 """
 
 from importlib import import_module
+from typing import Any
 
 from astroquery.query import BaseVOQuery
 
@@ -255,7 +256,7 @@ class AstorqueryClient(AstroqueryClientBase):
         self.catalog = {}
         self.n = 0
 
-    def create(self, *, name: str, config: str) -> AstroqueryService:
+    def create(self, *, name: str, config: dict[str, Any]) -> AstroqueryService:
         """
         Create a new astroquery service.
 
@@ -263,7 +264,7 @@ class AstorqueryClient(AstroqueryClientBase):
         ----------
         name : str
             Name of astroquery service
-        config : str
+        config : dict[str, Any]
             Json to be deserialized containing config options
 
         Returns
@@ -318,7 +319,7 @@ class AstorqueryClient(AstroqueryClientBase):
         return service
 
     def update_service(
-        self, *, id: int, name: str | None, config: str | None
+        self, *, id: int, name: str | None, config: dict[str, Any] | None
     ) -> AstroqueryService:
         """
         Update a service by id
@@ -329,7 +330,7 @@ class AstorqueryClient(AstroqueryClientBase):
             ID of service to be updated
         name : str | None, Default: None
             Name of source
-        config : str | None, Default: None
+        config : dict[str, Any] | None, Default: None
             Json to be deserialized containing config options
 
         Returns

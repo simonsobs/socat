@@ -2,6 +2,8 @@
 Core functionality providing access to the database.
 """
 
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +16,7 @@ from socat.database import (
 
 
 async def create_service(
-    name: str, config: str, session: AsyncSession
+    name: str, config: dict[str, Any], session: AsyncSession
 ) -> AstroqueryService:
     """
     Create a new astroquery service in the database.
@@ -25,10 +27,9 @@ async def create_service(
         Name of service
     session : AsyncSession
         Asynchronous session to use
-    config: str
+    config: dict[str, Any]
         json to be deserialized to config options
     """
-
     service = AstroqueryServiceTable(name=name, config=config)
 
     async with session.begin():
@@ -110,7 +111,7 @@ async def get_service_name(
 async def update_service(
     service_id: int,
     name: str | None,
-    config: str | None,
+    config: dict[str, Any] | None,
     session: AsyncSession,
 ) -> AstroqueryService:
     """
@@ -122,7 +123,7 @@ async def update_service(
          ID of service
      name : str | None
          Name of service
-     config: str | None
+     config: dict[str, Any]  | None
          json to be deserialized to config options
      session : AsyncSession
          Asynchronous session to use

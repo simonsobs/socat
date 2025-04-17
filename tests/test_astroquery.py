@@ -4,7 +4,7 @@ from httpx import HTTPStatusError
 
 def test_add_and_remove_service(client):
     response = client.put(
-        "api/v1/service/new", json={"name": "Simbad", "config": "test"}
+        "api/v1/service/new", json={"name": "Simbad", "config": {"config": "test"}}
     )
 
     id = response.json()["id"]
@@ -14,7 +14,7 @@ def test_add_and_remove_service(client):
 
     assert response.status_code == 200
     assert response.json()["name"] == "Simbad"
-    assert response.json()["config"] == "test"
+    assert response.json()["config"] == {"config": "test"}
 
     response = client.get(
         "api/v1/service/?service_name={}".format(response.json()["name"])
@@ -36,20 +36,20 @@ def test_add_and_remove_service(client):
 
 def test_update_service(client):
     response = client.put(
-        "api/v1/service/new", json={"name": "Simbad", "config": "test"}
+        "api/v1/service/new", json={"name": "Simbad", "config": {"config": "test"}}
     )
-
     id = response.json()["id"]
     assert response.status_code == 200
 
     response = client.post(
-        "api/v1/service/{}".format(id), json={"name": "VizieR", "config": "test2"}
+        "api/v1/service/{}".format(id),
+        json={"name": "VizieR", "config": {"config": "test2"}},
     )
 
     assert response.status_code == 200
     assert response.json()["id"] == id
     assert response.json()["name"] == "VizieR"
-    assert response.json()["config"] == "test2"
+    assert response.json()["config"] == {"config": "test2"}
 
     response = client.delete("api/v1/service/{}".format(id))
     assert response.status_code == 200
@@ -77,10 +77,13 @@ def test_bad_service(client):
 
 
 def test_add_source_by_name(client):
+    response = client.put(
+        "api/v1/service/new", json={"name": "Simbad", "config": {"config": "test"}}
+    )
     response = client.post(
         "api/v1/source/new?name={}&astroquery_service={}".format("m1", "Simbad")
     )
-
+    print("response: ", response)
     id = response.json()["id"]
     assert response.status_code == 200
 
