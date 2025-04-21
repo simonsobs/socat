@@ -103,6 +103,7 @@ def test_bad_id(client):
         response.raise_for_status()
 
     # TODO: should move to a different func
+    # Testing invalid box bounds
     response = client.post(
         "api/v1/source/box",
         json={"ra_min": 1, "ra_max": 0, "dec_min": 1, "dec_max": 0},

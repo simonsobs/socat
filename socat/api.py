@@ -2,15 +2,22 @@
 The web API to access the socat database.
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import socat.astroquery as soaq
 import socat.core as core
 
-from .database import ALL_TABLES, ExtragalacticSource, async_engine, get_async_session
+from .database import (
+    ALL_TABLES,
+    AstroqueryService,
+    ExtragalacticSource,
+    async_engine,
+    get_async_session,
+)
 
 
 async def lifespan(f: FastAPI):
@@ -30,9 +37,25 @@ router = APIRouter(prefix="/api/v1")
 SessionDependency = Annotated[AsyncSession, Depends(get_async_session)]
 
 
+class ServiceModificationRequestion(BaseModel):
+    """
+    Class which defines which service atributes are available to modify
+
+    Attributes
+    ----------
+    name : str | None
+        Name of service
+    config: dict[str, Any]  | None
+        json to be deserialized to config options
+    """
+
+    name: str | None
+    config: dict[str, Any]
+
+
 class SourceModificationRequest(BaseModel):
     """
-    Class which defines which atributes are available to modify
+    Class which defines which source atributes are available to modify
 
     Attributes
     ----------
@@ -40,10 +63,13 @@ class SourceModificationRequest(BaseModel):
         RA of source
     dec : float | None
         Dec of source
+    name : str | None
+        Name of source
     """
 
     ra: float | None
     dec: float | None
+    name: str | None = None
 
 
 class BoxRequest(BaseModel):
@@ -68,6 +94,168 @@ class BoxRequest(BaseModel):
     dec_max: float
 
 
+@router.put("/service/new")
+async def create_service(
+    model: ServiceModificationRequestion,
+    session: SessionDependency,
+) -> AstroqueryService:
+    """
+    Create a new astroquery service in the catalog
+
+    Parameters
+    ----------
+    model : ServiceModificationRequest
+        Object which contains name, common_api, and common attributes of service
+    session : SessionDependency
+        Asynchronous session to be used
+
+    Returns
+    -------
+    response : AstroqueryService
+       socat.database.AstroqueryService object which was added to the catalog.
+
+    Raises
+    ------
+    HTTPException
+        If the model does not contain required info or api response is malformed
+    """
+
+    try:
+        response = await core.create_service(
+            name=model.name, config=model.config, session=session
+        )
+    except ValidationError as e:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
+
+    return response
+
+
+@router.get("/service/{service_id}")
+async def get_service(service_id: int, session: SessionDependency) -> AstroqueryService:
+    """
+    Get a astroquery service by id from the database
+
+    Parameters
+    ----------
+    service_id : int
+        ID of service to querry
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns:
+    --------
+    response : AstroqueryService
+        socat.database.AstroqueryService corresponding to id
+
+    Raises
+    ------
+    HTTPException
+        If id does not correspond to any service
+    """
+    try:
+        response = await core.get_service(service_id, session=session)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    return response
+
+
+@router.get("/service/")
+async def get_service_name(
+    service_name: str, session: SessionDependency
+) -> list[AstroqueryService]:
+    """
+    Get an astroquery service by name from the database.
+
+    Parameters
+    ----------
+    service_name : str
+        Name of service to query
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns:
+    --------
+    response : AstroqueryService
+        socat.database.AstroqueryService corresponding to name
+
+    Raises
+    ------
+    HTTPException
+        If name does not correspond to any service
+    """
+    try:
+        response = await core.get_service_name(service_name, session=session)
+    except ValueError as e:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return response
+
+
+@router.post("/service/{service_id}")
+async def update_service(
+    service_id: int, model: ServiceModificationRequestion, session: SessionDependency
+) -> AstroqueryService:
+    """
+    Update astroquery service parameters by id
+
+    Parameters
+    ----------
+    service_name : int
+        Name of source to update
+    model : ServiceModificationRequestion
+        Parameters of service to modify
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns
+    -------
+    response :  AstroqueryService
+        socat.database.AstroqueryService that has been modified
+
+    Raises
+    ------
+    HTTPException
+        If id does not correspond to any source
+    """
+    try:
+        response = await core.update_service(
+            service_id, model.name, config=model.config, session=session
+        )
+    except ValueError as e:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    return response
+
+
+@router.delete("/service/{service_id}")
+async def delete_service(service_id: int, session: SessionDependency) -> None:
+    """
+    Delete a astroquery service by id
+
+    Parameters
+    ----------
+    service_id : int
+        ID of astroquery service to delete
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns
+    -------
+    None
+
+
+    Raises
+    ------
+    HTTPException
+        If name does not correspond to any service
+    """
+    try:
+        await core.delete_service(service_id, session=session)
+    except ValueError as e:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return
+
+
 @router.put("/source/new")
 async def create_source(
     model: SourceModificationRequest, session: SessionDependency
@@ -79,13 +267,14 @@ async def create_source(
     ----------
     model : SourceModificationRequest
         Object which contains all attributes of source
-    session : SessionDependencey
+    session : SessionDependency
         Asynchronous session to be used
 
     Returns
     -------
     response : ExtragalacticSource
         socat.database.ExtragalacticSource object which was added to the catalog.
+
     Raises
     ------
     HTTPException
@@ -96,9 +285,74 @@ async def create_source(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="RA and Dec must be provided",
         )
+    try:
+        response = await core.create_source(
+            model.ra,
+            model.dec,
+            session=session,
+            name=model.name,
+        )
+    except ValidationError as e:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
+
+    return response
+
+
+@router.post("/source/new")
+async def create_source_name(
+    name: str,
+    astroquery_service: str,
+    session: SessionDependency,
+) -> ExtragalacticSource:
+    """
+    Create a new source by name, resolve using astroquery_service.
+
+    Parameters
+    ----------
+    name : str
+        Name of source to resolve
+    astroquery_service : str
+        Name of astroquery service to use to resolve name
+    session : SessionDependency
+        Asynchronous session to be used
+
+    Returns
+    -------
+    response : ExtragalacticSource
+        socat.database.ExtragalacticSource object which was added to the catalog.
+
+    Raises
+    ------
+    HTTPException
+        If the astroquery service is not supported, if RA/dec aren't requested, or api response is malformed.
+    """
+
+    services = await get_service_name(astroquery_service, session=session)
+
+    if len(services) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Service {} is not available.".format(astroquery_service),
+        )
+
+    result_table = await soaq.get_source_info(
+        name=name,
+        astroquery_service=astroquery_service,
+    )
+
+    if result_table["ra"] is None or result_table["dec"] is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="RA or Dec unresolved by {}.".format(astroquery_service),
+        )
 
     try:
-        response = await core.create_source(model.ra, model.dec, session=session)
+        response = await core.create_source(
+            result_table["ra"],
+            result_table["dec"],
+            session=session,
+            name=name,
+        )
     except ValidationError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
 
