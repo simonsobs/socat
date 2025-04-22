@@ -1,13 +1,19 @@
 import warnings
 from importlib import import_module
+from typing import Any
 
+import astropy.units as u
+import numpy as np
+from astropy import coordinates
 from astroquery.query import BaseVOQuery
 from asyncer import asyncify
+
+from .core import AstroqueryService
 
 
 async def get_source_info(
     name: str, astroquery_service: str, requested_params: list[str] = ["ra", "dec"]
-):
+) -> dict:
     """
     Get source info by name using astroquery
 
@@ -43,7 +49,7 @@ async def get_source_info(
         warnings.warn(
             "More than one source resolved, returning first"
         )  # pragma: no cover
-
+    print("KEYS", result_table.keys())
     result_dict = {param: None for param in requested_params}
     if len(result_table) == 0:
         return result_dict
@@ -61,3 +67,57 @@ async def get_source_info(
             continue
 
     return result_dict
+
+
+async def cone_search(
+    ra: float, dec: float, service_list: list[AstroqueryService], radius: float = 1.5
+) -> list[dict[str, Any]]:
+    """
+    Function which uses astroquery to perform a cone search across.
+    The cone is centered on ra/dec with radius radius, and searches all services in service_list.
+    If service_list isn't specified, then searches all available services.
+
+    Parameters
+    ----------
+    ra : float
+        Ra of cone center, deg, -180 to 180 def
+    dec : float
+        Dec of cone center, deg
+    radius : float, Default: 1.5
+        Radius of cone search, arcmin
+    service_list : list[str] | None, Default: None
+        Services to check. If None, all available services are searched
+
+    Returns
+    -------
+    source_list : list[str]
+        List of names of sources in cone
+    """
+
+    source_list = []
+    center = coordinates.SkyCoord(ra * u.deg, dec * u.deg)
+
+    for service in service_list:
+        cur_service: BaseVOQuery = getattr(
+            import_module(f"astroquery.{service.name.lower()}"),
+            service.name,
+        )
+        result_table = await asyncify(cur_service.query_region)(
+            center, radius=radius * u.arcmin
+        )
+        for i in range(len(result_table)):
+            name = result_table[service.config["name_col"]].value.data[i]
+            cur_ra = result_table[service.config["ra_col"]].value.data[i]
+            cur_dec = result_table[service.config["dec_col"]].value.data[i]
+            source_list.append(
+                {
+                    "name": name,
+                    "ra": float(cur_ra),
+                    "dec": float(cur_dec),
+                    "provider": str(service.name),
+                    "distance": np.sqrt((ra - cur_ra) ** 2 + (dec - cur_dec) ** 2),
+                }
+            )
+
+    print(len(source_list))
+    return source_list
