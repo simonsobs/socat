@@ -94,6 +94,25 @@ class BoxRequest(BaseModel):
     dec_max: float
 
 
+class ConeRequest(BaseModel):
+    """
+    Class which defines attribues of cone requests
+
+    Attributes
+    ----------
+    ra : float
+        Ra of cone center
+    dec : float
+        Dec of cone center
+    radius : float
+        Radius of cone center
+    """
+
+    ra: float
+    dec: float
+    radius: float
+
+
 @router.put("/service/new")
 async def create_service(
     model: ServiceModificationRequestion,
@@ -357,6 +376,39 @@ async def create_source_name(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
 
     return response
+
+
+@router.post("/cone")  # TODO: Not sure if this is the right path
+async def get_cone_astroquery(
+    cone: ConeRequest,
+    session: SessionDependency,
+) -> list[
+    dict[str, Any]
+]:  # TODO: Should this return info other than names like ra/dec/what service it came from
+    """
+    Get all sources in cone centered on ra/dec with radius using astroquery.
+    All services in service_list will be queried.
+    If service_list is none, then all available services in AstroqueryServiceTable will be searched
+
+    Parameters
+    ----------
+    cone : ConeRequest
+        Cone request specifying ra/dec and radius of cond
+    session :  SessionDependeny
+        Asynchronous session to use
+
+    Returns
+    -------
+    source_list : list[str]
+        List of names of all sources within cone
+    """
+    service_list = await core.get_all_services(session=session)
+
+    source_list = await soaq.cone_search(
+        ra=cone.ra, dec=cone.dec, service_list=service_list, radius=cone.radius
+    )
+
+    return source_list
 
 
 @router.post("/source/box")
