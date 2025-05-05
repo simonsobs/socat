@@ -1,14 +1,39 @@
 import warnings
 from importlib import import_module
-from typing import Any
 
 import astropy.units as u
 import numpy as np
 from astropy import coordinates
 from astroquery.query import BaseVOQuery
 from asyncer import asyncify
+from pydantic import BaseModel
 
 from .core import AstroqueryService
+
+
+class AstroqueryReturn(BaseModel):
+    """
+    Pydantic Model which contains information about a source returned by astroquery.
+
+    Attributes
+    ----------
+    name : str
+        Name of the source
+    ra : float
+        RA of source
+    dec : float
+        Dec of the source
+    provider : str
+        Service which resolved this source
+    distance : float
+        Distance of source to center of query
+    """
+
+    name: str
+    ra: float
+    dec: float
+    provider: str
+    distance: float
 
 
 async def get_source_info(
@@ -49,7 +74,7 @@ async def get_source_info(
         warnings.warn(
             "More than one source resolved, returning first"
         )  # pragma: no cover
-    print("KEYS", result_table.keys())
+
     result_dict = {param: None for param in requested_params}
     if len(result_table) == 0:
         return result_dict
@@ -71,7 +96,7 @@ async def get_source_info(
 
 async def cone_search(
     ra: float, dec: float, service_list: list[AstroqueryService], radius: float = 1.5
-) -> list[dict[str, Any]]:
+) -> list[AstroqueryReturn]:
     """
     Function which uses astroquery to perform a cone search across.
     The cone is centered on ra/dec with radius radius, and searches all services in service_list.
@@ -90,8 +115,8 @@ async def cone_search(
 
     Returns
     -------
-    source_list : list[str]
-        List of names of sources in cone
+    source_list : list[AstroqueryReturn]
+        List of AstroqueryReturn objects specifying name, ra, dec, provider, and distance from center of source
     """
 
     source_list = []
@@ -110,14 +135,13 @@ async def cone_search(
             cur_ra = result_table[service.config["ra_col"]].value.data[i]
             cur_dec = result_table[service.config["dec_col"]].value.data[i]
             source_list.append(
-                {
-                    "name": name,
-                    "ra": float(cur_ra),
-                    "dec": float(cur_dec),
-                    "provider": str(service.name),
-                    "distance": np.sqrt((ra - cur_ra) ** 2 + (dec - cur_dec) ** 2),
-                }
+                AstroqueryReturn(
+                    name=name,
+                    ra=float(cur_ra),
+                    dec=float(cur_dec),
+                    provider=str(service.name),
+                    distance=np.sqrt((ra - cur_ra) ** 2 + (dec - cur_dec) ** 2),
+                )
             )
 
-    print(len(source_list))
     return source_list

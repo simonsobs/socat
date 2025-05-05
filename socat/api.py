@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import socat.astroquery as soaq
 import socat.core as core
+from socat.astroquery import AstroqueryReturn
 
 from .database import (
     ALL_TABLES,
@@ -383,7 +384,7 @@ async def get_cone_astroquery(
     cone: ConeRequest,
     session: SessionDependency,
 ) -> list[
-    dict[str, Any]
+    AstroqueryReturn
 ]:  # TODO: Should this return info other than names like ra/dec/what service it came from
     """
     Get all sources in cone centered on ra/dec with radius using astroquery.
@@ -399,8 +400,8 @@ async def get_cone_astroquery(
 
     Returns
     -------
-    source_list : list[str]
-        List of names of all sources within cone
+    source_list : list[AstroqueryReturn]
+        List of AstroqueryReturn objects specifying name, ra, dec, provider, and distance from center of source
     """
     service_list = await core.get_all_services(session=session)
 
