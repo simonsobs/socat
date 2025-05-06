@@ -69,6 +69,30 @@ async def get_service(service_id: int, session: AsyncSession) -> AstroqueryServi
     return service
 
 
+async def get_all_services(session: AsyncSession) -> list[AstroqueryService]:
+    """
+    Return all astroquery services.
+
+    Parameters
+    ----------
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    service_list : list[AstroqueryService]
+        List of all available astroquery services
+    """
+
+    async with session.begin():
+        stmt = select(AstroqueryServiceTable)
+        services = await session.execute(stmt)
+
+    service_list = [s.to_model() for s in services.scalars().all()]
+
+    return service_list
+
+
 async def get_service_name(
     service_name: str, session: AsyncSession
 ) -> list[AstroqueryService]:
@@ -84,8 +108,8 @@ async def get_service_name(
 
     Returns
     -------
-    service.to_mode() : AstroqueryService
-        Requested astroquery service
+    service_list : list[AstroqueryService]
+        Requested astroquery services
 
     Raises
     ------

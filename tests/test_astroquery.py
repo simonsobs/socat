@@ -80,6 +80,7 @@ def test_add_source_by_name(client):
     response = client.put(
         "api/v1/service/new", json={"name": "Simbad", "config": {"config": "test"}}
     )
+    service_id = response.json()["id"]
     response = client.post(
         "api/v1/source/new?name={}&astroquery_service={}".format("m1", "Simbad")
     )
@@ -123,6 +124,9 @@ def test_add_source_by_name(client):
 
     assert response.status_code == 200
 
+    response = client.delete("api/v1/service/{}".format(service_id))
+    assert response.status_code == 200
+
 
 def test_bad_request_service_by_name(client):
     with pytest.raises(HTTPStatusError):
@@ -140,3 +144,22 @@ def test_bad_request_service_by_name(client):
             )
         )
         response.raise_for_status()
+
+
+def test_cone_search(client):
+    response = client.post(
+        "api/v1/cone", json={"ra": 115.43541667, "dec": 74.24408333, "radius": 1.5}
+    )
+
+    assert response.status_code == 200
+
+    # Note: This test is pretty bad as the results will change both
+    # if astroquery updates anything, or if astroquery services (e.g. Simbad)
+    # change anything OR even if we change the list of usable services.
+    # Not sure what else to do, tho
+    source = response.json()[0]
+    assert source["name"] == "ZwCl 0735+7421"
+    assert source["ra"] == 115.41791666666667
+    assert source["dec"] == 74.24944444444445
+    assert source["distance"] == 0.018302777514708473
+    assert len(response.json()) == 30
