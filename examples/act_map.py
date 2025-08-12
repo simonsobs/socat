@@ -1,8 +1,11 @@
+import sys
+
 from astropy.io import fits
 
 from socat.client import mock
 
-path = "/home/jack/PS_S19_f090_2pass_optimalCatalog.fits"
+path = sys.argv[1]
+
 hdu = fits.open(path)
 
 act_cat = hdu[1]
