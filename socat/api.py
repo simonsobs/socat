@@ -64,12 +64,15 @@ class SourceModificationRequest(BaseModel):
         RA of source
     dec : float | None
         Dec of source
+    flux : float | None
+        Flux of source
     name : str | None
         Name of source
     """
 
     ra: float | None
     dec: float | None
+    flux: float | None
     name: str | None = None
 
 
@@ -309,6 +312,7 @@ async def create_source(
         response = await core.create_source(
             model.ra,
             model.dec,
+            flux=model.flux,
             session=session,
             name=model.name,
         )
@@ -371,6 +375,7 @@ async def create_source_name(
             result_table["ra"],
             result_table["dec"],
             session=session,
+            flux=result_table.get("flux", None),
             name=name,
         )
     except ValidationError as e:  # pragma: no cover
@@ -508,7 +513,7 @@ async def update_source(
     """
     try:
         response = await core.update_source(
-            source_id, model.ra, model.dec, session=session
+            source_id, model.ra, model.dec, session=session, flux=model.flux, name=model.name
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

@@ -79,17 +79,20 @@ class ExtragalacticSource(BaseModel):
         RA of source in degress (-180 to 180)
     dec : float
         Dec of source in degrees
+    flux : float | None
+        Flux of source in Jy. Not required
     name : str | None
         Name of source. Not required
     """
 
     id: int
-    ra: float = PydanticField(ge=-180.0, le=180.0)
+    ra: float = PydanticField(ge=0.0, le=360.0)
     dec: float = PydanticField(ge=-90.0, le=90.0)
+    flux: float | None = None
     name: str | None
 
     def __repr__(self):
-        return f"ExtragalacticSource(id={self.id}, ra={self.ra}, dec={self.dec}, name={self.name})"  # pragma: no cover
+        return f"ExtragalacticSource(id={self.id}, ra={self.ra}, dec={self.dec}, flux={self.flux}, name={self.name})"  # pragma: no cover
 
 
 class ExtragalacticSourceTable(ExtragalacticSource, SQLModel, table=True):
@@ -118,7 +121,7 @@ class ExtragalacticSourceTable(ExtragalacticSource, SQLModel, table=True):
         ExtragalaticSource : ExtragalacticSource
             Source corresponding to this id.
         """
-        return ExtragalacticSource(id=self.id, ra=self.ra, dec=self.dec, name=self.name)
+        return ExtragalacticSource(id=self.id, ra=self.ra, dec=self.dec, name=self.name, flux=self.flux)
 
 
 ALL_TABLES = [ExtragalacticSourceTable, AstroqueryServiceTable]

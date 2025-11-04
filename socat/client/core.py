@@ -52,6 +52,7 @@ class ClientBase(ABC):
         id: int,
         ra: float | None = None,
         dec: float | None = None,
+        flux: float | None = None,
         name: str | None = None,
     ) -> ExtragalacticSource | None:
         """

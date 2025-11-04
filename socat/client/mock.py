@@ -109,15 +109,11 @@ class Client(ClientBase):
                 result_dict[param] = result_table[param].value.data[
                     0
                 ]  # TODO: currently only take first match.
-                if param == "ra" and result_dict[param] > 180:
-                    result_dict[param] = -1 * (
-                        360 - result_dict[param]
-                    )  # Astroquery uses a 0-360 standard vs -180 to 180
             # Maybe should warn if more than one match?
             except KeyError:  # pragma: no cover
                 continue
         source = ExtragalacticSource(
-            id=self.n, ra=result_dict["ra"], dec=result_dict["dec"], name=name
+            id=self.n, ra=result_dict["ra"], dec=result_dict["dec"], name=name, flux=result_dict.get("flux", None)
         )
         self.catalog[self.n] = source
         self.n += 1
@@ -176,6 +172,7 @@ class Client(ClientBase):
         id: int,
         ra: float | None = None,
         dec: float | None = None,
+        flux: float | None = None,
         name: str | None = None,
     ) -> ExtragalacticSource | None:
         """
@@ -187,6 +184,8 @@ class Client(ClientBase):
             RA of source
         dec : float | None, Default: None
             Dec of source
+        flux : float | None, Default: None
+            Flux of source
         name : str | None, Default: None
             Name of source
 
@@ -205,6 +204,7 @@ class Client(ClientBase):
             ra=current.ra if ra is None else ra,
             dec=current.dec if dec is None else dec,
             name=current.name if name is None else name,
+            flux=current.flux if flux is None else flux,
         )
 
         self.catalog[id] = new
