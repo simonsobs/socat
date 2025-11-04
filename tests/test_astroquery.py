@@ -116,7 +116,7 @@ def test_add_source_by_name(client):
     response = client.get("api/v1/source/{}".format(id))
 
     assert response.status_code == 200
-    assert response.json()["ra"] == -36.63741666666664
+    assert response.json()["ra"] == 323.362583333
     assert response.json()["dec"] == -0.8232499999999998
     assert response.json()["name"] == "m2"
 

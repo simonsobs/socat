@@ -26,7 +26,7 @@ def test_add_and_retrieve(client):
 
 
 def test_get_box(client):
-    response = client.put("api/v1/source/new", json={"ra": 0.0, "dec": 0.0})
+    response = client.put("api/v1/source/new", json={"ra": 0.1, "dec": 0.0})
     id1 = response.json()["id"]
     response = client.put("api/v1/source/new", json={"ra": 1.0, "dec": 1.0})
     id2 = response.json()["id"]
@@ -34,7 +34,7 @@ def test_get_box(client):
     # Check we recover both sources
     response = client.post(
         "api/v1/source/box",
-        json={"ra_min": -1, "ra_max": 1, "dec_min": -1, "dec_max": 1},
+        json={"ra_min": 0.0, "ra_max": 2.0, "dec_min": -1.0, "dec_max": 1.0},
     )
 
     assert response.status_code == 200
@@ -49,7 +49,7 @@ def test_get_box(client):
     # Check we don't recover second source
     response = client.post(
         "api/v1/source/box",
-        json={"ra_min": -1, "ra_max": 0, "dec_min": -1, "dec_max": 0},
+        json={"ra_min": 0.0, "ra_max": 0.1, "dec_min": -1.0, "dec_max": 0.0},
     )
 
     assert response.status_code == 200

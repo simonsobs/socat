@@ -24,7 +24,7 @@ def test_add_and_remove_by_name(mock_client):
 
     source = mock_client.create_name(name="m2", astroquery_service="Simbad")
     assert source.id == 0
-    assert source.ra == -36.63741666666664
+    assert source.ra == 323.362583333
     assert source.dec == -0.8232499999999998
 
     mock_client.delete_source(id=0)
@@ -46,7 +46,7 @@ def test_box(mock_client):
     source = mock_client.create(ra=1.0, dec=1.0)
     id2 = source.id
 
-    sources = mock_client.get_box(ra_min=-1.0, ra_max=1.0, dec_min=-1.0, dec_max=1.0)
+    sources = mock_client.get_box(ra_min=0.0, ra_max=2.0, dec_min=-1.0, dec_max=1.0)
 
     id_list = []
     for source in sources:
@@ -55,7 +55,7 @@ def test_box(mock_client):
     assert id1 in id_list
     assert id2 in id_list
 
-    sources = mock_client.get_box(ra_min=-1.0, ra_max=0.0, dec_min=-1.0, dec_max=0.0)
+    sources = mock_client.get_box(ra_min=0.0, ra_max=0.1, dec_min=-1.0, dec_max=0.0)
 
     id_list = []
     for source in sources:
