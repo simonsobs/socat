@@ -71,7 +71,7 @@ class Client(ClientBase):
         source : ExtragalacticSource
             Extragalactic Source that was added
         """
-        source = ExtragalacticSource(id=self.n, ra=ra, dec=dec, name=name)
+        source = ExtragalacticSource(id=self.n, ra=ra, dec=dec, flux=flux, name=name)
         self.catalog[self.n] = source
         self.n += 1
 
