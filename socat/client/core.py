@@ -13,7 +13,7 @@ from socat.database import AstroqueryService, ExtragalacticSource
 class ClientBase(ABC):
     @abstractmethod
     def create(
-        self, *, ra: float, dec: float, flux: float, name: str | None = None
+        self, *, ra: float, dec: float, flux: float | None = None, name: str | None = None
     ) -> ExtragalacticSource:
         """
         Create a new source in the catlaog.

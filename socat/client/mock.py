@@ -50,7 +50,7 @@ class Client(ClientBase):
         self.n = 0
 
     def create(
-        self, *, ra: float, dec: float, name: str | None = None
+        self, *, ra: float, dec: float, flux: float | None = None, name: str | None = None
     ) -> ExtragalacticSource:
         """
         Create a new source and add it to the catalog.
