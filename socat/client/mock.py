@@ -61,6 +61,8 @@ class Client(ClientBase):
             RA of source
         dec : float
             Dec of source
+        flux : float | None, Default: None
+            Flux of source
         name : str | None, Default: None
             Name of source
 
