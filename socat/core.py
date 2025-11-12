@@ -322,8 +322,8 @@ async def update_source(
     source_id: int,
     ra: float | None,
     dec: float | None,
-    flux: float | None,
     session: AsyncSession,
+    flux: float | None = None,
     name: str | None = None,
 ) -> ExtragalacticSource:
     """

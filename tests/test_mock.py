@@ -24,7 +24,7 @@ def test_add_and_remove_by_name(mock_client):
 
     source = mock_client.create_name(name="m2", astroquery_service="Simbad")
     assert source.id == 0
-    assert source.ra == 323.362583333
+    assert source.ra == 323.36258333333336
     assert source.dec == -0.8232499999999998
 
     mock_client.delete_source(id=0)

@@ -25,6 +25,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("ra", sa.Float, nullable=False),
         sa.Column("dec", sa.Float, nullable=False),
+        sa.Column("flux", sa.Float, nullable=True),
         sa.Column("name", sa.String, nullable=True),
     )
 
