@@ -23,6 +23,8 @@ class AstroqueryReturn(BaseModel):
         RA of source
     dec : float
         Dec of the source
+    flux : float | None
+        Flux of source in Jy. Optional.
     provider : str
         Service which resolved this source
     distance : float
@@ -32,6 +34,7 @@ class AstroqueryReturn(BaseModel):
     name: str
     ra: float
     dec: float
+    flux: float | None
     provider: str
     distance: float
 
@@ -105,7 +108,7 @@ async def cone_search(
     Parameters
     ----------
     ra : float
-        Ra of cone center, deg, -180 to 180 def
+        Ra of cone center, deg
     dec : float
         Dec of cone center, deg
     radius : float, Default: 1.5
@@ -134,13 +137,15 @@ async def cone_search(
             name = result_table[service.config["name_col"]].value.data[i]
             cur_ra = result_table[service.config["ra_col"]].value.data[i]
             cur_dec = result_table[service.config["dec_col"]].value.data[i]
+            cur_flux = result_table[service.config["flux_col"]].value.data[i] if "flux_col" in service.config else None
             source_list.append(
                 AstroqueryReturn(
                     name=name,
                     ra=float(cur_ra),
                     dec=float(cur_dec),
+                    flux=float(cur_flux) if cur_flux is not None else None,
                     provider=str(service.name),
-                    distance=np.sqrt((ra - cur_ra) ** 2 + (dec - cur_dec) ** 2),
+                    distance=np.sqrt((ra - cur_ra) ** 2 + (dec - cur_dec) ** 2), ##TODO: use astropy separation and skycoords
                 )
             )
 

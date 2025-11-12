@@ -31,12 +31,12 @@ async def test_add_and_retrieve(database_async_sesionmaker):
 @pytest.mark.asyncio
 async def test_box(database_async_sesionmaker):
     async with database_async_sesionmaker() as session:
-        id1 = (await core.create_source(0.0, 0.0, session=session)).id
+        id1 = (await core.create_source(0.1, 0.0, session=session)).id
         id2 = (await core.create_source(1.0, 1.0, session=session)).id
 
     # Test we recover both sources
     async with database_async_sesionmaker() as session:
-        source_list = await core.get_box(-1, 2, -1, 2, session=session)
+        source_list = await core.get_box(0, 2, -1, 2, session=session)
 
         id_list = []
         for source in source_list:
@@ -47,7 +47,7 @@ async def test_box(database_async_sesionmaker):
 
     # Test we don't recover source not in box
     async with database_async_sesionmaker() as session:
-        source_list = await core.get_box(-1, 0.5, -1, 0.5, session=session)
+        source_list = await core.get_box(0, 0.5, -1, 0.5, session=session)
 
         id_list = []
         for source in source_list:

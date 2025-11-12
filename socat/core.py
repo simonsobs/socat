@@ -215,6 +215,7 @@ async def create_source(
     dec: float,
     session: AsyncSession,
     name: str | None = None,
+    flux: float | None = None,
 ) -> ExtragalacticSource:
     """
     Create a new source in the database.
@@ -225,8 +226,10 @@ async def create_source(
         RA of source
     dec : float
         Dec of source
+    flux : float | None
+        Flux of source in Jy. Optional.
     name : str | None
-        Name of source. Not required.
+        Name of source. Optional.
     session : AsyncSession
         Asynchronous session to use
 
@@ -235,7 +238,7 @@ async def create_source(
     source.to_model() : ExtragalacticSource
         Source that has been created
     """
-    source = ExtragalacticSourceTable(ra=ra, dec=dec, name=name)
+    source = ExtragalacticSourceTable(ra=ra, dec=dec, name=name, flux=flux)
 
     async with session.begin():
         session.add(source)
@@ -319,6 +322,7 @@ async def update_source(
     source_id: int,
     ra: float | None,
     dec: float | None,
+    flux: float | None,
     session: AsyncSession,
     name: str | None = None,
 ) -> ExtragalacticSource:
@@ -331,6 +335,8 @@ async def update_source(
         RA of source
     dec : float | None
         Dec of source
+    flux : float | None
+        Flux of source in Jy. Optional.
     session : AsyncSession
         Asynchronous session to use
     name : str | None
@@ -355,6 +361,7 @@ async def update_source(
 
         source.ra = ra if ra is not None else source.ra
         source.dec = dec if dec is not None else source.dec
+        source.flux = flux if flux is not None else source.flux
         source.name = name if name is not None else source.name
 
         await session.commit()
