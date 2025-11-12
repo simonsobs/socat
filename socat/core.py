@@ -227,9 +227,9 @@ async def create_source(
     dec : float
         Dec of source
     flux : float | None
-        Flux of source in Jy. Not required.
+        Flux of source in Jy. Optional.
     name : str | None
-        Name of source. Not required.
+        Name of source. Optional.
     session : AsyncSession
         Asynchronous session to use
 
@@ -336,7 +336,7 @@ async def update_source(
     dec : float | None
         Dec of source
     flux : float | None
-        Flux of source in Jy. Not required.
+        Flux of source in Jy. Optional.
     session : AsyncSession
         Asynchronous session to use
     name : str | None

@@ -80,9 +80,9 @@ class ExtragalacticSource(BaseModel):
     dec : float
         Dec of source in degrees
     flux : float | None
-        Flux of source in Jy. Not required
+        Flux of source in Jy. Optional
     name : str | None
-        Name of source. Not required
+        Name of source. Optional
     """
 
     id: int

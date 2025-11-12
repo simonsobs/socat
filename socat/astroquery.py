@@ -24,7 +24,7 @@ class AstroqueryReturn(BaseModel):
     dec : float
         Dec of the source
     flux : float | None
-        Flux of source in Jy. Not required.
+        Flux of source in Jy. Optional.
     provider : str
         Service which resolved this source
     distance : float

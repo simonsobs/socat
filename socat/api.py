@@ -372,8 +372,8 @@ async def create_source_name(
 
     try:
         response = await core.create_source(
-            result_table["ra"],
-            result_table["dec"],
+            ra=result_table["ra"],
+            dec=result_table["dec"],
             session=session,
             flux=result_table.get("flux", None),
             name=name,
