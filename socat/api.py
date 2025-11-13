@@ -4,6 +4,7 @@ The web API to access the socat database.
 
 from typing import Annotated, Any
 
+from astropy.coordinates import ICRS
 from astropydantic import AstroPydanticICRS, AstroPydanticQuantity, AstroPydanticUnit
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel, ValidationError
@@ -354,16 +355,17 @@ async def create_source_name(
         astroquery_service=astroquery_service,
     )
 
-    if result_table["ra"] is None or result_table["dec"] is None:
+    if result_table.get("ra", None) is None or result_table.get("dec", None) is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="RA or Dec unresolved by {}.".format(astroquery_service),
         )
 
+    position = ICRS(ra=result_table.get("ra", None), dec=result_table.get("dec", None))
+
     try:
         response = await core.create_source(
-            ra=result_table.get("ra", None),
-            dec=result_table.get("dec", None),
+            position=position,
             session=session,
             flux=result_table.get("flux", None),
             name=name,
