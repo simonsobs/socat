@@ -3,7 +3,17 @@ from httpx import HTTPStatusError
 
 
 def test_add_and_retrieve(client):
-    response = client.put("api/v1/source/new", json={"ra": 0.0, "dec": 0.0})
+    response = client.put(
+        "api/v1/source/new",
+        json={
+            "position": {
+                "ra": {"value": 0, "unit": "deg"},
+                "dec": {"value": 0, "unit": "deg"},
+            },
+            "flux": 1.5,
+            "name": "mySrc",
+        },
+    )
 
     id = response.json()["id"]
     assert response.status_code == 200
@@ -13,6 +23,8 @@ def test_add_and_retrieve(client):
     assert response.status_code == 200
     assert response.json()["ra"] == 0.0
     assert response.json()["dec"] == 0.0
+    assert response.json()["flux"] == 1.5
+    assert response.json()["name"] == "mySrc"
 
     response = client.delete("api/v1/source/{}".format(id))
 
@@ -26,15 +38,44 @@ def test_add_and_retrieve(client):
 
 
 def test_get_box(client):
-    response = client.put("api/v1/source/new", json={"ra": 0.1, "dec": 0.0})
+    response = client.put(
+        "api/v1/source/new",
+        json={
+            "position": {
+                "ra": {"value": 1.0, "unit": "deg"},
+                "dec": {"value": 1.0, "unit": "deg"},
+            },
+            "flux": 1.5,
+            "name": "mySrc",
+        },
+    )
     id1 = response.json()["id"]
-    response = client.put("api/v1/source/new", json={"ra": 1.0, "dec": 1.0})
+    response = client.put(
+        "api/v1/source/new",
+        json={
+            "position": {
+                "ra": {"value": 2.0, "unit": "deg"},
+                "dec": {"value": 2.0, "unit": "deg"},
+            },
+            "flux": 1.5,
+            "name": "mySrc2",
+        },
+    )
     id2 = response.json()["id"]
 
     # Check we recover both sources
     response = client.post(
         "api/v1/source/box",
-        json={"ra_min": 0.0, "ra_max": 2.0, "dec_min": -1.0, "dec_max": 1.0},
+        json={
+            "lower_left": {
+                "ra": {"value": 0.0, "unit": "deg"},
+                "dec": {"value": 0.0, "unit": "deg"},
+            },
+            "upper_right": {
+                "ra": {"value": 3.0, "unit": "deg"},
+                "dec": {"value": 3.0, "unit": "deg"},
+            },
+        },
     )
 
     assert response.status_code == 200
@@ -49,7 +90,16 @@ def test_get_box(client):
     # Check we don't recover second source
     response = client.post(
         "api/v1/source/box",
-        json={"ra_min": 0.0, "ra_max": 0.1, "dec_min": -1.0, "dec_max": 0.0},
+        json={
+            "lower_left": {
+                "ra": {"value": 0.0, "unit": "deg"},
+                "dec": {"value": 0.0, "unit": "deg"},
+            },
+            "upper_right": {
+                "ra": {"value": 1.5, "unit": "deg"},
+                "dec": {"value": 1.5, "unit": "deg"},
+            },
+        },
     )
 
     assert response.status_code == 200
@@ -67,17 +117,39 @@ def test_get_box(client):
 
 
 def test_update(client):
-    response = client.put("api/v1/source/new", json={"ra": 0.0, "dec": 0.0})
+    response = client.put(
+        "api/v1/source/new",
+        json={
+            "position": {
+                "ra": {"value": 1.0, "unit": "deg"},
+                "dec": {"value": 1.0, "unit": "deg"},
+            },
+            "flux": 1.5,
+            "name": "mySrc",
+        },
+    )
 
     id = response.json()["id"]
     assert response.status_code == 200
 
-    response = client.post("api/v1/source/{}".format(id), json={"ra": 1.0, "dec": 1.0})
+    response = client.post(
+        "api/v1/source/{}".format(id),
+        json={
+            "position": {
+                "ra": {"value": 2.0, "unit": "deg"},
+                "dec": {"value": 2.0, "unit": "deg"},
+            },
+            "flux": 2.5,
+            "name": "mySrcUpdate",
+        },
+    )
 
     assert response.status_code == 200
     assert response.json()["id"] == id
-    assert response.json()["ra"] == 1.0
-    assert response.json()["dec"] == 1.0
+    assert response.json()["ra"] == 2.0
+    assert response.json()["dec"] == 2.0
+    assert response.json()["flux"] == 2.5
+    assert response.json()["name"] == "mySrcUpdate"
 
     response = client.delete("api/v1/source/{}".format(id))
     assert response.status_code == 200
