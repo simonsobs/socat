@@ -403,7 +403,7 @@ async def get_cone_astroquery(
     service_list = await core.get_all_services(session=session)
 
     source_list = await soaq.cone_search(
-        ra=cone.ra, dec=cone.dec, service_list=service_list, radius=cone.radius
+        position=cone.position, service_list=service_list, radius=cone.radius
     )
 
     return source_list
@@ -419,8 +419,7 @@ async def get_box(
     Parameters
     ----------
     box : BoxRequest
-        BoxRequest class containing ra_min,
-        ra_max, dec_min, dec_max
+        BoxRequest class containing lower_left, upper_right
     session : SessionDependeny
         Asynchronous session to use
 
@@ -441,7 +440,7 @@ async def get_box(
         )
 
     response = await core.get_box(
-        box.ra_min, box.ra_max, box.dec_min, box.dec_max, session=session
+        lower_left=box.lower_left, upper_right=box.upper_right, session=session
     )
 
     return response

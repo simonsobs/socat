@@ -3,7 +3,7 @@ from importlib import import_module
 
 import astropy.units as u
 import numpy as np
-from astropy import coordinates
+from astropy.coordinates import ICRS
 from astroquery.query import BaseVOQuery
 from asyncer import asyncify
 from pydantic import BaseModel
@@ -104,7 +104,7 @@ async def get_source_info(
 
 
 async def cone_search(
-    ra: float, dec: float, service_list: list[AstroqueryService], radius: float = 1.5
+    position: ICRS, service_list: list[AstroqueryService], radius: float = 1.5
 ) -> list[AstroqueryReturn]:
     """
     Function which uses astroquery to perform a cone search across.
@@ -129,7 +129,6 @@ async def cone_search(
     """
 
     source_list = []
-    center = coordinates.SkyCoord(ra * u.deg, dec * u.deg)
 
     for service in service_list:
         cur_service: BaseVOQuery = getattr(
@@ -137,8 +136,11 @@ async def cone_search(
             service.name,
         )
         result_table = await asyncify(cur_service.query_region)(
-            center, radius=radius * u.arcmin
+            position, radius=radius * u.arcmin
         )
+        result_table["ra"].convert_unit_to("deg")
+        result_table["dec"].convert_unit_to("deg")
+        result_table["flux"].convert_unit_to("mJy")
         for i in range(len(result_table)):
             name = result_table[service.config["name_col"]].value.data[i]
             cur_ra = result_table[service.config["ra_col"]].value.data[i]
@@ -156,7 +158,8 @@ async def cone_search(
                     flux=float(cur_flux) if cur_flux is not None else None,
                     provider=str(service.name),
                     distance=np.sqrt(
-                        (ra - cur_ra) ** 2 + (dec - cur_dec) ** 2
+                        (position.ra.to_value["deg"] - cur_ra) ** 2
+                        + (position.dec.to_value["deg"] - cur_dec) ** 2
                     ),  ##TODO: use astropy separation and skycoords
                 )
             )
