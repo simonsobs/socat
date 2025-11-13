@@ -88,8 +88,8 @@ class BoxRequest(BaseModel):
         Top right corner of box
     """
 
-    bottom_left: AstroPydanticICRS
-    top_right: AstroPydanticICRS
+    lower_left: AstroPydanticICRS
+    upper_right: AstroPydanticICRS
 
 
 class ConeRequest(BaseModel):
@@ -438,7 +438,10 @@ async def get_box(
     HTTPException
         If unphysical box bounds
     """
-    if box.ra_min > box.ra_max or box.dec_min > box.dec_max:
+    if (
+        box.lower_left.ra > box.upper_right.ra
+        or box.lower_left.dec > box.upper_right.dec
+    ):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="RA/Dec min must be <= max",

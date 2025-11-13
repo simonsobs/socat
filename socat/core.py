@@ -280,10 +280,8 @@ async def get_source(source_id: int, session: AsyncSession) -> ExtragalacticSour
 
 
 async def get_box(
-    ra_min: float,
-    ra_max: float,
-    dec_min: float,
-    dec_max: float,
+    lower_left: ICRS,
+    upper_right: ICRS,
     session: AsyncSession,
 ) -> list[ExtragalacticSource]:
     """
@@ -291,14 +289,10 @@ async def get_box(
 
     Parameters
     ----------
-    ra_min : float
-        Min ra of box
-    ra_max : float
-        Max ra of box
-    dec_min : float
-        Min dec of box
-    dec_max : float
-        Max dec of box
+    lower_left : ICRS
+        Lower left bound of box
+    upper_right : ICRS
+        Upper right bound of box
     session : AsyncSession
         Asynchronous session to use
 
@@ -307,12 +301,15 @@ async def get_box(
     source_list : list[ExtragalacticSource]
         List of sources in box
     """
+    # Unclear why float casts are needed but
+    # comparisons raise TypeError: Boolean value of this clause is not defined
+    # without the cast.
     sources = await session.execute(
         select(ExtragalacticSourceTable).where(
-            ra_min <= ExtragalacticSourceTable.ra,
-            ExtragalacticSourceTable.ra <= ra_max,
-            dec_min <= ExtragalacticSourceTable.dec,
-            ExtragalacticSourceTable.dec <= dec_max,
+            float(lower_left.ra.to_value("deg")) <= ExtragalacticSourceTable.ra,
+            ExtragalacticSourceTable.ra <= float(upper_right.ra.to_value("deg")),
+            float(lower_left.dec.to_value("deg")) <= ExtragalacticSourceTable.dec,
+            ExtragalacticSourceTable.dec <= float(upper_right.dec.to_value("deg")),
         )
     )
 
