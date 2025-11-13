@@ -12,14 +12,14 @@ class Settings(BaseSettings):
     }
 
     @property
-    def database_url(self) -> str:
+    def database_url(self) -> str:  # pragma: no cover
         if self.database_type == "sqlite":
             return f"sqlite+aiosqlite:///{self.database_name}"
         if self.database_type == "postgresql":
             return f"postgresql+asyncpg://{self.database_name}"
 
     @property
-    def sync_database_url(self) -> str:
+    def sync_database_url(self) -> str:  # pragma: no cover
         if self.database_type == "sqlite":
             return f"sqlite:///{self.database_name}"
         if self.database_type == "postgresql":

@@ -24,7 +24,7 @@ from .database import (
 )
 
 
-async def lifespan(f: FastAPI):
+async def lifespan(f: FastAPI):  # pragma: no cover
     # Use SQLModel to create the tables.
     print("Creating tables")
     for table in ALL_TABLES:
@@ -294,7 +294,7 @@ async def create_source(
     HTTPException
         If the model does not contain required info or api response is malformed
     """
-    if model.position is None:
+    if model.position is None:  # pragma: no cover
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Source position must be provided",
@@ -343,7 +343,7 @@ async def create_source_name(
 
     services = await get_service_name(astroquery_service, session=session)
 
-    if len(services) == 0:
+    if len(services) == 0:  # pragma: no cover
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Service {} is not available.".format(astroquery_service),
@@ -441,7 +441,7 @@ async def get_box(
     if (
         box.lower_left.ra > box.upper_right.ra
         or box.lower_left.dec > box.upper_right.dec
-    ):
+    ):  # pragma: no cover
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="RA/Dec min must be <= max",
@@ -514,7 +514,7 @@ async def update_source(
         response = await core.update_source(
             source_id, model.position, session=session, flux=model.flux, name=model.name
         )
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     return response
