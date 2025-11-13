@@ -4,6 +4,7 @@ Core functionality providing access to the database.
 
 from typing import Any
 
+from astropy.coordinates import ICRS
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -211,8 +212,7 @@ async def delete_service(service_id: int, session: AsyncSession) -> None:
 
 
 async def create_source(
-    ra: float,
-    dec: float,
+    position: ICRS,
     session: AsyncSession,
     name: str | None = None,
     flux: float | None = None,
@@ -222,10 +222,8 @@ async def create_source(
 
     Parameters
     ----------
-    ra : float
-        RA of source
-    dec : float
-        Dec of source
+    position : ICRS
+        ICRS position of source
     flux : float | None
         Flux of source in Jy. Optional.
     name : str | None
@@ -238,7 +236,12 @@ async def create_source(
     source.to_model() : ExtragalacticSource
         Source that has been created
     """
-    source = ExtragalacticSourceTable(ra=ra, dec=dec, name=name, flux=flux)
+    source = ExtragalacticSourceTable(
+        ra=position.ra.to_value("deg"),
+        dec=position.dec.to_value("deg"),
+        name=name,
+        flux=flux,
+    )
 
     async with session.begin():
         session.add(source)
@@ -320,8 +323,7 @@ async def get_box(
 
 async def update_source(
     source_id: int,
-    ra: float | None,
-    dec: float | None,
+    position: ICRS | None,
     session: AsyncSession,
     flux: float | None = None,
     name: str | None = None,
@@ -331,10 +333,8 @@ async def update_source(
 
     Parameters
     ----------
-    ra : float | None
-        RA of source
-    dec : float | None
-        Dec of source
+    position : ICRS | None
+        Position of source in ICRS coordinates
     flux : float | None
         Flux of source in Jy. Optional.
     session : AsyncSession
@@ -359,8 +359,12 @@ async def update_source(
         if source is None:
             raise ValueError(f"Source with ID {source_id} not found")
 
-        source.ra = ra if ra is not None else source.ra
-        source.dec = dec if dec is not None else source.dec
+        source.ra = (
+            position.ra.to_value("deg") if position.ra is not None else source.ra
+        )
+        source.dec = (
+            position.dec.to_value("deg") if position.dec is not None else source.dec
+        )
         source.flux = flux if flux is not None else source.flux
         source.name = name if name is not None else source.name
 

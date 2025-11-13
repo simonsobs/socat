@@ -4,6 +4,7 @@ The web API to access the socat database.
 
 from typing import Annotated, Any
 
+from astropydantic import AstroPydanticICRS, AstroPydanticQuantity, AstroPydanticUnit
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,18 +61,15 @@ class SourceModificationRequest(BaseModel):
 
     Attributes
     ----------
-    ra : float | None
-        RA of source
-    dec : float | None
-        Dec of source
+    position : AstroPydanticICRS | None
+        ICRS coordinates of source
     flux : float | None
-        Flux of source
+        Flux of source in mJy
     name : str | None
         Name of source
     """
 
-    ra: float | None
-    dec: float | None
+    position: AstroPydanticICRS | None
     flux: float | None
     name: str | None = None
 
@@ -82,20 +80,14 @@ class BoxRequest(BaseModel):
 
     Attributes
     ----------
-    ra_min : float
-        Minimum RA of box
-    ra_max : float
-        Maximum RA of box
-    dec_min : float
-        Minimum dec of box
-    dec_max : float
-        Maximum dec of box
+    bottom_left : AstroPydanticICRS
+        Bottom left corner of box
+    top_right : AstroPydanticICRS
+        Top right corner of box
     """
 
-    ra_min: float
-    ra_max: float
-    dec_min: float
-    dec_max: float
+    bottom_left: AstroPydanticICRS
+    top_right: AstroPydanticICRS
 
 
 class ConeRequest(BaseModel):
@@ -104,17 +96,16 @@ class ConeRequest(BaseModel):
 
     Attributes
     ----------
-    ra : float
-        Ra of cone center
-    dec : float
-        Dec of cone center
-    radius : float
+    position : AstroPydanticICRS
+        Cone center
+    radius : AstroPydanticQuantity
         Radius of cone center
+    radius_units : AstroPydanticUnit
     """
 
-    ra: float
-    dec: float
-    radius: float
+    position: AstroPydanticICRS
+    radius: AstroPydanticQuantity
+    radius_units: AstroPydanticUnit
 
 
 @router.put("/service/new")
@@ -303,15 +294,14 @@ async def create_source(
     HTTPException
         If the model does not contain required info or api response is malformed
     """
-    if model.ra is None or model.dec is None:
+    if model.position is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="RA and Dec must be provided",
+            detail="Source position must be provided",
         )
     try:
         response = await core.create_source(
-            model.ra,
-            model.dec,
+            position=model.position,
             flux=model.flux,
             session=session,
             name=model.name,
@@ -513,7 +503,7 @@ async def update_source(
     """
     try:
         response = await core.update_source(
-            source_id, model.ra, model.dec, session=session, flux=model.flux, name=model.name
+            source_id, model.position, session=session, flux=model.flux, name=model.name
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
