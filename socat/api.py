@@ -4,8 +4,9 @@ The web API to access the socat database.
 
 from typing import Annotated, Any
 
+import astropy.units as u
 from astropy.coordinates import ICRS
-from astropydantic import AstroPydanticICRS, AstroPydanticQuantity, AstroPydanticUnit
+from astropydantic import AstroPydanticICRS, AstroPydanticQuantity
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -100,13 +101,11 @@ class ConeRequest(BaseModel):
     position : AstroPydanticICRS
         Cone center
     radius : AstroPydanticQuantity
-        Radius of cone center
-    radius_units : AstroPydanticUnit
+        Radius of cone center. Unitfull.
     """
 
     position: AstroPydanticICRS
-    radius: AstroPydanticQuantity
-    radius_units: AstroPydanticUnit
+    radius: AstroPydanticQuantity[u.arcmin]
 
 
 @router.put("/service/new")
@@ -361,7 +360,11 @@ async def create_source_name(
             detail="RA or Dec unresolved by {}.".format(astroquery_service),
         )
 
-    position = ICRS(ra=result_table.get("ra", None), dec=result_table.get("dec", None))
+    # Note the conversion to degrees happens in soaq.get_source_info
+    position = ICRS(
+        ra=result_table.get("ra", None) * u.deg,
+        dec=result_table.get("dec", None) * u.deg,
+    )
 
     try:
         response = await core.create_source(
@@ -403,7 +406,9 @@ async def get_cone_astroquery(
     service_list = await core.get_all_services(session=session)
 
     source_list = await soaq.cone_search(
-        position=cone.position, service_list=service_list, radius=cone.radius
+        position=cone.position,
+        service_list=service_list,
+        radius=cone.radius,
     )
 
     return source_list

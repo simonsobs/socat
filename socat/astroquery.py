@@ -1,7 +1,6 @@
 import warnings
 from importlib import import_module
 
-import astropy.units as u
 import numpy as np
 from astropy.coordinates import ICRS
 from astroquery.query import BaseVOQuery
@@ -78,7 +77,8 @@ async def get_source_info(
     # some reason.
     result_table["ra"].convert_unit_to("deg")
     result_table["dec"].convert_unit_to("deg")
-    result_table["flux"].convert_unit_to("mJy")
+    if "flux" in result_table.keys():
+        result_table["flux"].convert_unit_to("mJy")
     if len(result_table) > 1:
         warnings.warn(
             "More than one source resolved, returning first"
@@ -104,7 +104,9 @@ async def get_source_info(
 
 
 async def cone_search(
-    position: ICRS, service_list: list[AstroqueryService], radius: float = 1.5
+    position: ICRS,
+    service_list: list[AstroqueryService],
+    radius: float,
 ) -> list[AstroqueryReturn]:
     """
     Function which uses astroquery to perform a cone search across.
@@ -117,8 +119,8 @@ async def cone_search(
         Ra of cone center, deg
     dec : float
         Dec of cone center, deg
-    radius : float, Default: 1.5
-        Radius of cone search, arcmin
+    radius : float
+        Radius of cone search
     service_list : list[str] | None, Default: None
         Services to check. If None, all available services are searched
 
@@ -136,11 +138,13 @@ async def cone_search(
             service.name,
         )
         result_table = await asyncify(cur_service.query_region)(
-            position, radius=radius * u.arcmin
+            position,
+            radius=radius,
         )
         result_table["ra"].convert_unit_to("deg")
         result_table["dec"].convert_unit_to("deg")
-        result_table["flux"].convert_unit_to("mJy")
+        if "flux" in result_table.keys():
+            result_table["flux"].convert_unit_to("mJy")
         for i in range(len(result_table)):
             name = result_table[service.config["name_col"]].value.data[i]
             cur_ra = result_table[service.config["ra_col"]].value.data[i]
@@ -158,8 +162,8 @@ async def cone_search(
                     flux=float(cur_flux) if cur_flux is not None else None,
                     provider=str(service.name),
                     distance=np.sqrt(
-                        (position.ra.to_value["deg"] - cur_ra) ** 2
-                        + (position.dec.to_value["deg"] - cur_dec) ** 2
+                        (position.ra.to_value("deg") - cur_ra) ** 2
+                        + (position.dec.to_value("deg") - cur_dec) ** 2
                     ),  ##TODO: use astropy separation and skycoords
                 )
             )
