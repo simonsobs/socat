@@ -72,7 +72,13 @@ async def get_source_info(
     )
 
     result_table = await asyncify(service.query_object)(name)
-
+    # I guess it's like marginally more efficient to only do these
+    # conversions if the params are requested but that also opens
+    # the door to bugs where the conversion doesn't happen for
+    # some reason.
+    result_table["ra"].convert_unit_to("deg")
+    result_table["dec"].convert_unit_to("deg")
+    result_table["flux"].convert_unit_to("mJy")
     if len(result_table) > 1:
         warnings.warn(
             "More than one source resolved, returning first"
@@ -137,7 +143,11 @@ async def cone_search(
             name = result_table[service.config["name_col"]].value.data[i]
             cur_ra = result_table[service.config["ra_col"]].value.data[i]
             cur_dec = result_table[service.config["dec_col"]].value.data[i]
-            cur_flux = result_table[service.config["flux_col"]].value.data[i] if "flux_col" in service.config else None
+            cur_flux = (
+                result_table[service.config["flux_col"]].value.data[i]
+                if "flux_col" in service.config
+                else None
+            )
             source_list.append(
                 AstroqueryReturn(
                     name=name,
@@ -145,7 +155,9 @@ async def cone_search(
                     dec=float(cur_dec),
                     flux=float(cur_flux) if cur_flux is not None else None,
                     provider=str(service.name),
-                    distance=np.sqrt((ra - cur_ra) ** 2 + (dec - cur_dec) ** 2), ##TODO: use astropy separation and skycoords
+                    distance=np.sqrt(
+                        (ra - cur_ra) ** 2 + (dec - cur_dec) ** 2
+                    ),  ##TODO: use astropy separation and skycoords
                 )
             )
 
