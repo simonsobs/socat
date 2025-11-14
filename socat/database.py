@@ -4,8 +4,10 @@ Core database tables storing information about sources.
 
 from typing import Any
 
+import astropy.units as u
+from astropy.coordinates import ICRS
+from astropydantic import AstroPydanticICRS, AstroPydanticQuantity
 from pydantic import BaseModel, ConfigDict
-from pydantic import Field as PydanticField
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import JSON, Column, Field, SQLModel
 
@@ -75,27 +77,24 @@ class ExtragalacticSource(BaseModel):
     ----------
     id : int
         Unique source identifier. Internal to SO
-    ra : float
-        RA of source in degress (-180 to 180)
-    dec : float
-        Dec of source in degrees
-    flux : float | None
-        Flux of source in Jy. Optional
+    position : AstroPydanticICRS
+        Position of source in ICRS coordinates
+    flux_mJy : AstroPydanticQuantity | None
+        Flux of source in mJy. Optional
     name : str | None
         Name of source. Optional
     """
 
-    id: int
-    ra: float = PydanticField(ge=0.0, le=360.0)
-    dec: float = PydanticField(ge=-90.0, le=90.0)
-    flux: float | None = None
+    id: int | None = None
+    position: AstroPydanticICRS
+    flux: AstroPydanticQuantity | None = None
     name: str | None
 
     def __repr__(self):
-        return f"ExtragalacticSource(id={self.id}, ra={self.ra}, dec={self.dec}, flux={self.flux}, name={self.name})"  # pragma: no cover
+        return f"ExtragalacticSource(id={self.id}, ra={self.ra_deg}, dec={self.dec_deg}, flux={self.flux_mJy}, name={self.name})"  # pragma: no cover
 
 
-class ExtragalacticSourceTable(ExtragalacticSource, SQLModel, table=True):
+class ExtragalacticSourceTable(SQLModel, table=True):
     """
     An extragalactic (i.e. fixed RA, Dec) source. This is the table model
     providing SQLModel functionality. You can export a base model, for example
@@ -110,6 +109,10 @@ class ExtragalacticSourceTable(ExtragalacticSource, SQLModel, table=True):
     __tablename__ = "extragalactic_sources"
 
     id: int = Field(primary_key=True)
+    ra_deg: float = Field(nullable=False)
+    dec_deg: float = Field(nullable=False)
+    flux_mJy: float | None = Field(nullable=True)
+
     name: str = Field(index=True, nullable=True)
 
     def to_model(self) -> ExtragalacticSource:
@@ -121,7 +124,15 @@ class ExtragalacticSourceTable(ExtragalacticSource, SQLModel, table=True):
         ExtragalaticSource : ExtragalacticSource
             Source corresponding to this id.
         """
-        return ExtragalacticSource(id=self.id, ra=self.ra, dec=self.dec, name=self.name, flux=self.flux)
+        flux = self.flux_mJy
+        if self.flux_mJy is not None:
+            flux *= u.mJy
+        return ExtragalacticSource(
+            id=self.id,
+            position=ICRS(ra=self.ra_deg * u.deg, dec=self.dec_deg * u.deg),
+            flux=flux,
+            name=self.name,
+        )
 
 
 ALL_TABLES = [ExtragalacticSourceTable, AstroqueryServiceTable]

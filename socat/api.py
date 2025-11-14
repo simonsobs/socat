@@ -4,6 +4,9 @@ The web API to access the socat database.
 
 from typing import Annotated, Any
 
+import astropy.units as u
+from astropy.coordinates import ICRS
+from astropydantic import AstroPydanticICRS, AstroPydanticQuantity
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +24,7 @@ from .database import (
 )
 
 
-async def lifespan(f: FastAPI):
+async def lifespan(f: FastAPI):  # pragma: no cover
     # Use SQLModel to create the tables.
     print("Creating tables")
     for table in ALL_TABLES:
@@ -60,19 +63,16 @@ class SourceModificationRequest(BaseModel):
 
     Attributes
     ----------
-    ra : float | None
-        RA of source
-    dec : float | None
-        Dec of source
-    flux : float | None
-        Flux of source
+    position : AstroPydanticICRS | None
+        ICRS coordinates of source
+    flux : Quantity | None
+        Flux of source.
     name : str | None
         Name of source
     """
 
-    ra: float | None
-    dec: float | None
-    flux: float | None
+    position: AstroPydanticICRS | None
+    flux: AstroPydanticQuantity[u.mJy] | None
     name: str | None = None
 
 
@@ -82,20 +82,14 @@ class BoxRequest(BaseModel):
 
     Attributes
     ----------
-    ra_min : float
-        Minimum RA of box
-    ra_max : float
-        Maximum RA of box
-    dec_min : float
-        Minimum dec of box
-    dec_max : float
-        Maximum dec of box
+    bottom_left : AstroPydanticICRS
+        Bottom left corner of box
+    top_right : AstroPydanticICRS
+        Top right corner of box
     """
 
-    ra_min: float
-    ra_max: float
-    dec_min: float
-    dec_max: float
+    lower_left: AstroPydanticICRS
+    upper_right: AstroPydanticICRS
 
 
 class ConeRequest(BaseModel):
@@ -104,17 +98,14 @@ class ConeRequest(BaseModel):
 
     Attributes
     ----------
-    ra : float
-        Ra of cone center
-    dec : float
-        Dec of cone center
-    radius : float
-        Radius of cone center
+    position : AstroPydanticICRS
+        Cone center
+    radius : AstroPydanticQuantity
+        Radius of cone center. Unitfull.
     """
 
-    ra: float
-    dec: float
-    radius: float
+    position: AstroPydanticICRS
+    radius: AstroPydanticQuantity[u.arcmin]
 
 
 @router.put("/service/new")
@@ -303,15 +294,14 @@ async def create_source(
     HTTPException
         If the model does not contain required info or api response is malformed
     """
-    if model.ra is None or model.dec is None:
+    if model.position is None:  # pragma: no cover
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="RA and Dec must be provided",
+            detail="Source position must be provided",
         )
     try:
         response = await core.create_source(
-            model.ra,
-            model.dec,
+            position=model.position,
             flux=model.flux,
             session=session,
             name=model.name,
@@ -353,7 +343,7 @@ async def create_source_name(
 
     services = await get_service_name(astroquery_service, session=session)
 
-    if len(services) == 0:
+    if len(services) == 0:  # pragma: no cover
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Service {} is not available.".format(astroquery_service),
@@ -364,18 +354,26 @@ async def create_source_name(
         astroquery_service=astroquery_service,
     )
 
-    if result_table["ra"] is None or result_table["dec"] is None:
+    if result_table.get("ra", None) is None or result_table.get("dec", None) is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="RA or Dec unresolved by {}.".format(astroquery_service),
         )
 
+    # Note the conversion to degrees happens in soaq.get_source_info
+    position = ICRS(
+        ra=result_table.get("ra", None) * u.deg,
+        dec=result_table.get("dec", None) * u.deg,
+    )
+    flux = result_table.get("flux", None)
+    if flux is not None:
+        flux *= u.mJy
+
     try:
         response = await core.create_source(
-            ra=result_table["ra"],
-            dec=result_table["dec"],
+            position=position,
             session=session,
-            flux=result_table.get("flux", None),
+            flux=flux,
             name=name,
         )
     except ValidationError as e:  # pragma: no cover
@@ -411,7 +409,9 @@ async def get_cone_astroquery(
     service_list = await core.get_all_services(session=session)
 
     source_list = await soaq.cone_search(
-        ra=cone.ra, dec=cone.dec, service_list=service_list, radius=cone.radius
+        position=cone.position,
+        service_list=service_list,
+        radius=cone.radius,
     )
 
     return source_list
@@ -427,8 +427,7 @@ async def get_box(
     Parameters
     ----------
     box : BoxRequest
-        BoxRequest class containing ra_min,
-        ra_max, dec_min, dec_max
+        BoxRequest class containing lower_left, upper_right
     session : SessionDependeny
         Asynchronous session to use
 
@@ -442,14 +441,17 @@ async def get_box(
     HTTPException
         If unphysical box bounds
     """
-    if box.ra_min > box.ra_max or box.dec_min > box.dec_max:
+    if (
+        box.lower_left.ra > box.upper_right.ra
+        or box.lower_left.dec > box.upper_right.dec
+    ):  # pragma: no cover
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="RA/Dec min must be <= max",
         )
 
     response = await core.get_box(
-        box.ra_min, box.ra_max, box.dec_min, box.dec_max, session=session
+        lower_left=box.lower_left, upper_right=box.upper_right, session=session
     )
 
     return response
@@ -513,9 +515,9 @@ async def update_source(
     """
     try:
         response = await core.update_source(
-            source_id, model.ra, model.dec, session=session, flux=model.flux, name=model.name
+            source_id, model.position, session=session, flux=model.flux, name=model.name
         )
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     return response

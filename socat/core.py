@@ -4,6 +4,8 @@ Core functionality providing access to the database.
 
 from typing import Any
 
+from astropy.coordinates import ICRS
+from astropy.units import Quantity
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -211,23 +213,20 @@ async def delete_service(service_id: int, session: AsyncSession) -> None:
 
 
 async def create_source(
-    ra: float,
-    dec: float,
+    position: ICRS,
     session: AsyncSession,
     name: str | None = None,
-    flux: float | None = None,
+    flux: Quantity | None = None,
 ) -> ExtragalacticSource:
     """
     Create a new source in the database.
 
     Parameters
     ----------
-    ra : float
-        RA of source
-    dec : float
-        Dec of source
-    flux : float | None
-        Flux of source in Jy. Optional.
+    position : ICRS
+        ICRS position of source
+    flux : Quantity | None
+        Flux of source. Optional.
     name : str | None
         Name of source. Optional.
     session : AsyncSession
@@ -238,7 +237,14 @@ async def create_source(
     source.to_model() : ExtragalacticSource
         Source that has been created
     """
-    source = ExtragalacticSourceTable(ra=ra, dec=dec, name=name, flux=flux)
+    if flux is not None:
+        flux = flux.to_value("mJy")
+    source = ExtragalacticSourceTable(
+        ra_deg=position.ra.to_value("deg"),
+        dec_deg=position.dec.to_value("deg"),
+        name=name,
+        flux_mJy=flux,
+    )
 
     async with session.begin():
         session.add(source)
@@ -277,10 +283,8 @@ async def get_source(source_id: int, session: AsyncSession) -> ExtragalacticSour
 
 
 async def get_box(
-    ra_min: float,
-    ra_max: float,
-    dec_min: float,
-    dec_max: float,
+    lower_left: ICRS,
+    upper_right: ICRS,
     session: AsyncSession,
 ) -> list[ExtragalacticSource]:
     """
@@ -288,14 +292,10 @@ async def get_box(
 
     Parameters
     ----------
-    ra_min : float
-        Min ra of box
-    ra_max : float
-        Max ra of box
-    dec_min : float
-        Min dec of box
-    dec_max : float
-        Max dec of box
+    lower_left : ICRS
+        Lower left bound of box
+    upper_right : ICRS
+        Upper right bound of box
     session : AsyncSession
         Asynchronous session to use
 
@@ -304,12 +304,15 @@ async def get_box(
     source_list : list[ExtragalacticSource]
         List of sources in box
     """
+    # Unclear why float casts are needed but
+    # comparisons raise TypeError: Boolean value of this clause is not defined
+    # without the cast.
     sources = await session.execute(
         select(ExtragalacticSourceTable).where(
-            ra_min <= ExtragalacticSourceTable.ra,
-            ExtragalacticSourceTable.ra <= ra_max,
-            dec_min <= ExtragalacticSourceTable.dec,
-            ExtragalacticSourceTable.dec <= dec_max,
+            float(lower_left.ra.to_value("deg")) <= ExtragalacticSourceTable.ra_deg,
+            ExtragalacticSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
+            float(lower_left.dec.to_value("deg")) <= ExtragalacticSourceTable.dec_deg,
+            ExtragalacticSourceTable.dec_deg <= float(upper_right.dec.to_value("deg")),
         )
     )
 
@@ -320,10 +323,9 @@ async def get_box(
 
 async def update_source(
     source_id: int,
-    ra: float | None,
-    dec: float | None,
+    position: ICRS | None,
     session: AsyncSession,
-    flux: float | None = None,
+    flux: Quantity | None = None,
     name: str | None = None,
 ) -> ExtragalacticSource:
     """
@@ -331,12 +333,10 @@ async def update_source(
 
     Parameters
     ----------
-    ra : float | None
-        RA of source
-    dec : float | None
-        Dec of source
-    flux : float | None
-        Flux of source in Jy. Optional.
+    position : ICRS | None
+        Position of source in ICRS coordinates
+    flux : Quanity | None
+        Flux of source. Optional.
     session : AsyncSession
         Asynchronous session to use
     name : str | None
@@ -359,9 +359,13 @@ async def update_source(
         if source is None:
             raise ValueError(f"Source with ID {source_id} not found")
 
-        source.ra = ra if ra is not None else source.ra
-        source.dec = dec if dec is not None else source.dec
-        source.flux = flux if flux is not None else source.flux
+        source.ra_deg = (
+            position.ra.to_value("deg") if position.ra is not None else source.ra_deg
+        )
+        source.dec_deg = (
+            position.dec.to_value("deg") if position.dec is not None else source.dec_deg
+        )
+        source.flux_mJy = flux.to_value("mJy") if flux is not None else source.flux_mJy
         source.name = name if name is not None else source.name
 
         await session.commit()
