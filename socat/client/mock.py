@@ -5,6 +5,9 @@ Uses a local dictionary to implement the core.
 from importlib import import_module
 from typing import Any
 
+import astropy.units as u
+from astropy.coordinates import ICRS
+from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
 
 from socat.database import AstroqueryService, ExtragalacticSource
@@ -25,15 +28,15 @@ class Client(ClientBase):
 
     Methods
     -------
-    create(self, *, ra: float, dec: float)
+    create(self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None)
         Create a source and add it to the catalog
     create_name(self, *, name: str, service_name: str)
         Create a source by name using astroquery and add it to the catalog
-    get_box(self, *, ra_min: float, ra_max: float, dec_min: float, dec_max: float)
+    get_box(self, *, lower_left: ICRS, upper_right: IRCS)
         Get sources within box
     get_source(self, *, id: int)
         Get a source by id
-    update_source(self, *, id: int, ra: float | None = None, dec: float | None = None)
+    update_source(self, *, id: int, position: ICRS | None = None, name: str | None = None, flux: Quantity | None = None)
         Update source by id
     delete_source(self, *, id: int)
         Delete source by id
@@ -50,19 +53,17 @@ class Client(ClientBase):
         self.n = 0
 
     def create(
-        self, *, ra: float, dec: float, flux: float | None = None, name: str | None = None
+        self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
     ) -> ExtragalacticSource:
         """
         Create a new source and add it to the catalog.
 
         Parameters
         ----------
-        ra : float
-            RA of source
-        dec : float
-            Dec of source
-        flux : float | None, Default: None
-            Flux of source
+        position : ICRS
+            Position of source in ICRS coordinates
+        flux : Quantity | None, Default: None
+            Flux of source.
         name : str | None, Default: None
             Name of source
 
@@ -71,7 +72,14 @@ class Client(ClientBase):
         source : ExtragalacticSource
             Extragalactic Source that was added
         """
-        source = ExtragalacticSource(id=self.n, ra=ra, dec=dec, flux=flux, name=name)
+        if flux is not None:
+            flux *= u.mJy
+        source = ExtragalacticSource(
+            id=self.n,
+            position=position,
+            flux=flux,
+            name=name,
+        )
         self.catalog[self.n] = source
         self.n += 1
 
@@ -102,7 +110,10 @@ class Client(ClientBase):
         requested_params = ["ra", "dec"]
 
         result_table = service.query_object(name)
-
+        result_table["ra"].convert_unit_to("deg")
+        result_table["dec"].convert_unit_to("deg")
+        if "flux" in result_table.keys():
+            result_table["flux"].convert_unit_to("mJy")  # pragma: no cover
         result_dict = {param: None for param in requested_params}
         if len(result_table) == 0:
             return None
@@ -114,8 +125,19 @@ class Client(ClientBase):
             # Maybe should warn if more than one match?
             except KeyError:  # pragma: no cover
                 continue
+
+        position = ICRS(
+            ra=result_dict["ra"] * u.deg,
+            dec=result_dict["dec"] * u.deg,
+        )
+        flux = result_dict.get("flux", None)
+        if flux is not None:
+            flux *= u.mJy
         source = ExtragalacticSource(
-            id=self.n, ra=result_dict["ra"], dec=result_dict["dec"], name=name, flux=result_dict.get("flux", None)
+            id=self.n,
+            position=position,
+            name=name,
+            flux=flux,
         )
         self.catalog[self.n] = source
         self.n += 1
@@ -123,29 +145,33 @@ class Client(ClientBase):
         return source
 
     def get_box(
-        self, *, ra_min: float, ra_max: float, dec_min: float, dec_max: float
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
     ) -> ExtragalacticSource:
         """
         Get sources within a box.
 
         Parameters
         ----------
-        ra_min : float
-            Min ra of box
-        ra_max : float
-            Max ra of box
-        dec_min : float
-            Min dec of box
-        dec_max : float
-            Max dec of box
+        lower_left : ICRS
+            Lower left corner of box in ICRS coordinates
+        upper_right : ICRS
+            Upper right corner of box in ICRS coordinates
 
         Returns
         -------
         list(sources) : list[ExtragalacticSource]
             List of sources in box
         """
+        ra_min = lower_left.ra.value
+        dec_min = lower_left.dec.value
+        ra_max = upper_right.ra.value
+        dec_max = upper_right.dec.value
         sources = filter(
-            lambda x: (ra_min <= x.ra <= ra_max) and (dec_min <= x.dec <= dec_max),
+            lambda x: (ra_min <= x.position.ra.value <= ra_max)
+            and (dec_min <= x.position.dec.value <= dec_max),
             self.catalog.values(),
         )
 
@@ -172,24 +198,21 @@ class Client(ClientBase):
         self,
         *,
         id: int,
-        ra: float | None = None,
-        dec: float | None = None,
-        flux: float | None = None,
+        position: ICRS | None = None,
         name: str | None = None,
+        flux: Quantity | None = None,
     ) -> ExtragalacticSource | None:
         """
         Update a source by id
 
         Parameters
         ----------
-        ra : float | None, Default: None
-            RA of source
-        dec : float | None, Default: None
-            Dec of source
-        flux : float | None, Default: None
-            Flux of source
+        position : ICRS | Float, Default: None
+            Position of source
         name : str | None, Default: None
             Name of source
+        flux : Quantity | None, Default: None
+            Flux of source
 
         Returns
         -------
@@ -203,8 +226,7 @@ class Client(ClientBase):
 
         new = ExtragalacticSource(
             id=current.id,
-            ra=current.ra if ra is None else ra,
-            dec=current.dec if dec is None else dec,
+            position=current.position if position is None else position,
             name=current.name if name is None else name,
             flux=current.flux if flux is None else flux,
         )

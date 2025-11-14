@@ -3,6 +3,7 @@ from importlib import import_module
 
 import numpy as np
 from astropy.coordinates import ICRS
+from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
 from asyncer import asyncify
 from pydantic import BaseModel
@@ -106,7 +107,7 @@ async def get_source_info(
 async def cone_search(
     position: ICRS,
     service_list: list[AstroqueryService],
-    radius: float,
+    radius: Quantity,
 ) -> list[AstroqueryReturn]:
     """
     Function which uses astroquery to perform a cone search across.
@@ -115,11 +116,9 @@ async def cone_search(
 
     Parameters
     ----------
-    ra : float
-        Ra of cone center, deg
-    dec : float
-        Dec of cone center, deg
-    radius : float
+    position : ICRS
+        Position of center of cone
+    radius : Quantity
         Radius of cone search
     service_list : list[str] | None, Default: None
         Services to check. If None, all available services are searched

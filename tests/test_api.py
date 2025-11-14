@@ -10,7 +10,7 @@ def test_add_and_retrieve(client):
                 "ra": {"value": 0, "unit": "deg"},
                 "dec": {"value": 0, "unit": "deg"},
             },
-            "flux": 1.5,
+            "flux": {"value": 1.5, "unit": "mJy"},
             "name": "mySrc",
         },
     )
@@ -21,9 +21,13 @@ def test_add_and_retrieve(client):
     response = client.get("api/v1/source/{}".format(id))
 
     assert response.status_code == 200
-    assert response.json()["ra"] == 0.0
-    assert response.json()["dec"] == 0.0
-    assert response.json()["flux"] == 1.5
+
+    assert response.json()["position"]["ra"]["value"] == 0.0
+    assert response.json()["position"]["ra"]["unit"] == "deg"
+    assert response.json()["position"]["dec"]["value"] == 0.0
+    assert response.json()["position"]["dec"]["unit"] == "deg"
+    assert response.json()["flux"]["value"] == 1.5
+    assert response.json()["flux"]["unit"] == "mJy"
     assert response.json()["name"] == "mySrc"
 
     response = client.delete("api/v1/source/{}".format(id))
@@ -45,7 +49,7 @@ def test_get_box(client):
                 "ra": {"value": 1.0, "unit": "deg"},
                 "dec": {"value": 1.0, "unit": "deg"},
             },
-            "flux": 1.5,
+            "flux": {"value": 1.5, "unit": "mJy"},
             "name": "mySrc",
         },
     )
@@ -57,7 +61,7 @@ def test_get_box(client):
                 "ra": {"value": 2.0, "unit": "deg"},
                 "dec": {"value": 2.0, "unit": "deg"},
             },
-            "flux": 1.5,
+            "flux": {"value": 2.5, "unit": "mJy"},
             "name": "mySrc2",
         },
     )
@@ -124,7 +128,7 @@ def test_update(client):
                 "ra": {"value": 1.0, "unit": "deg"},
                 "dec": {"value": 1.0, "unit": "deg"},
             },
-            "flux": 1.5,
+            "flux": {"value": 1.5, "unit": "mJy"},
             "name": "mySrc",
         },
     )
@@ -139,16 +143,16 @@ def test_update(client):
                 "ra": {"value": 2.0, "unit": "deg"},
                 "dec": {"value": 2.0, "unit": "deg"},
             },
-            "flux": 2.5,
+            "flux": {"value": 2.5, "unit": "mJy"},
             "name": "mySrcUpdate",
         },
     )
 
     assert response.status_code == 200
     assert response.json()["id"] == id
-    assert response.json()["ra"] == 2.0
-    assert response.json()["dec"] == 2.0
-    assert response.json()["flux"] == 2.5
+    assert response.json()["position"]["ra"]["value"] == 2.0
+    assert response.json()["position"]["dec"]["value"] == 2.0
+    assert response.json()["flux"]["value"] == 2.5
     assert response.json()["name"] == "mySrcUpdate"
 
     response = client.delete("api/v1/source/{}".format(id))

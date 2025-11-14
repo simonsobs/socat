@@ -1,15 +1,30 @@
+import astropy.units as u
+from astropy.coordinates import ICRS
+
+
 def test_add_and_remove(mock_client):
-    source = mock_client.create(ra=0.0, dec=0.0)
+    position = ICRS(0.0 * u.deg, 0.0 * u.deg)
+    flux = 1.0 * u.mJy
+    source = mock_client.create(position=position, name="mySrc", flux=flux)
     assert source.id == 0
-    assert source.ra == 0.0
-    assert source.dec == 0.0
+    assert source.position.ra.value == 0.0
+    assert source.position.dec.value == 0.0
+    assert source.flux.value == 1.0
+    assert source.name == "mySrc"
 
     source = mock_client.get_source(id=source.id)
 
-    source = mock_client.update_source(id=source.id, ra=1.0, dec=1.0)
+    position = ICRS(1.0 * u.deg, 1.0 * u.deg)
+    flux = 2.0 * u.mJy
+    source = mock_client.update_source(
+        id=source.id, position=position, name="mySrcUpdate", flux=flux
+    )
     source = mock_client.get_source(id=source.id)
-    assert source.ra == 1.0
-    assert source.dec == 1.0
+    assert source.id == 0
+    assert source.position.ra.value == 1.0
+    assert source.position.dec.value == 1.0
+    assert source.flux.value == 2.0
+    assert source.name == "mySrcUpdate"
 
     mock_client.delete_source(id=0)
 
@@ -17,15 +32,15 @@ def test_add_and_remove(mock_client):
 def test_add_and_remove_by_name(mock_client):
     source = mock_client.create_name(name="m1", astroquery_service="Simbad")
     assert source.id == 0
-    assert source.ra == 83.6324
-    assert source.dec == 22.0174
+    assert source.position.ra.value == 83.6324
+    assert source.position.dec.value == 22.0174
 
     mock_client.delete_source(id=0)
 
     source = mock_client.create_name(name="m2", astroquery_service="Simbad")
     assert source.id == 0
-    assert source.ra == 323.36258333333336
-    assert source.dec == -0.8232499999999998
+    assert source.position.ra.value == 323.36258333333336
+    assert source.position.dec.value == -0.8232499999999998
 
     mock_client.delete_source(id=0)
 
@@ -36,17 +51,25 @@ def test_bad_create_name(mock_client):
 
 
 def test_bad_id(mock_client):
-    source = mock_client.update_source(id=999999, ra=1.0, dec=1.0)
+    position = ICRS(1.0 * u.deg, 1.0 * u.deg)
+    flux = 2.0 * u.mJy
+    source = mock_client.update_source(id=999999, position=position, flux=flux)
     assert source is None
 
 
 def test_box(mock_client):
-    source = mock_client.create(ra=0.0, dec=0.0)
-    id1 = source.id
-    source = mock_client.create(ra=1.0, dec=1.0)
-    id2 = source.id
+    position1 = ICRS(1.0 * u.deg, 1.0 * u.deg)
+    flux1 = 1.0 * u.mJy
+    source1 = mock_client.create(position=position1, name="mySrc", flux=flux1)
+    id1 = source1.id
+    position2 = ICRS(2.0 * u.deg, 2.0 * u.deg)
+    flux2 = 21.0 * u.mJy
+    source2 = mock_client.create(position=position2, name="mySrc2", flux=flux2)
+    id2 = source2.id
 
-    sources = mock_client.get_box(ra_min=0.0, ra_max=2.0, dec_min=-1.0, dec_max=1.0)
+    lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
+    upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
+    sources = mock_client.get_box(lower_left=lower_left, upper_right=upper_right)
 
     id_list = []
     for source in sources:
@@ -55,7 +78,9 @@ def test_box(mock_client):
     assert id1 in id_list
     assert id2 in id_list
 
-    sources = mock_client.get_box(ra_min=0.0, ra_max=0.1, dec_min=-1.0, dec_max=0.0)
+    lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
+    upper_right = ICRS(1.5 * u.deg, 1.5 * u.deg)
+    sources = mock_client.get_box(lower_left=lower_left, upper_right=upper_right)
 
     id_list = []
     for source in sources:
@@ -66,19 +91,28 @@ def test_box(mock_client):
 
 
 def test_add_and_remove_astroquery(mock_client_astroquery):
-    service = mock_client_astroquery.create(name="Simbad", config={"test": "test"})
+    service = mock_client_astroquery.create(
+        name="Simbad",
+        config={"name_col": "main_id", "ra_col": "ra", "dec_col": "dec"},
+    )
     assert service.id == 0
     assert service.name == "Simbad"
-    assert service.config == {"test": "test"}
+    assert service.config == {"name_col": "main_id", "ra_col": "ra", "dec_col": "dec"}
 
     service = mock_client_astroquery.get_service(id=service.id)
 
     service = mock_client_astroquery.update_service(
-        id=service.id, name="VizieR", config={"test": "test2"}
+        id=service.id,
+        name="VizieR",
+        config={"name_col": "name", "ra_col": "ra_deg", "dec_col": "dec_deg"},
     )
     service = mock_client_astroquery.get_service(id=service.id)
     assert service.name == "VizieR"
-    assert service.config == {"test": "test2"}
+    assert service.config == {
+        "name_col": "name",
+        "ra_col": "ra_deg",
+        "dec_col": "dec_deg",
+    }
 
     service_list = mock_client_astroquery.get_service_name(name="VizieR")
     assert len(service_list) == 1

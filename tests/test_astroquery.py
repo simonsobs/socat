@@ -113,8 +113,8 @@ def test_add_source_by_name(client):
     response = client.get("api/v1/source/{}".format(id))
 
     assert response.status_code == 200
-    assert response.json()["ra"] == 83.6324
-    assert response.json()["dec"] == 22.0174
+    assert response.json()["position"]["ra"]["value"] == 83.6324
+    assert response.json()["position"]["dec"]["value"] == 22.0174
     assert response.json()["name"] == "m1"
 
     response = client.delete("api/v1/source/{}".format(id))
@@ -138,8 +138,8 @@ def test_add_source_by_name(client):
     response = client.get("api/v1/source/{}".format(id))
 
     assert response.status_code == 200
-    assert response.json()["ra"] == 323.36258333333336
-    assert response.json()["dec"] == -0.8232499999999998
+    assert response.json()["position"]["ra"]["value"] == 323.36258333333336
+    assert response.json()["position"]["dec"]["value"] == -0.8232499999999998
     assert response.json()["name"] == "m2"
 
     response = client.delete("api/v1/source/{}".format(id))
@@ -169,6 +169,13 @@ def test_bad_request_service_by_name(client):
 
 
 def test_cone_search(client):
+    response = client.put(
+        "api/v1/service/new",
+        json={
+            "name": "Simbad",
+            "config": {"name_col": "main_id", "ra_col": "ra", "dec_col": "dec"},
+        },
+    )
     response = client.post(
         "api/v1/cone",
         json={

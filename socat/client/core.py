@@ -7,13 +7,16 @@ client.
 from abc import ABC, abstractmethod
 from typing import Any
 
+from astropy.coordinates import ICRS
+from astropy.units import Quantity
+
 from socat.database import AstroqueryService, ExtragalacticSource
 
 
 class ClientBase(ABC):
     @abstractmethod
     def create(
-        self, *, ra: float, dec: float, flux: float | None = None, name: str | None = None
+        self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
     ) -> ExtragalacticSource:
         """
         Create a new source in the catlaog.
@@ -31,7 +34,10 @@ class ClientBase(ABC):
 
     @abstractmethod
     def get_box(
-        self, *, ra_min: float, ra_max: float, dec_min: float, dec_max: float
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
     ) -> list[ExtragalacticSource]:
         """
         Get all sources within a box on the sky.
@@ -50,10 +56,9 @@ class ClientBase(ABC):
         self,
         *,
         id: int,
-        ra: float | None = None,
-        dec: float | None = None,
-        flux: float | None = None,
+        position: ICRS | None = None,
         name: str | None = None,
+        flux: Quantity | None = None,
     ) -> ExtragalacticSource | None:
         """
         Update a source. If the source is updated, return its new value. Else, return None.

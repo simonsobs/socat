@@ -5,6 +5,7 @@ Core functionality providing access to the database.
 from typing import Any
 
 from astropy.coordinates import ICRS
+from astropy.units import Quantity
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -215,7 +216,7 @@ async def create_source(
     position: ICRS,
     session: AsyncSession,
     name: str | None = None,
-    flux: float | None = None,
+    flux: Quantity | None = None,
 ) -> ExtragalacticSource:
     """
     Create a new source in the database.
@@ -224,8 +225,8 @@ async def create_source(
     ----------
     position : ICRS
         ICRS position of source
-    flux : float | None
-        Flux of source in Jy. Optional.
+    flux : Quantity | None
+        Flux of source. Optional.
     name : str | None
         Name of source. Optional.
     session : AsyncSession
@@ -236,11 +237,13 @@ async def create_source(
     source.to_model() : ExtragalacticSource
         Source that has been created
     """
+    if flux is not None:
+        flux = flux.to_value("mJy")
     source = ExtragalacticSourceTable(
-        ra=position.ra.to_value("deg"),
-        dec=position.dec.to_value("deg"),
+        ra_deg=position.ra.to_value("deg"),
+        dec_deg=position.dec.to_value("deg"),
         name=name,
-        flux=flux,
+        flux_mJy=flux,
     )
 
     async with session.begin():
@@ -306,10 +309,10 @@ async def get_box(
     # without the cast.
     sources = await session.execute(
         select(ExtragalacticSourceTable).where(
-            float(lower_left.ra.to_value("deg")) <= ExtragalacticSourceTable.ra,
-            ExtragalacticSourceTable.ra <= float(upper_right.ra.to_value("deg")),
-            float(lower_left.dec.to_value("deg")) <= ExtragalacticSourceTable.dec,
-            ExtragalacticSourceTable.dec <= float(upper_right.dec.to_value("deg")),
+            float(lower_left.ra.to_value("deg")) <= ExtragalacticSourceTable.ra_deg,
+            ExtragalacticSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
+            float(lower_left.dec.to_value("deg")) <= ExtragalacticSourceTable.dec_deg,
+            ExtragalacticSourceTable.dec_deg <= float(upper_right.dec.to_value("deg")),
         )
     )
 
@@ -322,7 +325,7 @@ async def update_source(
     source_id: int,
     position: ICRS | None,
     session: AsyncSession,
-    flux: float | None = None,
+    flux: Quantity | None = None,
     name: str | None = None,
 ) -> ExtragalacticSource:
     """
@@ -332,8 +335,8 @@ async def update_source(
     ----------
     position : ICRS | None
         Position of source in ICRS coordinates
-    flux : float | None
-        Flux of source in Jy. Optional.
+    flux : Quanity | None
+        Flux of source. Optional.
     session : AsyncSession
         Asynchronous session to use
     name : str | None
@@ -356,13 +359,13 @@ async def update_source(
         if source is None:
             raise ValueError(f"Source with ID {source_id} not found")
 
-        source.ra = (
-            position.ra.to_value("deg") if position.ra is not None else source.ra
+        source.ra_deg = (
+            position.ra.to_value("deg") if position.ra is not None else source.ra_deg
         )
-        source.dec = (
-            position.dec.to_value("deg") if position.dec is not None else source.dec
+        source.dec_deg = (
+            position.dec.to_value("deg") if position.dec is not None else source.dec_deg
         )
-        source.flux = flux if flux is not None else source.flux
+        source.flux_mJy = flux.to_value("mJy") if flux is not None else source.flux_mJy
         source.name = name if name is not None else source.name
 
         await session.commit()

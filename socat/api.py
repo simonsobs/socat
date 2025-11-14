@@ -65,14 +65,14 @@ class SourceModificationRequest(BaseModel):
     ----------
     position : AstroPydanticICRS | None
         ICRS coordinates of source
-    flux : float | None
-        Flux of source in mJy
+    flux : Quantity | None
+        Flux of source.
     name : str | None
         Name of source
     """
 
     position: AstroPydanticICRS | None
-    flux: float | None
+    flux: AstroPydanticQuantity[u.mJy] | None
     name: str | None = None
 
 
@@ -365,12 +365,15 @@ async def create_source_name(
         ra=result_table.get("ra", None) * u.deg,
         dec=result_table.get("dec", None) * u.deg,
     )
+    flux = result_table.get("flux", None)
+    if flux is not None:
+        flux *= u.mJy
 
     try:
         response = await core.create_source(
             position=position,
             session=session,
-            flux=result_table.get("flux", None),
+            flux=flux,
             name=name,
         )
     except ValidationError as e:  # pragma: no cover

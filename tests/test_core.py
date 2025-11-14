@@ -16,11 +16,12 @@ async def test_database_exists(database_async_sesionmaker):
 
 @pytest.mark.asyncio
 async def test_add_and_retrieve(database_async_sesionmaker):
-    position = ICRS(0 * u.deg, 0 * u.deg)
+    position = ICRS(1 * u.deg, 1 * u.deg)
+    flux = 1.5 * u.mJy
     async with database_async_sesionmaker() as session:
         id = (
             await core.create_source(
-                position=position, session=session, name="mySrc", flux=1.5
+                position=position, session=session, name="mySrc", flux=flux
             )
         ).id
 
@@ -28,10 +29,10 @@ async def test_add_and_retrieve(database_async_sesionmaker):
         source = await core.get_source(id, session=session)
 
     assert source.id == id
-    assert source.ra == 0.0
-    assert source.dec == 0.0
+    assert source.position.ra.value == 1.0
+    assert source.position.dec.value == 1.0
     assert source.name == "mySrc"
-    assert source.flux == 1.5
+    assert source.flux == flux
 
     async with database_async_sesionmaker() as session:
         await core.delete_source(id, session=session)
@@ -41,15 +42,23 @@ async def test_add_and_retrieve(database_async_sesionmaker):
 async def test_box(database_async_sesionmaker):
     position1 = ICRS(1.0 * u.deg, 1.0 * u.deg)
     position2 = ICRS(2.0 * u.deg, 2.0 * u.deg)
+    flux1 = 1.5 * u.mJy
+    flux2 = 2.5 * u.mJy
     async with database_async_sesionmaker() as session:
         id1 = (
             await core.create_source(
-                position=position1, session=session, name="mySrc1", flux=1.5
+                position=position1,
+                session=session,
+                name="mySrc1",
+                flux=flux1,
             )
         ).id
         id2 = (
             await core.create_source(
-                position=position2, session=session, name="mySrc2", flux=2.5
+                position=position2,
+                session=session,
+                name="mySrc2",
+                flux=flux2,
             )
         ).id
 
@@ -92,10 +101,14 @@ async def test_box(database_async_sesionmaker):
 @pytest.mark.asyncio
 async def test_update(database_async_sesionmaker):
     position = ICRS(0 * u.deg, 0 * u.deg)
+    flux = 1.5 * u.mJy
     async with database_async_sesionmaker() as session:
         id = (
             await core.create_source(
-                position=position, session=session, name="mySrc", flux=1.5
+                position=position,
+                session=session,
+                name="mySrc",
+                flux=flux,
             )
         ).id
 
@@ -107,8 +120,8 @@ async def test_update(database_async_sesionmaker):
             session=session,
         )
     assert source.id == id
-    assert source.ra == 1.0
-    assert source.dec == 1.0
+    assert source.position.ra.value == 1.0
+    assert source.position.dec.value == 1.0
 
     # Not sure if this cleanup is needed
     async with database_async_sesionmaker() as session:
