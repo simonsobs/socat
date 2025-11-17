@@ -73,7 +73,7 @@ class Client(ClientBase):
             Extragalactic Source that was added
         """
         if flux is not None:
-            flux *= u.mJy
+            flux = flux.to(u.mJy)
         source = ExtragalacticSource(
             id=self.n,
             position=position,
