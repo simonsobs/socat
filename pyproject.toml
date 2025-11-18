@@ -16,7 +16,9 @@ dependencies = [
     "uvicorn",
     "aiosqlite",
     "alembic",
-    "pydantic_settings"
+    "pydantic_settings",
+    "astropy",
+    "astroquery"
 ]
 
 [project.optional-dependencies]
