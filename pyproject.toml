@@ -37,7 +37,7 @@ dev = [
 ]
 
 [project.scripts]
-"socat-act-fits" = "socat.ingest.actfits:main"
+socat-act-fits = "socat.ingest.actfits:main"
 
 [tool.ruff.lint]
 preview = true
