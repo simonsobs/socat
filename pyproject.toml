@@ -18,7 +18,8 @@ dependencies = [
     "alembic",
     "pydantic_settings",
     "astropy",
-    "astroquery"
+    "astroquery",
+    "astropydantic"
 ]
 
 [project.optional-dependencies]
