@@ -2,10 +2,11 @@
 Client connection settings for socat.
 """
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Literal
-from pathlib import Path
 import pickle
+from pathlib import Path
+from typing import Literal
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class SOCatClientSettings(BaseSettings):

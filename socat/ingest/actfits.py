@@ -2,13 +2,15 @@
 Ingest ACT fits files into an instance of SOCat.
 """
 
-from socat.client.core import ClientBase
-from socat.client.mock import Client as MockClient
 import pickle
-from astropy.io import fits
+from pathlib import Path
+
 from astropy import units as u
 from astropy.coordinates import ICRS
-from pathlib import Path
+from astropy.io import fits
+
+from socat.client.core import ClientBase
+from socat.client.mock import Client as MockClient
 
 
 def ingest_fits_file(
@@ -34,7 +36,7 @@ def ingest_fits_file(
         The number of sources added to the catalog.
     """
 
-    table = fits.open(filename, hdu=hdu)
+    table = fits.open(filename, hdu=hdu)[hdu]
 
     number_of_sources = 0
 
@@ -43,9 +45,9 @@ def ingest_fits_file(
             position=ICRS(
                 ra=row["raDeg"] * u.deg,
                 dec=row["decDeg"] * u.deg,
-                flux=row["fluxJy"] * u.Jy,
-                name=row["name"],
-            )
+            ),
+            flux=row["fluxJy"] * u.Jy,
+            name=row["name"],
         )
 
         number_of_sources += 1
@@ -53,7 +55,7 @@ def ingest_fits_file(
     return number_of_sources
 
 
-def main(): # pragma: no cover
+def main():  # pragma: no cover
     import argparse as ap
 
     parser = ap.ArgumentParser(
