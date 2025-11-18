@@ -35,6 +35,9 @@ dev = [
     "gevent"
 ]
 
+[project.scripts]
+"socat-act-fits" = "socat.ingest.actfits:main"
+
 [tool.ruff.lint]
 preview = true
 extend-select = ["I", "DOC501"]
