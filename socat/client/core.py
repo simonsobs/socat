@@ -50,6 +50,13 @@ class ClientBase(ABC):
         Get information about a specific source. If the source is not found, we return None.
         """
         return None  # pragma: no cover
+    
+    @abstractmethod
+    def get_forced_photometry_sources(self, *, minimum_flux: Quantity) -> list[ExtragalacticSource]:
+        """
+        Get all sources that are used for forced photometry based on a minimum flux.
+        """
+        return []  # pragma: no cover
 
     @abstractmethod
     def update_source(
