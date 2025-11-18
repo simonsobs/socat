@@ -17,6 +17,7 @@ dependencies = [
     "aiosqlite",
     "alembic",
     "pydantic_settings",
+    "asyncer",
     "astropy",
     "astroquery",
     "astropydantic"
