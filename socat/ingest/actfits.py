@@ -73,7 +73,7 @@ def main():  # pragma: no cover
     parser.add_argument(
         "-o",
         "--output",
-        type=Path | None,
+        type=Path,
         help="File to serialize the catalog as. If not provided, your configured SOCat environment is used",
         required=False,
         default=None,
