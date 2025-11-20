@@ -10,8 +10,9 @@ def run_migration(database_path: str):
     """
     Run the migration on the database.
     """
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     alembic_cfg = Config("alembic.ini")
     database_url = f"sqlite:///{database_path}"
