@@ -38,6 +38,7 @@ dev = [
 
 [project.scripts]
 socat-act-fits = "socat.ingest.actfits:main"
+socat-migrate = "socat.migrate:migrate"
 
 [tool.ruff.lint]
 preview = true
