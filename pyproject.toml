@@ -17,6 +17,7 @@ dependencies = [
     "aiosqlite",
     "alembic",
     "pydantic_settings",
+    "asyncer",
     "astropy",
     "astroquery",
     "astropydantic"
@@ -34,6 +35,9 @@ dev = [
     "httpx",
     "gevent"
 ]
+
+[project.scripts]
+socat-act-fits = "socat.ingest.actfits:main"
 
 [tool.ruff.lint]
 preview = true

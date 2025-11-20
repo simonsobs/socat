@@ -193,6 +193,28 @@ class Client(ClientBase):
             Source corresponding to id. Returns None if source not found
         """
         return self.catalog.get(id, None)
+    
+    def get_forced_photometry_sources(self, *, minimum_flux: Quantity) -> list[ExtragalacticSource]:
+        """
+        Get all sources that are used for forced photometry based on a minimum flux.
+
+        Parameters
+        ----------
+        minimum_flux : Quantity
+            Minimum flux for source to be included
+
+        Returns
+        -------
+        sources : iterable[ExtragalacticSource]
+            List of sources with flux greater than minimum_flux
+        """
+        sources = filter(
+            lambda x: x.flux is not None and x.flux >= minimum_flux,
+            self.catalog.values(),
+        )
+
+        return sources
+
 
     def update_source(
         self,

@@ -90,9 +90,6 @@ class ExtragalacticSource(BaseModel):
     flux: AstroPydanticQuantity | None = None
     name: str | None
 
-    def __repr__(self):
-        return f"ExtragalacticSource(id={self.id}, ra={self.ra_deg}, dec={self.dec_deg}, flux={self.flux_mJy}, name={self.name})"  # pragma: no cover
-
 
 class ExtragalacticSourceTable(SQLModel, table=True):
     """
