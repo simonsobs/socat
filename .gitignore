@@ -6,3 +6,4 @@ dist/*
 *.coverage
 *.fits
 *.pickle
+*.pk
