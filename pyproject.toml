@@ -2,6 +2,9 @@
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.package-data]
+socat = ["alembic/*", "alembic.ini", "alembic/versions/*"]
+
 [tool.setuptools.packages.find]
 exclude=["*alembic*"]
 
@@ -26,7 +29,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "ruff",
+    "ruff==0.14.5", # If you change this, also change the version in the CI
     "testcontainers",
     "coverage",
     "pytest-cov",
@@ -38,6 +41,7 @@ dev = [
 
 [project.scripts]
 socat-act-fits = "socat.ingest.actfits:main"
+socat-migrate = "socat.migrate:migrate"
 
 [tool.ruff.lint]
 preview = true

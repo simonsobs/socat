@@ -13,31 +13,35 @@ def run_migration(database_path: str):
     from alembic import command
     from alembic.config import Config
 
-    alembic_cfg = Config("alembic.ini")
+    alembic_cfg = Config("socat/alembic.ini")
     database_url = f"sqlite:///{database_path}"
     alembic_cfg.set_main_option("sqlalchemy.url", database_url)
-    command.upgrade(alembic_cfg, "heads")
-
-    return
+    command.upgrade(alembic_cfg, "head")
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
-async def database_async_sesionmaker(tmp_path_factory):
+@pytest.fixture(scope="session", autouse=True)
+def database(tmp_path_factory):
     """
-    Create a temporary SQLite database for testing. This is a
-    somewhat tricky scenario as we must create the database using
-    the synchronous engine, but access it using the asynchronous
-    engine.
+    Create a temporary SQLite database for testing.
     """
 
     tmp_path = tmp_path_factory.mktemp("socat")
     # Create a temporary SQLite database for testing.
     database_path = tmp_path / "test.db"
 
-    # Run the migration on the database. This is blocking.
+    os.environ["socat_model_database_name"] = str(database_path)
+
     run_migration(database_path)
 
-    database_url = f"sqlite+aiosqlite:///{database_path}"
+    yield str(database_path)
+
+    # Clean up the database (don't do this in case we want to inspect)
+    # database_path.unlink()
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def database_async_sessionmaker(database):
+    database_url = f"sqlite+aiosqlite:///{database}"
 
     async_engine = create_async_engine(database_url, echo=True, future=True)
 
@@ -48,21 +52,24 @@ async def database_async_sesionmaker(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
-def client(tmp_path_factory):
+def client(database):
     """
     Create a test client for the FastAPI app.
     """
-    tmp_path = tmp_path_factory.mktemp("socat")
-    # Create a temporary SQLite database for testing.
-    database_path = tmp_path / "test.db"
+    os.environ["socat_model_database_name"] = str(database)
 
-    run_migration(database_path)
+    from sqlalchemy.ext.asyncio import create_async_engine
 
-    os.environ["socat_model_database_name"] = str(database_path)
-
+    import socat.database as db
     from socat.api import app
 
-    yield TestClient(app)
+    db.async_engine = create_async_engine(
+        f"sqlite+aiosqlite:///{database}", echo=True, future=True
+    )
+
+    test_client = TestClient(app)
+
+    yield test_client
 
 
 @pytest.fixture(scope="session")

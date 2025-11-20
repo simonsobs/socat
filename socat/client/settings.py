@@ -21,9 +21,7 @@ class SOCatClientSettings(BaseSettings):
     token_tag: str | None = "socat"
     identity_server: str | None = None
 
-    model_config: SettingsConfigDict = {
-        "env_prefix": "socat_client_"
-    }
+    model_config: SettingsConfigDict = {"env_prefix": "socat_client_"}
 
     def _pickle_client(self):
         with open(self.pickle_path, "rb") as handle:
