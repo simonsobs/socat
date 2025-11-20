@@ -18,8 +18,6 @@ def run_migration(database_path: str):
     alembic_cfg.set_main_option("sqlalchemy.url", database_url)
     command.upgrade(alembic_cfg, "head")
 
-    return
-
 
 @pytest.fixture(scope="session", autouse=True)
 def database(tmp_path_factory):
@@ -31,7 +29,7 @@ def database(tmp_path_factory):
     # Create a temporary SQLite database for testing.
     database_path = tmp_path / "test.db"
 
-    os.environ["SOCAT_MODEL_DATABASE_NAME"] = str(database_path)
+    os.environ["socat_model_database_name"] = str(database_path)
 
     run_migration(database_path)
 
@@ -42,7 +40,7 @@ def database(tmp_path_factory):
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
-async def database_async_sesionmaker(database):
+async def database_async_sessionmaker(database):
     database_url = f"sqlite+aiosqlite:///{database}"
 
     async_engine = create_async_engine(database_url, echo=True, future=True)
@@ -58,7 +56,7 @@ def client(database):
     """
     Create a test client for the FastAPI app.
     """
-    os.environ["SOCAT_MODEL_DATABASE_NAME"] = str(database)
+    os.environ["socat_model_database_name"] = str(database)
 
     from sqlalchemy.ext.asyncio import create_async_engine
 

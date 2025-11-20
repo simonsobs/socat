@@ -12,5 +12,3 @@ def migrate():
     location = __file__.replace("migrate.py", "alembic.ini")
 
     subprocess.call(["alembic", "-c", location, "upgrade", "head"])
-
-    return
