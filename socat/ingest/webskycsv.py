@@ -4,15 +4,14 @@ Ingest websky csv files into an instance of SOCat.
 
 import pickle
 from pathlib import Path
+import re
 
 from astropy import units as u
-from astropy.coordinates import ICRS
+from astropy.coordinates import SkyCoord,ICRS
 import pandas as pd
 
 from socat.client.core import ClientBase
 from socat.client.mock import Client as MockClient
-
-from sotrplib.sotrplib.utils.utils import radec_to_str_name
 
 
 def ingest_csv_file(
@@ -46,14 +45,15 @@ def ingest_csv_file(
             row["RA(deg)"] if row["RA(deg)"] > 0.0 else row["RA(deg)"] + 360.0
         ) * u.deg
         dec = row["dec(deg)"] * u.deg
-        name = radec_to_str_name(ra.to_value(u.deg), dec.to_value(u.deg))
+        strname = SkyCoord(ra=ra,dec=dec).to_string('hmsdms')
+        IAUname = 'J'+''.join(re.split(r'[ hmds]', strname))
         client.create(
             position=ICRS(
                 ra=ra,
                 dec=dec,
             ),
             flux=flux,
-            name=name,
+            name=IAUname,
         )
         number_of_sources += 1
     return number_of_sources
