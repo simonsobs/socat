@@ -2,13 +2,14 @@
 Ingest websky csv files into an instance of SOCat.
 """
 
+import pandas as pd
 import pickle
-from pathlib import Path
 import re
+from pathlib import Path
 
 from astropy import units as u
-from astropy.coordinates import SkyCoord,ICRS
-import pandas as pd
+from astropy.coordinates import ICRS, SkyCoord
+
 
 from socat.client.core import ClientBase
 from socat.client.mock import Client as MockClient
@@ -45,8 +46,8 @@ def ingest_csv_file(
             row["RA(deg)"] if row["RA(deg)"] > 0.0 else row["RA(deg)"] + 360.0
         ) * u.deg
         dec = row["dec(deg)"] * u.deg
-        strname = SkyCoord(ra=ra,dec=dec).to_string('hmsdms')
-        IAUname = 'J'+''.join(re.split(r'[ hmds]', strname))
+        strname = SkyCoord(ra=ra, dec=dec).to_string("hmsdms")
+        IAUname = "J" + "".join(re.split(r"[ hmds]", strname))
         client.create(
             position=ICRS(
                 ra=ra,
@@ -106,7 +107,9 @@ def main():  # pragma: no cover
         else:
             output_path = None
 
-    number_of_sources = ingest_csv_file(client=client, filename=args.file, flux_lower_limit=args.flux_lower_limit * u.Jy)
+    number_of_sources = ingest_csv_file(
+        client=client, filename=args.file, flux_lower_limit=args.flux_lower_limit * u.Jy
+    )
 
     print(f"Ingested {number_of_sources} sources")
 
