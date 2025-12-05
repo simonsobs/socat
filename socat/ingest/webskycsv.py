@@ -2,14 +2,13 @@
 Ingest websky csv files into an instance of SOCat.
 """
 
-import pandas as pd
 import pickle
 import re
 from pathlib import Path
 
+import pandas as pd
 from astropy import units as u
 from astropy.coordinates import ICRS, SkyCoord
-
 
 from socat.client.core import ClientBase
 from socat.client.mock import Client as MockClient
