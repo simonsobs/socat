@@ -224,19 +224,16 @@ class SolarSystemEphemTable(SQLModel, table=True):
         foreign_key="solarsystem_sources.id",
         nullable=False,
         ondelete="CASCADE",
-        onupdate="CASCADE",
     )
     MPC_id: int | None = Field(
         foreign_key="solarsystem_sources.MPC_id",
         nullable=True,
         ondelete="CASCADE",
-        onupdate="CASCADE",
     )
     name: int = Field(
         foreign_key="solarsystem_sources.name",
         nullable=False,
         ondelete="CASCADE",
-        onupdate="CASCADE",
     )
     time: int
     ra_deg: float = Field(nullable=False)
