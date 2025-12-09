@@ -19,6 +19,7 @@ from .database import (
     ALL_TABLES,
     AstroqueryService,
     ExtragalacticSource,
+    SolarSystemSource,
     async_engine,
     get_async_session,
 )
@@ -74,6 +75,22 @@ class SourceModificationRequest(BaseModel):
     position: AstroPydanticICRS | None
     flux: AstroPydanticQuantity[u.mJy] | None
     name: str | None = None
+
+
+class SolarSystemSourceModificationRequest(BaseModel):
+    """
+    Class which defines which source atributes are available to modify for a solar system source
+
+    Attributes
+    ----------
+    name : str | None
+        Name of source
+    MPC_id : int | None
+        Minor Planet Center ID of source
+    """
+
+    name: str | None = None
+    MPC_id: int | None = None
 
 
 class BoxRequest(BaseModel):
@@ -547,6 +564,149 @@ async def delete_source(source_id: int, session: SessionDependency) -> None:
     """
     try:
         await core.delete_source(source_id, session=session)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return
+
+
+@router.put("/solarsystemsource/new")
+async def create_solarsystem_source(
+    model: SolarSystemSourceModificationRequest, session: SessionDependency
+) -> SolarSystemSource:
+    """
+    Create a new solar system source
+
+    Parameters
+    ----------
+    model : SolarSystemSourceModificationRequest
+        Object which contains all attributes of source
+    session : SessionDependency
+        Asynchronous session to be used
+
+    Returns
+    -------
+    response : SolarSystemSource
+        socat.database.SolarSystemSource object which was added to the catalog.
+
+    Raises
+    ------
+    HTTPException
+        If the model does not contain required info or api response is malformed
+    """
+    if model.name is None:  # pragma: no cover
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Source name must be provided",
+        )
+    try:
+        response = await core.create_solarsystem_source(
+            name=model.name,
+            MPC_id=model.MPC_id,
+            session=session,
+        )
+    except ValidationError as e:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
+
+    return response
+
+
+@router.get("/solarsystemsource/{source_id}")
+async def get_solarsystem_source(
+    source_id: int, session: SessionDependency
+) -> SolarSystemSource:
+    """
+    Get a solar sytem source by id from the database
+
+    Parameters
+    ----------
+    source_id : int
+        ID of solar system source to querry
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns:
+    --------
+    response : SolarSystemSource
+        socat.database.SolarSystemSource corresponding to id
+
+    Raises
+    ------
+    HTTPException
+        If id does not correspond to any source
+    """
+    try:
+        response = await core.get_solarsystem_source(source_id, session=session)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    return response
+
+
+@router.post("/solarsystemsource/{source_id}")
+async def update_solarsystem_source(
+    source_id: int,
+    model: SolarSystemSourceModificationRequest,
+    session: SessionDependency,
+) -> SolarSystemSource:
+    """
+    Update solar system source parameters by id
+
+    Parameters
+    ----------
+    source_id : int
+        ID of solar system source to update
+    model : SolarSystemSourceModificationRequest
+        Parameters of model to modify
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns
+    -------
+    response : SolarSystemSource
+        socat.database.SolarSystemSource that has been modified
+
+    Raises
+    ------
+    HTTPException
+        If id does not correspond to any source
+    """
+    try:
+        response = await core.update_solarsystem_source(
+            source_id,
+            name=model.name,
+            MPC_id=model.MPC_id,
+            session=session,
+        )
+    except ValueError as e:  # pragma: no cover
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    return response
+
+
+@router.delete("/solarsystemsource/{source_id}")
+async def delete_solarsystem_source(source_id: int, session: SessionDependency) -> None:
+    """
+    Delete a solar system source by id
+
+    Parameters
+    ----------
+    source_id : int
+        ID of solar system source to delete
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns
+    -------
+    None
+
+
+    Raises
+    ------
+    HTTPException
+        If id does not correspond to any source
+    """
+    try:
+        await core.delete_solarsystem_source(source_id, session=session)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return
