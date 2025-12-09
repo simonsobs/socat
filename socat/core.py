@@ -14,6 +14,8 @@ from socat.database import (
     AstroqueryServiceTable,
     ExtragalacticSource,
     ExtragalacticSourceTable,
+    SolarSystemSource,
+    SolarSystemTable,
 )
 
 
@@ -162,21 +164,21 @@ async def update_service(
      Raises
      ------
      ValueError
-         If the source is not found.
+         If the service is not found.
     """
 
     async with session.begin():
-        source = await session.get(AstroqueryServiceTable, service_id)
+        service = await session.get(AstroqueryServiceTable, service_id)
 
-        if source is None:
+        if service is None:
             raise ValueError(f"Source with ID {service_id} not found")
 
-        source.name = name if name is not None else source.name
-        source.config = config if config is not None else source.config
+        service.name = name if name is not None else service.name
+        service.config = config if config is not None else service.config
 
         await session.commit()
 
-    return source.to_model()
+    return service.to_model()
 
 
 async def delete_service(service_id: int, session: AsyncSession) -> None:
@@ -197,16 +199,16 @@ async def delete_service(service_id: int, session: AsyncSession) -> None:
     Raises
     ------
     ValueError
-        If the source is not found.
+        If the service is not found.
     """
 
     async with session.begin():
-        source = await session.get(AstroqueryServiceTable, service_id)
+        service = await session.get(AstroqueryServiceTable, service_id)
 
-        if source is None:
+        if service is None:
             raise ValueError(f"Service with ID {service_id} not found")
 
-        await session.delete(source)
+        await session.delete(service)
         await session.commit()
 
     return
@@ -396,6 +398,215 @@ async def delete_source(source_id: int, session: AsyncSession) -> None:
 
     async with session.begin():
         source = await session.get(ExtragalacticSourceTable, source_id)
+
+        if source is None:
+            raise ValueError(f"Source with ID {source_id} not found")
+
+        await session.delete(source)
+        await session.commit()
+
+    return
+
+
+async def create_solarsystem_source(
+    name: str,
+    MPC_id: int | None,
+    session: AsyncSession,
+) -> SolarSystemSource:
+    """
+    Create a new solar system source in the database.
+
+    Parameters
+    ----------
+    name : str
+        Name of solar system source
+    MPC_id : int | None
+        Minor Planet Center ID of source
+    session : AsyncSession
+        Asynchronous session to use
+
+    """
+    source = SolarSystemTable(MPC_id=MPC_id, name=name)
+
+    async with session.begin():
+        session.add(source)
+        await session.commit()
+
+    return source.to_model()
+
+
+async def get_solarsystem_source(
+    source_id: int, session: AsyncSession
+) -> SolarSystemSource:
+    """
+    Get a solar system source from the database by id.
+
+    Parameters
+    ----------
+    source_id :  int
+        ID of source
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    source.to_mode() : SolarSystemSource
+        Requested solar system source
+
+    Raises
+    ------
+    ValueError
+        If the source is not found.
+    """
+
+    source = await session.get(SolarSystemTable, source_id)
+
+    if source is None:
+        raise ValueError(f"Solar system source with ID {source} not found.")
+
+    return source
+
+
+async def get_solarsystem_source_name(
+    source_name: str, session: AsyncSession
+) -> list[SolarSystemSource]:
+    """
+    Get a solar system source by name.
+
+    Parameters
+    ----------
+    source_name :  str
+        Name of source
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    source_list : list[SolarSystemSource]
+        Requested solar system sources
+
+    Raises
+    ------
+    ValueError
+        If the source is not found.
+    """
+
+    async with session.begin():
+        stmt = select(SolarSystemTable).where(SolarSystemTable.name == source_name)
+
+        service = await session.execute(stmt)
+
+    source_list = [s.to_model() for s in service.scalars().all()]
+
+    if len(source_list) == 0:
+        raise ValueError(f"Service with name {source_name} not found.")
+
+    return source_list
+
+
+async def get_solarsystem_source_MPC_id(
+    MPC_id: int, session: AsyncSession
+) -> list[SolarSystemSource]:
+    """
+    Get a solar system source by MPC ID.
+
+    Parameters
+    ----------
+    MPC_id :  int
+        Minor Planet Center ID of source
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    source_list : list[SolarSystemSource]
+        Requested solar system sources
+
+    Raises
+    ------
+    ValueError
+        If the source is not found.
+    """
+
+    async with session.begin():
+        stmt = select(SolarSystemTable).where(SolarSystemTable.MPC_id == MPC_id)
+
+        service = await session.execute(stmt)
+
+    source_list = [s.to_model() for s in service.scalars().all()]
+
+    if len(source_list) == 0:
+        raise ValueError(f"Service with MPC ID {MPC_id} not found.")
+
+    return source_list
+
+
+async def update_solarsystem_source(
+    source_id: int,
+    name: str | None,
+    MPC_id: int | None,
+    session: AsyncSession,
+) -> SolarSystemSource:
+    """
+    Update a solar system source.
+    Parameters
+    ----------
+    source_id : int
+    Internal SO source ID
+    name : str
+        Name of solar system source
+    MPC_id : int | None
+        Minor Planet Center ID of source
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    source.to_mode() : SolarSystemSource
+        Modified solar system source
+    Raises
+    ------
+    ValueError
+        If the source is not found.
+    """
+
+    async with session.begin():
+        source = await session.get(SolarSystemTable, source_id)
+
+        if source is None:
+            raise ValueError(f"Solar system source with ID {source_id} not found")
+
+        source.name = name if name is not None else source.name
+        source.MPC_id = MPC_id if MPC_id is not None else source.MPC_id
+
+        await session.commit()
+
+    return source.to_model()
+
+
+async def delete_solarsystem_source(source_id: int, session: AsyncSession) -> None:
+    """
+    Delete a solar system source from the dattabase.
+
+    Parameters
+    ----------
+    source_id : int
+        ID of source
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+        If the source is not found.
+    """
+
+    async with session.begin():
+        source = await session.get(SolarSystemTable, source_id)
 
         if source is None:
             raise ValueError(f"Source with ID {source_id} not found")
