@@ -9,6 +9,7 @@ Create Date: 2024-10-23 09:53:07.953912
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -25,7 +26,7 @@ def upgrade() -> None:
         sa.Column("ra_deg", sa.Float, nullable=False),
         sa.Column("dec_deg", sa.Float, nullable=False),
         sa.Column("flux_mJy", sa.Float, nullable=True),
-        sa.Column("name", sa.String, nullable=True),
+        sa.Column("name", sa.String, index=True, nullable=True),
     )
 
     op.create_table(
@@ -40,6 +41,47 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("name", sa.String, index=True, nullable=False),
         sa.Column("config", sa.JSON, nullable=False),
+    )
+
+    op.create_table(
+        "solarsystem_sources",
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("MPC_id", sa.Integer, index=True, nullable=True),
+        sa.Column("name", sa.String, index=True, nullable=False),
+    )
+
+    op.create_table(
+        "solarsystem_ephem",
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column(
+            "obj_id",
+            sa.Integer,
+            sa.ForeignKey(
+                "solarsystem_sources.id", ondelete="CASCADE", onupdate="CASCADE"
+            ),
+            nullable=False,
+        ),
+        sa.Column(
+            "MPC_id",
+            sa.Integer,
+            sa.ForeignKey(
+                "solarsystem_sources.MPC_id", ondelete="CASCADE", onupdate="CASCADE"
+            ),
+            nullable=False,
+        ),
+        sa.Column(
+            "name",
+            sa.Integer,
+            sa.ForeignKey(
+                "solarsystem_sources.name", ondelete="CASCADE", onupdate="CASCADE"
+            ),
+            nullable=False,
+        ),
+        sa.Column("time", sa.Integer, index=True, nullable=False),
+        sa.Column("ra_deg", sa.Float, nullable=False),
+        sa.Column("dec_deg", sa.Float, nullable=False),
+        sa.Column("flux_mJy", sa.Float, nullable=True),
+        postgresql_partition_by="LIST (obj_id)",
     )
 
 
