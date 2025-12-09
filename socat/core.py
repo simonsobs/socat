@@ -619,7 +619,7 @@ async def delete_solarsystem_source(source_id: int, session: AsyncSession) -> No
     return
 
 
-async def create_solarsystem_ephem(
+async def create_ephem(
     session: AsyncSession,
     obj_id: int,
     MPC_id: int | None,
@@ -673,9 +673,7 @@ async def create_solarsystem_ephem(
     return ephem.to_model()
 
 
-async def get_solarsystem_ephem(
-    ephem_id: int, session: AsyncSession
-) -> SolarSystemEphem:
+async def get_ephem(ephem_id: int, session: AsyncSession) -> SolarSystemEphem:
     """
     Get a solar system ephemeris point from the database.
 
@@ -704,7 +702,7 @@ async def get_solarsystem_ephem(
     return ephem.to_model()
 
 
-async def update_solarsystem_ephem(
+async def update_ephem(
     ephem_id: int,
     session: AsyncSession,
     obj_id: int | None,
@@ -770,7 +768,7 @@ async def update_solarsystem_ephem(
     return ephem.to_model()
 
 
-async def delete_solarsystem_ephem(ephem_id: int, session: AsyncSession) -> None:
+async def delete_ephem(ephem_id: int, session: AsyncSession) -> None:
     """
     Delete a solar system ephemeris point from the dattabase.
 
