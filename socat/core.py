@@ -14,6 +14,8 @@ from socat.database import (
     AstroqueryServiceTable,
     ExtragalacticSource,
     ExtragalacticSourceTable,
+    SolarSystemEphem,
+    SolarSystemEphemTable,
     SolarSystemSource,
     SolarSystemTable,
 )
@@ -612,6 +614,190 @@ async def delete_solarsystem_source(source_id: int, session: AsyncSession) -> No
             raise ValueError(f"Source with ID {source_id} not found")
 
         await session.delete(source)
+        await session.commit()
+
+    return
+
+
+async def create_solarsystem_ephem(
+    session: AsyncSession,
+    obj_id: int,
+    MPC_id: int | None,
+    name: str,
+    time: int,
+    position: ICRS,
+    flux: Quantity | None = None,
+) -> SolarSystemEphem:
+    """
+    Create a new solar system ephemeris point in the database.
+
+    Parameters
+    ----------
+    session : AsyncSession
+        Session to use
+    obj_id :int
+        Internal SO ID of source
+    MPC_id : int | None
+        MPC ID of source
+    name : str
+        Name of source
+    time : int
+        Time of source ephem, unix time
+    position : AstroPydanticICRS
+        Position of source at time in ICRS coordinates
+    flux : Quantity  | None
+        Flux of source at ephem point in mJy
+
+    Returns
+    -------
+    ephem.to_model() : SolarSystemEphem
+        Created ephem point
+    """
+
+    if flux is not None:
+        flux = flux.to_value("mJy")
+    ephem = SolarSystemEphemTable(
+        obj_id=obj_id,
+        MPC_id=MPC_id,
+        name=name,
+        time=time,
+        ra_deg=position.ra.to_value("deg"),
+        dec_deg=position.dec.to_value("deg"),
+        flux_mJy=flux,
+    )
+
+    async with session.begin():
+        session.add(ephem)
+        await session.commit()
+
+    return ephem.to_model()
+
+
+async def get_solarsystem_ephem(
+    ephem_id: int, session: AsyncSession
+) -> SolarSystemEphem:
+    """
+    Get a solar system ephemeris point from the database.
+
+    Parameters
+    ----------
+    ephem_id : int
+        ID of solar system ephemeris point
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    ephem.to_model() : SolarSystemEphem
+        Requested ephemeris point
+
+    Raises
+    ------
+    ValueError
+        If the ephemeris point is not found.
+    """
+    ephem = await session.get(SolarSystemEphemTable, ephem_id)
+
+    if ephem is None:
+        raise ValueError(f"Ephemeris point with ID {ephem_id} not found")
+
+    return ephem.to_model()
+
+
+async def update_solarsystem_ephem(
+    ephem_id: int,
+    session: AsyncSession,
+    obj_id: int | None,
+    MPC_id: int | None,
+    name: str | None,
+    time: int | None,
+    position: ICRS | None,
+    flux: Quantity | None = None,
+) -> SolarSystemEphem:
+    """
+    Create a new solar system ephemeris point in the database.
+
+    Parameters
+    ----------
+    ephem_id : int
+        ID of ephem.
+    session : AsyncSession
+        Session to use
+    obj_id :int | None
+        Internal SO ID of source
+    MPC_id : int | None
+        MPC ID of source
+    name : str | None
+        Name of source
+    time : int | None
+        Time of source ephem, unix time
+    position : AstroPydanticICRS | None
+        Position of source in ICRS coordinates
+    flux : Quantity  | None
+        Flux of source at ephem point in mJy
+
+    Returns
+    -------
+    ephem.to_model() : SolarSystemEphem
+        updated ephemeris point
+
+    Raises
+    ------
+    ValueError
+        If the ephemeris point is not found.
+    """
+
+    async with session.begin():
+        ephem = await session.get(SolarSystemEphemTable, ephem_id)
+
+        if ephem is None:
+            raise ValueError(f"Ephem point with ID {ephem_id} not found.")
+
+        ephem.obj_id = obj_id if obj_id is not None else ephem.obj_id
+        ephem.MPC_id = MPC_id if MPC_id is not None else ephem.MPC_id
+        ephem.name = name if name is not None else ephem.name
+        ephem.time = time if time is not None else ephem.time
+        ephem.ra_deg = (
+            position.ra.to_value("deg") if position.ra is not None else ephem.ra_deg
+        )
+        ephem.dec_deg = (
+            position.dec.to_value("deg") if position.dec is not None else ephem.dec_deg
+        )
+        ephem.flux_mJy = flux.to_value("mJy") if flux is not None else ephem.flux_mJy
+
+        await session.commit()
+
+    return ephem.to_model()
+
+
+async def delete_solarsystem_ephem(ephem_id: int, session: AsyncSession) -> None:
+    """
+    Delete a solar system ephemeris point from the dattabase.
+
+    Parameters
+    ----------
+    ephem_id : int
+        ID of sephem pointource
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+        If the ephem point is not found.
+    """
+
+    async with session.begin():
+        ephem = await session.get(SolarSystemEphemTable, ephem_id)
+
+        if ephem is None:
+            raise ValueError(f"Source with ID {ephem_id} not found")
+
+        await session.delete(ephem)
         await session.commit()
 
     return
