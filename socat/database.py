@@ -206,7 +206,7 @@ class SolarSystemEphem(BaseModel):
     MPC_id: int | None
     name: str
     time: int
-    position: AstroPydanticQuantity
+    position: AstroPydanticICRS
     flux: AstroPydanticQuantity | None = None
 
 
@@ -259,7 +259,7 @@ class SolarSystemEphemTable(SQLModel, table=True):
             name=self.name,
             time=self.time,
             position=ICRS(ra=self.ra_deg * u.deg, dec=self.dec_deg * u.deg),
-            flux=self.flux_mJy,
+            flux=flux,
         )
 
 

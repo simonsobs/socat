@@ -119,7 +119,7 @@ class EphemModificationRequest(BaseModel):
     name: str | None
     time: int | None
     position: AstroPydanticICRS | None
-    flux: AstroPydanticQuantity[u.mJy] | None = None
+    flux: AstroPydanticQuantity[u.mJy] | None
 
 
 class BoxRequest(BaseModel):
@@ -809,7 +809,7 @@ async def get_ephem(ephem_id: int, session: SessionDependency) -> SolarSystemEph
         If id does not correspond to any source
     """
     try:
-        response = await core.get_source(ephem_id, session=session)
+        response = await core.get_ephem(ephem_id, session=session)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -845,6 +845,7 @@ async def update_ephem(
     try:
         response = await core.update_ephem(
             ephem_id,
+            session=session,
             obj_id=model.obj_id,
             MPC_id=model.MPC_id,
             name=model.name,
