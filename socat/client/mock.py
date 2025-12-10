@@ -34,12 +34,12 @@ class Client(ClientBase):
         Create a source by name using astroquery and add it to the catalog
     get_box(self, *, lower_left: ICRS, upper_right: IRCS)
         Get sources within box
-    get_source(self, *, id: int)
-        Get a source by id
-    update_source(self, *, id: int, position: ICRS | None = None, name: str | None = None, flux: Quantity | None = None)
-        Update source by id
-    delete_source(self, *, id: int)
-        Delete source by id
+    get_source(self, *, source_id: int)
+        Get a source by source_id
+    update_source(self, *, source_id: int, position: ICRS | None = None, name: str | None = None, flux: Quantity | None = None)
+        Update source by source_id
+    delete_source(self, *, source_id: int)
+        Delete source by source_id
     """
 
     catalog: dict[int, ExtragalacticSource]
@@ -75,7 +75,7 @@ class Client(ClientBase):
         if flux is not None:
             flux = flux.to(u.mJy)
         source = ExtragalacticSource(
-            id=self.n,
+            source_id=self.n,
             position=position,
             flux=flux,
             name=name,
@@ -134,7 +134,7 @@ class Client(ClientBase):
         if flux is not None:
             flux *= u.mJy
         source = ExtragalacticSource(
-            id=self.n,
+            source_id=self.n,
             position=position,
             name=name,
             flux=flux,
@@ -177,22 +177,22 @@ class Client(ClientBase):
 
         return list(sources)
 
-    def get_source(self, *, id: int) -> ExtragalacticSource | None:
+    def get_source(self, *, source_id: int) -> ExtragalacticSource | None:
         """
         Get source by id
 
         Parameters
         ----------
-        id : int
+        source_id : int
             ID of source of interest
 
 
         Returns
         -------
-        self.catalog.get(id, None) : ExtragalacticSource | None
-            Source corresponding to id. Returns None if source not found
+        self.catalog.get(source_id, None) : ExtragalacticSource | None
+            Source corresponding to source_id. Returns None if source not found
         """
-        return self.catalog.get(id, None)
+        return self.catalog.get(source_id, None)
 
     def get_forced_photometry_sources(
         self, *, minimum_flux: Quantity
@@ -220,7 +220,7 @@ class Client(ClientBase):
     def update_source(
         self,
         *,
-        id: int,
+        source_id: int,
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
@@ -242,36 +242,36 @@ class Client(ClientBase):
         new : ExtragalacticSource
             Source that has been updated
         """
-        current = self.get_source(id=id)
+        current = self.get_source(source_id=source_id)
 
         if current is None:
             return None
 
         new = ExtragalacticSource(
-            id=current.id,
+            source_id=current.source_id,
             position=current.position if position is None else position,
             name=current.name if name is None else name,
             flux=current.flux if flux is None else flux,
         )
 
-        self.catalog[id] = new
+        self.catalog[source_id] = new
 
         return new
 
-    def delete_source(self, *, id: int):
+    def delete_source(self, *, source_id: int):
         """
         Delete source by id
 
         Parameters
         ----------
-        id : int
+        source_id : int
             ID of source to be deleted
 
         Returns
         -------
         None
         """
-        self.catalog.pop(id, None)
+        self.catalog.pop(source_id, None)
         self.n -= 1
 
 
@@ -319,27 +319,27 @@ class AstorqueryClient(AstroqueryClientBase):
         service : AstroqueryService
             Astroquery service that was added
         """
-        service = AstroqueryService(id=self.n, name=name, config=config)
+        service = AstroqueryService(service_id=self.n, name=name, config=config)
         self.catalog[self.n] = service
         self.n += 1
 
         return service
 
-    def get_service(self, *, id: int) -> AstroqueryService | None:
+    def get_service(self, *, service_id: int) -> AstroqueryService | None:
         """
         Get a service by id number
 
         Parameters
         ----------
-        id : int
+        service_id : int
             ID of service to get
 
         Returns
         -------
-        self.catalog.get(id, None) : AstroqueryService | None
-            Service corresponding to id. Returns None if service not found
+        self.catalog.get(service_id, None) : AstroqueryService | None
+            Service corresponding to service_id. Returns None if service not found
         """
-        return self.catalog.get(id, None)
+        return self.catalog.get(service_id, None)
 
     def get_service_name(self, *, name: str) -> list[AstroqueryService] | None:
         """
@@ -353,12 +353,12 @@ class AstorqueryClient(AstroqueryClientBase):
         Returns
         -------
          : list[AstroqueryService] | None
-            List of services corresponding to id. Returns None if service not found
+            List of services corresponding to service_id. Returns None if service not found
         """
         service = []
-        for id in self.catalog:
-            if self.catalog[id].name == name:
-                service.append(self.catalog[id])
+        for service_id in self.catalog:
+            if self.catalog[service_id].name == name:
+                service.append(self.catalog[service_id])
 
         if len(service) == 0:
             service = None
@@ -366,14 +366,14 @@ class AstorqueryClient(AstroqueryClientBase):
         return service
 
     def update_service(
-        self, *, id: int, name: str | None, config: dict[str, Any] | None
+        self, *, service_id: int, name: str | None, config: dict[str, Any] | None
     ) -> AstroqueryService:
         """
         Update a service by id
 
         Parameters
         ----------
-        id : int
+        service_id : int
             ID of service to be updated
         name : str | None, Default: None
             Name of source
@@ -385,33 +385,33 @@ class AstorqueryClient(AstroqueryClientBase):
         new : AstroqueryService
             Service that has been updated
         """
-        current = self.get_service(id=id)
+        current = self.get_service(service_id=service_id)
 
         if current is None:
             return None
 
         new = AstroqueryService(
-            id=current.id,
+            service_id=current.service_id,
             name=current.name if name is None else name,
             config=current.config if config is None else config,
         )
 
-        self.catalog[id] = new
+        self.catalog[service_id] = new
 
         return new
 
-    def delete_service(self, *, id: int):
+    def delete_service(self, *, service_id: int):
         """
         Delete service by id
 
         Parameters
         ----------
-        id : int
+        service_id : int
             ID of service to be deleted
 
         Returns
         -------
         None
         """
-        self.catalog.pop(id, None)
+        self.catalog.pop(service_id, None)
         self.n -= 1

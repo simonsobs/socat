@@ -22,7 +22,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         "extragalactic_sources",
-        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("source_id", sa.Integer, primary_key=True),
         sa.Column("ra_deg", sa.Float, nullable=False),
         sa.Column("dec_deg", sa.Float, nullable=False),
         sa.Column("flux_mJy", sa.Float, nullable=True),
@@ -31,28 +31,28 @@ def upgrade() -> None:
 
     op.create_table(
         "astroquery_services",
-        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("service_id", sa.Integer, primary_key=True),
         sa.Column("name", sa.String, nullable=False),
         sa.Column("config", sa.JSON, nullable=False),
     )
 
-    op.create_table(
-        "astroquery_sources",
-        sa.Column("id", sa.Integer, primary_key=True),
-        sa.Column("name", sa.String, index=True, nullable=False),
-        sa.Column("config", sa.JSON, nullable=False),
-    )
+    # op.create_table(
+    #    "astroquery_sources",
+    #    sa.Column("id", sa.Integer, primary_key=True),
+    #    sa.Column("name", sa.String, index=True, nullable=False),
+    #    sa.Column("config", sa.JSON, nullable=False),
+    # )
 
     op.create_table(
         "solarsystem_sources",
-        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("solar_id", sa.Integer, primary_key=True),
         sa.Column("MPC_id", sa.Integer, index=True, nullable=True),
         sa.Column("name", sa.String, index=True, nullable=False),
     )
 
     op.create_table(
         "solarsystem_ephem",
-        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("ephem_id", sa.Integer, primary_key=True),
         sa.Column(
             "obj_id",
             sa.Integer,

@@ -51,7 +51,7 @@ class AstroqueryServiceTable(AstroqueryService, SQLModel, table=True):
         Unique service identifier
     """
 
-    __tablename__ = "astroquery_sources"
+    __tablename__ = "astroquery_services"
 
     service_id: int = Field(primary_key=True)
     name: str = Field(index=True)
@@ -223,7 +223,7 @@ class SolarSystemEphemTable(SQLModel, table=True):
 
     ephem_id: int = Field(primary_key=True)
     obj_id: int = Field(
-        foreign_key="solarsystem_sources.id",
+        foreign_key="solarsystem_sources.solar_id",
         nullable=False,
         ondelete="CASCADE",
     )
