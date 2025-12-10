@@ -36,13 +36,6 @@ def upgrade() -> None:
         sa.Column("config", sa.JSON, nullable=False),
     )
 
-    # op.create_table(
-    #    "astroquery_sources",
-    #    sa.Column("id", sa.Integer, primary_key=True),
-    #    sa.Column("name", sa.String, index=True, nullable=False),
-    #    sa.Column("config", sa.JSON, nullable=False),
-    # )
-
     op.create_table(
         "solarsystem_sources",
         sa.Column("solar_id", sa.Integer, primary_key=True),
