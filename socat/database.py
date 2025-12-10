@@ -22,7 +22,7 @@ class AstroqueryService(BaseModel):
     """An allowable astroquery service
     Attributes
     ----------
-    id : int
+    service_id : int
         Unique service identifier
     name : str
         Name of service
@@ -30,7 +30,7 @@ class AstroqueryService(BaseModel):
         json to be deserialized to config options
     """
 
-    id: int
+    service_id: int
     name: str
     config: dict[str, Any]
 
@@ -38,7 +38,7 @@ class AstroqueryService(BaseModel):
     #    config = AstroqueryConfig.model_validate_json(config)
 
     def __repr__(self):
-        return f"AstroqueryService(id={self.id}, name={self.name})"  # pragma: no cover
+        return f"AstroqueryService(id={self.service_id}, name={self.name})"  # pragma: no cover
 
 
 class AstroqueryServiceTable(AstroqueryService, SQLModel, table=True):
@@ -53,7 +53,7 @@ class AstroqueryServiceTable(AstroqueryService, SQLModel, table=True):
 
     __tablename__ = "astroquery_sources"
 
-    id: int = Field(primary_key=True)
+    service_id: int = Field(primary_key=True)
     name: str = Field(index=True)
     config: dict[str, Any] = Field(sa_column=Column(JSON))
 
@@ -66,7 +66,9 @@ class AstroqueryServiceTable(AstroqueryService, SQLModel, table=True):
         AstroqueryService : AstroqueryService
             Service corresponding to this id.
         """
-        return AstroqueryService(id=self.id, name=self.name, config=self.config)
+        return AstroqueryService(
+            service_id=self.service_id, name=self.name, config=self.config
+        )
 
 
 class ExtragalacticSource(BaseModel):
@@ -75,7 +77,7 @@ class ExtragalacticSource(BaseModel):
 
     Attributes
     ----------
-    id : int
+    source_id : int
         Unique source identifier. Internal to SO
     position : AstroPydanticICRS
         Position of source in ICRS coordinates
@@ -85,7 +87,7 @@ class ExtragalacticSource(BaseModel):
         Name of source. Optional
     """
 
-    id: int | None = None
+    source_id: int | None = None
     position: AstroPydanticICRS
     flux: AstroPydanticQuantity | None = None
     name: str | None
@@ -99,13 +101,13 @@ class ExtragalacticSourceTable(SQLModel, table=True):
 
     Attributes
     ----------
-    id : int
+    source_id : int
         Unique source identifiers. Internal to SO
     """
 
     __tablename__ = "extragalactic_sources"
 
-    id: int = Field(primary_key=True)
+    source_id: int = Field(primary_key=True)
     ra_deg: float = Field(nullable=False)
     dec_deg: float = Field(nullable=False)
     flux_mJy: float | None = Field(nullable=True)
@@ -124,7 +126,7 @@ class ExtragalacticSourceTable(SQLModel, table=True):
         if self.flux_mJy is not None:
             flux *= u.mJy
         return ExtragalacticSource(
-            id=self.id,
+            source_id=self.source_id,
             position=ICRS(ra=self.ra_deg * u.deg, dec=self.dec_deg * u.deg),
             flux=flux,
             name=self.name,
@@ -146,7 +148,7 @@ class SolarSystemSource(BaseModel):
 
     """
 
-    id: int
+    solar_id: int
     MPC_id: int | None
     name: str
 
@@ -160,7 +162,7 @@ class SolarSystemTable(SolarSystemSource, SQLModel, table=True):
 
     __tablename__ = "solarsystem_sources"
 
-    id: int = Field(primary_key=True)
+    solar_id: int = Field(primary_key=True)
     MPC_id: int | None = Field(index=True, nullable=True)
     name: str = Field(index=True, nullable=False)
 
@@ -174,7 +176,7 @@ class SolarSystemTable(SolarSystemSource, SQLModel, table=True):
             Source corresponding to this id.
         """
         return SolarSystemSource(
-            id=self.id,
+            solar_id=self.solar_id,
             MPC_id=self.MPC_id,
             name=self.name,
         )
@@ -186,7 +188,7 @@ class SolarSystemEphem(BaseModel):
 
     Attributes
     ----------
-    id : int
+    solar_id : int
         ID of ephem.
     obj_id :int
         Internal SO ID of source
@@ -201,7 +203,7 @@ class SolarSystemEphem(BaseModel):
 
     """
 
-    id: int
+    ephem_id: int
     obj_id: int
     MPC_id: int | None
     name: str
@@ -219,7 +221,7 @@ class SolarSystemEphemTable(SQLModel, table=True):
 
     __tablename__ = "solarsystem_ephem"
 
-    id: int = Field(primary_key=True)
+    ephem_id: int = Field(primary_key=True)
     obj_id: int = Field(
         foreign_key="solarsystem_sources.id",
         nullable=False,
@@ -253,7 +255,7 @@ class SolarSystemEphemTable(SQLModel, table=True):
         if self.flux_mJy is not None:
             flux *= u.mJy
         return SolarSystemEphem(
-            id=self.id,
+            ephem_id=self.ephem_id,
             obj_id=self.obj_id,
             MPC_id=self.MPC_id,
             name=self.name,
