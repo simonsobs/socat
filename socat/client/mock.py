@@ -10,7 +10,11 @@ from astropy.coordinates import ICRS
 from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
 
-from socat.database import AstroqueryService, ExtragalacticSource
+from socat.database import (
+    AstroqueryService,
+    ExtragalacticSource,
+    SolarSystemSource,
+)
 
 from .core import AstroqueryClientBase, ClientBase
 
@@ -28,7 +32,7 @@ class Client(ClientBase):
 
     Methods
     -------
-    create(self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None)
+    create_source(self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None)
         Create a source and add it to the catalog
     create_name(self, *, name: str, service_name: str)
         Create a source by name using astroquery and add it to the catalog
@@ -52,7 +56,7 @@ class Client(ClientBase):
         self.catalog = {}
         self.n = 0
 
-    def create(
+    def create_source(
         self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
     ) -> ExtragalacticSource:
         """
@@ -415,3 +419,98 @@ class AstorqueryClient(AstroqueryClientBase):
         """
         self.catalog.pop(service_id, None)
         self.n -= 1
+
+
+class SolarSystemClient(ClientBase):
+    """
+    Mock solar system client for testing.
+
+    Attributes
+    ----------
+    catalog : dict[int, SolarSystemSource]
+        Dictionary of solar system sources replicating a catalog
+    n : int
+        Number of entries in catalog
+
+    Methods
+    -------
+    create_solarsystem_source(self, *, name: str, MPC_id: int | None)
+        Create a solar system source.
+    get_solarsystem_source(self, *, solar_id: int)
+        Get a solar system source.
+    get_solarsystem_source_name(self, *, name: str)
+        Get a solar system source by name.
+    get_solarsystem_source_MPC_id(self, *, MPC_id: int)
+        Get a solar system source by MPC ID.
+    update_solarsystem_source(self, *, solar_id: int, name: str | None, MPC_id: int | None)
+        Update a solar system source.
+    delete_solarsystem_source(sefl, *, solar_id: int)
+        Delete a solar system source.
+    """
+
+    catalog: dict[int, SolarSystemSource]
+    n: int
+
+    def __init__(self):
+        """
+        Initialize an empty catalog.
+        """
+        self.catalog = {}
+        self.n = 0
+
+    def create_solarsystem_source(
+        self, *, name: str, MPC_id: int | None
+    ) -> SolarSystemSource:
+        """
+        Create a new solar system source.
+
+        Parameters
+        ----------
+        name : str
+            Name of source
+        MPC_id : int
+            Minor Planet Center ID of source
+
+        Returns
+        -------
+        solar_source : SolarSystemSource
+            Solar system source that was added.
+        """
+        solar_source = SolarSystemSource(solar_id=self.n, name=name, MPC_id=MPC_id)
+        self.catalog[self.n] = solar_source
+        self.n += 1
+
+        return solar_source
+
+    def get_solarsystem_source(self, *, solar_id: int) -> SolarSystemSource | None:
+        """
+        Get a solar system source.
+
+        Parameters
+        ----------
+        solar_id : int
+            Internal SO ID of solar system source
+
+        Returns
+        -------
+        solar_source : SolarSytemSource
+            Reuqested solar system source.
+        """
+        solar_source = self.catalog.get(solar_id, None)
+
+        return solar_source
+
+    def get_solarsystem_source_name(self, *, name: str) -> list[SolarSystemSource]:
+        """
+        Get a solar system source by name.
+
+        Parameters
+        ----------
+        name : str
+            Name of solar system source
+
+        Returns
+        -------
+        solar_source : SolarSystemSource
+            Requested solar system source.
+        """
