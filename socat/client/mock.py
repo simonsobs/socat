@@ -444,15 +444,15 @@ class SolarSystemClient(SolarSystemClientBase):
     -------
     create_sso(self, *, name: str, MPC_id: int | None)
         Create a solar system source.
-    get_sso(self, *, solar_id: int)
+    get_sso(self, *, sso_id: int)
         Get a solar system source.
     get_sso_name(self, *, name: str)
         Get a solar system source by name.
     get_sso_MPC_id(self, *, MPC_id: int)
         Get a solar system source by MPC ID.
-    update_sso(self, *, solar_id: int, name: str | None, MPC_id: int | None)
+    update_sso(self, *, sso_id: int, name: str | None, MPC_id: int | None)
         Update a solar system source.
-    delete_sso(sefl, *, solar_id: int)
+    delete_sso(sefl, *, sso_id: int)
         Delete a solar system source.
     """
 
@@ -482,19 +482,19 @@ class SolarSystemClient(SolarSystemClientBase):
         solar_source : SolarSystemSource
             Solar system source that was added.
         """
-        solar_source = SolarSystemSource(solar_id=self.n, name=name, MPC_id=MPC_id)
+        solar_source = SolarSystemSource(sso_id=self.n, name=name, MPC_id=MPC_id)
         self.catalog[self.n] = solar_source
         self.n += 1
 
         return solar_source
 
-    def get_sso(self, *, solar_id: int) -> SolarSystemSource | None:
+    def get_sso(self, *, sso_id: int) -> SolarSystemSource | None:
         """
         Get a solar system source.
 
         Parameters
         ----------
-        solar_id : int
+        sso_id : int
             Internal SO ID of solar system source
 
         Returns
@@ -502,7 +502,7 @@ class SolarSystemClient(SolarSystemClientBase):
         solar_source : SolarSytemSource
             Reuqested solar system source.
         """
-        solar_source = self.catalog.get(solar_id, None)
+        solar_source = self.catalog.get(sso_id, None)
 
         return solar_source
 
@@ -555,7 +555,7 @@ class SolarSystemClient(SolarSystemClientBase):
         return solars
 
     def update_sso(
-        self, *, solar_id: int, name: str | None, MPC_id: int | None
+        self, *, sso_id: int, name: str | None, MPC_id: int | None
     ) -> SolarSystemSource | None:
         """
         Update a solar system source by ID.
@@ -563,7 +563,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
         Parameters
         ----------
-        solar_id : int
+        sso_id : int
             Internal SO ID of solar system source
         name : str | None
             Name of source
@@ -575,35 +575,35 @@ class SolarSystemClient(SolarSystemClientBase):
         new : SolarSystemSource | None
             Updated solar system source
         """
-        current = self.get_sso(solar_id=solar_id)
+        current = self.get_sso(sso_id=sso_id)
 
         if current is None:
             return None
 
         new = SolarSystemSource(
-            solar_id=current.solar_id,
+            sso_id=current.sso_id,
             name=current.name if name is None else name,
             MPC_id=current.MPC_id if MPC_id is None else MPC_id,
         )
 
-        self.catalog[solar_id] = new
+        self.catalog[sso_id] = new
 
         return new
 
-    def delete_sso(self, *, solar_id: int) -> None:
+    def delete_sso(self, *, sso_id: int) -> None:
         """
         Delete solar system source by ID.
 
         Parameters:
         -----------
-        solar_id : int
+        sso_id : int
             Internal SO ID of source
 
         Returns
         -------
         None
         """
-        check = self.catalog.pop(solar_id, None)
+        check = self.catalog.pop(sso_id, None)
         if check is not None:
             self.n -= 1
 
@@ -657,7 +657,7 @@ class EphemClient(EphemClientBase):
         Parameters
         ----------
         sso_id : int
-            Internal SO ID of associated SSO (solar_id).
+            Internal SO ID of associated SSO (sso_id).
         MPC_id : int
             Minor Planet Center ID of SSO.
         name : str
@@ -754,6 +754,7 @@ class EphemClient(EphemClientBase):
             MPC_id=current.MPC_id if MPC_id is None else MPC_id,
             name=current.name if name is None else name,
             time=current.time if time is None else time,
+            position=current.position if position is None else position,
             flux=current.flux if flux is None else flux,
         )
 
