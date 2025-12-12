@@ -599,7 +599,7 @@ async def delete_source(source_id: int, session: SessionDependency) -> None:
 
 
 @router.put("/solarsystemsource/new")
-async def create_solarsystem_source(
+async def create_sso(
     model: SolarSystemSourceModificationRequest, session: SessionDependency
 ) -> SolarSystemSource:
     """
@@ -628,7 +628,7 @@ async def create_solarsystem_source(
             detail="Source name must be provided",
         )
     try:
-        response = await core.create_solarsystem_source(
+        response = await core.create_sso(
             name=model.name,
             MPC_id=model.MPC_id,
             session=session,
@@ -640,9 +640,7 @@ async def create_solarsystem_source(
 
 
 @router.get("/solarsystemsource/{solar_id}")
-async def get_solarsystem_source(
-    solar_id: int, session: SessionDependency
-) -> SolarSystemSource:
+async def get_sso(solar_id: int, session: SessionDependency) -> SolarSystemSource:
     """
     Get a solar sytem source by id from the database
 
@@ -664,7 +662,7 @@ async def get_solarsystem_source(
         If id does not correspond to any source
     """
     try:
-        response = await core.get_solarsystem_source(solar_id, session=session)
+        response = await core.get_sso(solar_id, session=session)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -672,7 +670,7 @@ async def get_solarsystem_source(
 
 
 @router.post("/solarsystemsource/{solar_id}")
-async def update_solarsystem_source(
+async def update_sso(
     solar_id: int,
     model: SolarSystemSourceModificationRequest,
     session: SessionDependency,
@@ -700,7 +698,7 @@ async def update_solarsystem_source(
         If id does not correspond to any source
     """
     try:
-        response = await core.update_solarsystem_source(
+        response = await core.update_sso(
             solar_id,
             name=model.name,
             MPC_id=model.MPC_id,
@@ -713,7 +711,7 @@ async def update_solarsystem_source(
 
 
 @router.delete("/solarsystemsource/{solar_id}")
-async def delete_solarsystem_source(solar_id: int, session: SessionDependency) -> None:
+async def delete_sso(solar_id: int, session: SessionDependency) -> None:
     """
     Delete a solar system source by id
 
@@ -735,7 +733,7 @@ async def delete_solarsystem_source(solar_id: int, session: SessionDependency) -
         If id does not correspond to any source
     """
     try:
-        await core.delete_solarsystem_source(solar_id, session=session)
+        await core.delete_sso(solar_id, session=session)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return

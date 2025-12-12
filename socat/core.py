@@ -410,7 +410,7 @@ async def delete_source(source_id: int, session: AsyncSession) -> None:
     return
 
 
-async def create_solarsystem_source(
+async def create_sso(
     name: str,
     MPC_id: int | None,
     session: AsyncSession,
@@ -437,9 +437,7 @@ async def create_solarsystem_source(
     return source.to_model()
 
 
-async def get_solarsystem_source(
-    solar_id: int, session: AsyncSession
-) -> SolarSystemSource:
+async def get_sso(sso_id: int, session: AsyncSession) -> SolarSystemSource:
     """
     Get a solar system source from the database by id.
 
@@ -461,15 +459,15 @@ async def get_solarsystem_source(
         If the source is not found.
     """
 
-    source = await session.get(SolarSystemTable, solar_id)
+    source = await session.get(SolarSystemTable, sso_id)
 
     if source is None:
-        raise ValueError(f"Solar system source with ID {solar_id} not found.")
+        raise ValueError(f"Solar system source with ID {sso_id} not found.")
 
     return source
 
 
-async def get_solarsystem_source_name(
+async def get_sso_name(
     source_name: str, session: AsyncSession
 ) -> list[SolarSystemSource]:
     """
@@ -506,9 +504,7 @@ async def get_solarsystem_source_name(
     return source_list
 
 
-async def get_solarsystem_source_MPC_id(
-    MPC_id: int, session: AsyncSession
-) -> list[SolarSystemSource]:
+async def get_sso_MPC_id(MPC_id: int, session: AsyncSession) -> list[SolarSystemSource]:
     """
     Get a solar system source by MPC ID.
 
@@ -543,8 +539,8 @@ async def get_solarsystem_source_MPC_id(
     return source_list
 
 
-async def update_solarsystem_source(
-    solar_id: int,
+async def update_sso(
+    sso_id: int,
     name: str | None,
     MPC_id: int | None,
     session: AsyncSession,
@@ -553,7 +549,7 @@ async def update_solarsystem_source(
     Update a solar system source.
     Parameters
     ----------
-    solar_id : int
+    sso_id : int
         Internal SO source ID
     name : str
         Name of solar system source
@@ -573,10 +569,10 @@ async def update_solarsystem_source(
     """
 
     async with session.begin():
-        source = await session.get(SolarSystemTable, solar_id)
+        source = await session.get(SolarSystemTable, sso_id)
 
         if source is None:
-            raise ValueError(f"Solar system source with ID {solar_id} not found")
+            raise ValueError(f"Solar system source with ID {sso_id} not found")
 
         source.name = name if name is not None else source.name
         source.MPC_id = MPC_id if MPC_id is not None else source.MPC_id
@@ -586,13 +582,13 @@ async def update_solarsystem_source(
     return source.to_model()
 
 
-async def delete_solarsystem_source(solar_id: int, session: AsyncSession) -> None:
+async def delete_sso(sso_id: int, session: AsyncSession) -> None:
     """
     Delete a solar system source from the dattabase.
 
     Parameters
     ----------
-    solar_id : int
+    sso_id : int
         ID of source
     session : AsyncSession
         Asynchronous session to use
@@ -608,10 +604,10 @@ async def delete_solarsystem_source(solar_id: int, session: AsyncSession) -> Non
     """
 
     async with session.begin():
-        source = await session.get(SolarSystemTable, solar_id)
+        source = await session.get(SolarSystemTable, sso_id)
 
         if source is None:
-            raise ValueError(f"Source with ID {solar_id} not found")
+            raise ValueError(f"Source with ID {sso_id} not found")
 
         await session.delete(source)
         await session.commit()

@@ -148,7 +148,7 @@ class SolarSystemSource(BaseModel):
 
     """
 
-    solar_id: int
+    sso_id: int
     MPC_id: int | None
     name: str
 
@@ -162,7 +162,7 @@ class SolarSystemTable(SolarSystemSource, SQLModel, table=True):
 
     __tablename__ = "solarsystem_sources"
 
-    solar_id: int = Field(primary_key=True)
+    sso_id: int = Field(primary_key=True)
     MPC_id: int | None = Field(index=True, nullable=True)
     name: str = Field(index=True, nullable=False)
 
@@ -176,7 +176,7 @@ class SolarSystemTable(SolarSystemSource, SQLModel, table=True):
             Source corresponding to this id.
         """
         return SolarSystemSource(
-            solar_id=self.solar_id,
+            sso_id=self.sso_id,
             MPC_id=self.MPC_id,
             name=self.name,
         )
@@ -188,7 +188,7 @@ class SolarSystemEphem(BaseModel):
 
     Attributes
     ----------
-    solar_id : int
+    ephem_id : int
         ID of ephem.
     obj_id :int
         Internal SO ID of source
@@ -223,7 +223,7 @@ class SolarSystemEphemTable(SQLModel, table=True):
 
     ephem_id: int = Field(primary_key=True)
     obj_id: int = Field(
-        foreign_key="solarsystem_sources.solar_id",
+        foreign_key="solarsystem_sources.sso_id",
         nullable=False,
         ondelete="CASCADE",
     )
