@@ -3,6 +3,7 @@ import os
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 
@@ -10,8 +11,9 @@ def run_migration(database_path: str):
     """
     Run the migration on the database.
     """
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     alembic_cfg = Config("socat/alembic.ini")
     database_url = f"sqlite:///{database_path}"
@@ -44,6 +46,13 @@ async def database_async_sessionmaker(database):
     database_url = f"sqlite+aiosqlite:///{database}"
 
     async_engine = create_async_engine(database_url, echo=True, future=True)
+
+    @event.listens_for(async_engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        """Event listener to set PRAGMA statements on new synchronous connections."""
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
     yield async_sessionmaker(bind=async_engine, expire_on_commit=False)
 
