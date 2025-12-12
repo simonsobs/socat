@@ -89,7 +89,7 @@ class ClientBase(ABC):
 
 class AstroqueryClientBase(ABC):
     @abstractmethod
-    def create(self, *, name: str, config: dict[str, Any]) -> AstroqueryService:
+    def create_service(self, *, name: str, config: dict[str, Any]) -> AstroqueryService:
         """
         Create a new service in the catalog.
         """

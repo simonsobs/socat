@@ -314,7 +314,7 @@ class AstorqueryClient(AstroqueryClientBase):
         self.catalog = {}
         self.n = 0
 
-    def create(self, *, name: str, config: dict[str, Any]) -> AstroqueryService:
+    def create_service(self, *, name: str, config: dict[str, Any]) -> AstroqueryService:
         """
         Create a new astroquery service.
 

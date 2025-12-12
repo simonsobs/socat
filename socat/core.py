@@ -467,9 +467,7 @@ async def get_sso(sso_id: int, session: AsyncSession) -> SolarSystemSource:
     return source
 
 
-async def get_sso_name(
-    source_name: str, session: AsyncSession
-) -> list[SolarSystemSource]:
+async def get_sso_name(sso_name: str, session: AsyncSession) -> list[SolarSystemSource]:
     """
     Get a solar system source by name.
 
@@ -492,14 +490,14 @@ async def get_sso_name(
     """
 
     async with session.begin():
-        stmt = select(SolarSystemTable).where(SolarSystemTable.name == source_name)
+        stmt = select(SolarSystemTable).where(SolarSystemTable.name == sso_name)
 
         service = await session.execute(stmt)
 
     source_list = [s.to_model() for s in service.scalars().all()]
 
     if len(source_list) == 0:
-        raise ValueError(f"Service with name {source_name} not found.")
+        raise ValueError(f"Service with name {sso_name} not found.")
 
     return source_list
 

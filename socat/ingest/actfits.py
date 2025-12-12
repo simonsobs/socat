@@ -41,7 +41,7 @@ def ingest_fits_file(
     number_of_sources = 0
 
     for row in table.data:
-        client.create(
+        client.create_source(
             position=ICRS(
                 ra=row["raDeg"] * u.deg,
                 dec=row["decDeg"] * u.deg,

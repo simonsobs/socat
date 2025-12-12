@@ -5,7 +5,7 @@ from astropy.coordinates import ICRS
 def test_add_and_remove(mock_client):
     position = ICRS(0.0 * u.deg, 0.0 * u.deg)
     flux = 1.0 * u.mJy
-    source = mock_client.create(position=position, name="mySrc", flux=flux)
+    source = mock_client.create_source(position=position, name="mySrc", flux=flux)
     assert source.source_id == 0
     assert source.position.ra.value == 0.0
     assert source.position.dec.value == 0.0
@@ -60,11 +60,11 @@ def test_bad_id(mock_client):
 def test_box(mock_client):
     position1 = ICRS(1.0 * u.deg, 1.0 * u.deg)
     flux1 = 1.0 * u.mJy
-    source1 = mock_client.create(position=position1, name="mySrc", flux=flux1)
+    source1 = mock_client.create_source(position=position1, name="mySrc", flux=flux1)
     id1 = source1.source_id
     position2 = ICRS(2.0 * u.deg, 2.0 * u.deg)
     flux2 = 21.0 * u.mJy
-    source2 = mock_client.create(position=position2, name="mySrc2", flux=flux2)
+    source2 = mock_client.create_source(position=position2, name="mySrc2", flux=flux2)
     id2 = source2.source_id
 
     lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
@@ -91,7 +91,7 @@ def test_box(mock_client):
 
 
 def test_add_and_remove_astroquery(mock_client_astroquery):
-    service = mock_client_astroquery.create(
+    service = mock_client_astroquery.create_service(
         name="Simbad",
         config={"name_col": "main_id", "ra_col": "ra", "dec_col": "dec"},
     )
