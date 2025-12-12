@@ -38,7 +38,7 @@ def upgrade() -> None:
 
     op.create_table(
         "solarsystem_sources",
-        sa.Column("solar_id", sa.Integer, primary_key=True),
+        sa.Column("sso_id", sa.Integer, primary_key=True),
         sa.Column("MPC_id", sa.Integer, index=True, nullable=True),
         sa.Column("name", sa.String, index=True, nullable=False),
     )
