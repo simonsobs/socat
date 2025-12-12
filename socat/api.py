@@ -100,7 +100,7 @@ class EphemModificationRequest(BaseModel):
 
     Attributes
     ----------
-    obj_id : int | None
+    sso_id : int | None
         Internal SO identifier of solar system source
     MPC_id : int | None
         MPC ID of source
@@ -114,7 +114,7 @@ class EphemModificationRequest(BaseModel):
         Flux of source at ephem point in mJy
     """
 
-    obj_id: int | None
+    sso_id: int | None
     MPC_id: int | None
     name: str | None
     time: int | None
@@ -598,7 +598,7 @@ async def delete_source(source_id: int, session: SessionDependency) -> None:
     return
 
 
-@router.put("/solarsystemsource/new")
+@router.put("/sso/new")
 async def create_sso(
     model: SolarSystemSourceModificationRequest, session: SessionDependency
 ) -> SolarSystemSource:
@@ -639,7 +639,7 @@ async def create_sso(
     return response
 
 
-@router.get("/solarsystemsource/{sso_id}")
+@router.get("/sso/{sso_id}")
 async def get_sso(sso_id: int, session: SessionDependency) -> SolarSystemSource:
     """
     Get a solar sytem source by id from the database
@@ -669,7 +669,7 @@ async def get_sso(sso_id: int, session: SessionDependency) -> SolarSystemSource:
     return response
 
 
-@router.post("/solarsystemsource/{sso_id}")
+@router.post("/sso/{sso_id}")
 async def update_sso(
     sso_id: int,
     model: SolarSystemSourceModificationRequest,
@@ -710,7 +710,7 @@ async def update_sso(
     return response
 
 
-@router.delete("/solarsystemsource/{sso_id}")
+@router.delete("/sso/{sso_id}")
 async def delete_sso(sso_id: int, session: SessionDependency) -> None:
     """
     Delete a solar system source by id
@@ -771,7 +771,7 @@ async def create_ephem(
     try:
         response = await core.create_ephem(
             session=session,
-            obj_id=model.obj_id,
+            sso_id=model.sso_id,
             MPC_id=model.MPC_id,
             name=model.name,
             time=model.time,
@@ -844,7 +844,7 @@ async def update_ephem(
         response = await core.update_ephem(
             ephem_id,
             session=session,
-            obj_id=model.obj_id,
+            sso_id=model.sso_id,
             MPC_id=model.MPC_id,
             name=model.name,
             time=model.time,

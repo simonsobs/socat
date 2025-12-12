@@ -615,7 +615,7 @@ async def delete_sso(sso_id: int, session: AsyncSession) -> None:
 
 async def create_ephem(
     session: AsyncSession,
-    obj_id: int,
+    sso_id: int,
     MPC_id: int | None,
     name: str,
     time: int,
@@ -629,7 +629,7 @@ async def create_ephem(
     ----------
     session : AsyncSession
         Session to use
-    obj_id :int
+    sso_id :int
         Internal SO ID of source
     MPC_id : int | None
         MPC ID of source
@@ -651,7 +651,7 @@ async def create_ephem(
     if flux is not None:
         flux = flux.to_value("mJy")
     ephem = SolarSystemEphemTable(
-        obj_id=obj_id,
+        sso_id=sso_id,
         MPC_id=MPC_id,
         name=name,
         time=time,
@@ -699,7 +699,7 @@ async def get_ephem(ephem_id: int, session: AsyncSession) -> SolarSystemEphem:
 async def update_ephem(
     ephem_id: int,
     session: AsyncSession,
-    obj_id: int | None,
+    sso_id: int | None,
     MPC_id: int | None,
     name: str | None,
     time: int | None,
@@ -715,7 +715,7 @@ async def update_ephem(
         ID of ephem.
     session : AsyncSession
         Session to use
-    obj_id :int | None
+    sso_id :int | None
         Internal SO ID of source
     MPC_id : int | None
         MPC ID of source
@@ -745,7 +745,7 @@ async def update_ephem(
         if ephem is None:
             raise ValueError(f"Ephem point with ID {ephem_id} not found.")
 
-        ephem.obj_id = obj_id if obj_id is not None else ephem.obj_id
+        ephem.sso_id = sso_id if sso_id is not None else ephem.sso_id
         ephem.MPC_id = MPC_id if MPC_id is not None else ephem.MPC_id
         ephem.name = name if name is not None else ephem.name
         ephem.time = time if time is not None else ephem.time

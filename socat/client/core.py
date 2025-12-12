@@ -181,7 +181,7 @@ class EphemClientBase(ABC):
     def create_ephem(
         self,
         *,
-        obj_id: int,
+        sso_id: int,
         MPC_id: int | None,
         name: str,
         time: int,
@@ -205,7 +205,7 @@ class EphemClientBase(ABC):
         self,
         *,
         ephem_id: int,
-        obj_id: int | None,
+        sso_id: int | None,
         MPC_id: int | None,
         name: str | None,
         time: int | None,

@@ -621,11 +621,11 @@ class EphemClient(EphemClientBase):
 
     Methods
     -------
-    create_ephem(self,*,obj_id: int,MPC_id: int | None,name: str,time: int,position: ICRS,flux: Quantity | None = None,)
+    create_ephem(self,*,sso_id: int,MPC_id: int | None,name: str,time: int,position: ICRS,flux: Quantity | None = None,)
         Create a single ephemera point for solar system source.
     get_ephem(self, *, ephem_id: int)
         Get a single ephem point.
-    update_ephem(self,*,ephem_id: int,obj_id: int | None,MPC_id: int | None,name: str | None,time: int | None,position: ICRS | None,flux: Quantity | None,)
+    update_ephem(self,*,ephem_id: int,sso_id: int | None,MPC_id: int | None,name: str | None,time: int | None,position: ICRS | None,flux: Quantity | None,)
         Update a single ephem point.
     delete_ephem(self, *, ephem_id: int)
         Delete a single ephem point.
@@ -644,7 +644,7 @@ class EphemClient(EphemClientBase):
     def create_ephem(
         self,
         *,
-        obj_id: int,
+        sso_id: int,
         MPC_id: int,
         name: str,
         time: int,
@@ -656,7 +656,7 @@ class EphemClient(EphemClientBase):
 
         Parameters
         ----------
-        obj_id : int
+        sso_id : int
             Internal SO ID of associated SSO (solar_id).
         MPC_id : int
             Minor Planet Center ID of SSO.
@@ -676,7 +676,7 @@ class EphemClient(EphemClientBase):
         """
         ephem = SolarSystemEphem(
             ephem_id=self.n,
-            obj_id=obj_id,
+            sso_id=sso_id,
             MPC_id=MPC_id,
             name=name,
             time=time,
@@ -712,7 +712,7 @@ class EphemClient(EphemClientBase):
         self,
         *,
         ephem_id: int,
-        obj_id: int | None,
+        sso_id: int | None,
         MPC_id: int | None,
         name: str | None,
         time: int | None,
@@ -727,7 +727,7 @@ class EphemClient(EphemClientBase):
         ----------
         ephem_id : int
             Internal SO ID of ephem point.
-        obj_id : int
+        sso_id : int
             Internal SO ID of associated SSO.
         MPC_id : int
             Minor Planet Center ID of associated SSO.
@@ -750,7 +750,7 @@ class EphemClient(EphemClientBase):
 
         new = SolarSystemEphem(
             ephem_id=current.ephem_id,
-            obj_id=current.obj_id if obj_id is None else obj_id,
+            sso_id=current.sso_id if sso_id is None else sso_id,
             MPC_id=current.MPC_id if MPC_id is None else MPC_id,
             name=current.name if name is None else name,
             time=current.time if time is None else time,

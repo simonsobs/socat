@@ -163,8 +163,8 @@ class SolarSystemTable(SolarSystemSource, SQLModel, table=True):
     __tablename__ = "solarsystem_sources"
 
     sso_id: int = Field(primary_key=True)
-    MPC_id: int | None = Field(index=True, nullable=True)
-    name: str = Field(index=True, nullable=False)
+    MPC_id: int | None = Field(index=True, nullable=True, unique=True)
+    name: str = Field(index=True, nullable=False, unique=True)
 
     def to_model(self) -> SolarSystemSource:
         """
@@ -190,7 +190,7 @@ class SolarSystemEphem(BaseModel):
     ----------
     ephem_id : int
         ID of ephem.
-    obj_id :int
+    sso_id :int
         Internal SO ID of source
     MPC_id : int | None
         MPC ID of source
@@ -204,7 +204,7 @@ class SolarSystemEphem(BaseModel):
     """
 
     ephem_id: int
-    obj_id: int
+    sso_id: int
     MPC_id: int | None
     name: str
     time: int
@@ -222,7 +222,7 @@ class SolarSystemEphemTable(SQLModel, table=True):
     __tablename__ = "solarsystem_ephem"
 
     ephem_id: int = Field(primary_key=True)
-    obj_id: int = Field(
+    sso_id: int = Field(
         foreign_key="solarsystem_sources.sso_id",
         nullable=False,
         ondelete="CASCADE",
@@ -256,7 +256,7 @@ class SolarSystemEphemTable(SQLModel, table=True):
             flux *= u.mJy
         return SolarSystemEphem(
             ephem_id=self.ephem_id,
-            obj_id=self.obj_id,
+            sso_id=self.sso_id,
             MPC_id=self.MPC_id,
             name=self.name,
             time=self.time,

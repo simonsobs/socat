@@ -39,18 +39,18 @@ def upgrade() -> None:
     op.create_table(
         "solarsystem_sources",
         sa.Column("sso_id", sa.Integer, primary_key=True),
-        sa.Column("MPC_id", sa.Integer, index=True, nullable=True),
-        sa.Column("name", sa.String, index=True, nullable=False),
+        sa.Column("MPC_id", sa.Integer, index=True, nullable=True, unique=True),
+        sa.Column("name", sa.String, index=True, nullable=False, unique=True),
     )
 
     op.create_table(
         "solarsystem_ephem",
         sa.Column("ephem_id", sa.Integer, primary_key=True),
         sa.Column(
-            "obj_id",
+            "sso_id",
             sa.Integer,
             sa.ForeignKey(
-                "solarsystem_sources.id", ondelete="CASCADE", onupdate="CASCADE"
+                "solarsystem_sources.sso_id", ondelete="CASCADE", onupdate="CASCADE"
             ),
             nullable=False,
         ),
@@ -74,7 +74,7 @@ def upgrade() -> None:
         sa.Column("ra_deg", sa.Float, nullable=False),
         sa.Column("dec_deg", sa.Float, nullable=False),
         sa.Column("flux_mJy", sa.Float, nullable=True),
-        postgresql_partition_by="LIST (obj_id)",
+        postgresql_partition_by="LIST (sso_id)",
     )
 
 
