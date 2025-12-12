@@ -25,7 +25,7 @@ async def test_add_and_retrieve(database_async_sessionmaker):
 
         ephem_id = (
             await core.create_ephem(
-                obj_id=sso_id,
+                sso_id=sso_id,
                 MPC_id=511,
                 name="Davida",
                 time=123456789,
@@ -44,7 +44,7 @@ async def test_add_and_retrieve(database_async_sessionmaker):
     assert sso.MPC_id == 511
 
     assert ephem.ephem_id == ephem_id
-    assert ephem.obj_id == sso_id
+    assert ephem.sso_id == sso_id
     assert ephem.MPC_id == 511
     assert ephem.name == "Davida"
     assert ephem.time == 123456789
@@ -90,7 +90,7 @@ async def test_update(database_async_sessionmaker):
 
         ephem_id = (
             await core.create_ephem(
-                obj_id=sso_id,
+                sso_id=sso_id,
                 MPC_id=511,
                 name="Davida",
                 time=123456789,
@@ -108,7 +108,7 @@ async def test_update(database_async_sessionmaker):
         )
         ephem = await core.update_ephem(
             ephem_id=ephem_id,
-            obj_id=sso.sso_id,
+            sso_id=sso.sso_id,
             MPC_id=423,
             name="Diotima",
             time=987654321,
@@ -122,7 +122,7 @@ async def test_update(database_async_sessionmaker):
     assert sso.MPC_id == 423
 
     assert ephem.ephem_id == ephem_id
-    assert ephem.obj_id == sso.sso_id
+    assert ephem.sso_id == sso.sso_id
     assert ephem.MPC_id == 423
     assert ephem.name == "Diotima"
     assert ephem.time == 987654321
@@ -132,4 +132,54 @@ async def test_update(database_async_sessionmaker):
 
     async with database_async_sessionmaker() as session:
         await core.delete_sso(sso_id, session=session)
-        await core.delete_ephem(ephem_id, session=session)
+
+
+@pytest.mark.asyncio
+async def test_bad_id(database_async_sessionmaker):
+    with pytest.raises(ValueError):
+        async with database_async_sessionmaker() as session:
+            await core.get_sso(sso_id=999999, session=session)
+
+    with pytest.raises(ValueError):
+        async with database_async_sessionmaker() as session:
+            await core.get_sso_name(sso_name="badName", session=session)
+
+    with pytest.raises(ValueError):
+        async with database_async_sessionmaker() as session:
+            await core.get_sso_MPC_id(MPC_id=999999, session=session)
+
+    with pytest.raises(ValueError):
+        async with database_async_sessionmaker() as session:
+            await core.get_ephem(ephem_id=999999, session=session)
+
+    with pytest.raises(ValueError):
+        async with database_async_sessionmaker() as session:
+            await core.update_sso(
+                sso_id=999999,
+                name="Davida",
+                MPC_id=511,
+                session=session,
+            )
+
+    position = ICRS(1 * u.deg, 1 * u.deg)
+    flux = 1 * u.mJy
+    with pytest.raises(ValueError):
+        async with database_async_sessionmaker() as session:
+            await core.update_ephem(
+                ephem_id=999999,
+                session=session,
+                sso_id=1,
+                name="Davida",
+                MPC_id=511,
+                time=123456789,
+                position=position,
+                flux=flux,
+            )
+
+    with pytest.raises(ValueError):
+        async with database_async_sessionmaker() as session:
+            await core.delete_sso(sso_id=999999, session=session)
+
+    with pytest.raises(ValueError):
+        async with database_async_sessionmaker() as session:
+            await core.delete_ephem(ephem_id=999999, session=session)
