@@ -132,46 +132,44 @@ class AstroqueryClientBase(ABC):
 
 class SolarSystemClientBase(ABC):
     @abstractmethod
-    def create_solarsystem_source(
-        self, *, name: str, MPC_id: int | None
-    ) -> SolarSystemSource:
+    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemSource:
         """
         Create a new solar system source in the catalog.
         """
         return  # pragma: no cover
 
     @abstractmethod
-    def get_solarsystem_source(self, *, solar_id: int) -> SolarSystemSource | None:
+    def get_sso(self, *, solar_id: int) -> SolarSystemSource | None:
         """
         Get information about a specific solar system source. If the service is not found, we return None.
         """
         return None  # pragma: no cover
 
     @abstractmethod
-    def get_solarsystem_source_name(self, *, name: str) -> list[SolarSystemSource]:
+    def get_sso_name(self, *, name: str) -> list[SolarSystemSource] | None:
         """
         Get information about a specific solar system source by name.
         """
         return []  # pragma: no cover
 
     @abstractmethod
-    def get_solarsystem_source_MPC_id(self, *, MPC_id: int) -> list[SolarSystemSource]:
+    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemSource] | None:
         """
         Get information about a solar system source by Minor Planet Center ID.
         """
         return []  # pragma: no cover
 
     @abstractmethod
-    def update_solarsystem_source(
+    def update_sso(
         self, *, solar_id: int, name: str | None, MPC_id: int | None
-    ) -> SolarSystemSource:
+    ) -> SolarSystemSource | None:
         """
         Update information about a solar system source.
         """
         return []  #  pragma: no cover
 
     @abstractmethod
-    def delete_solarsystem_source(sefl, *, solar_id: int) -> None:
+    def delete_sso(self, *, solar_id: int) -> None:
         """
         Delete solar system source.
         """
@@ -196,7 +194,7 @@ class EphemClientBase(ABC):
         return []
 
     @abstractmethod
-    def get_ephem(self, *, ephem_id: int) -> SolarSystemEphem:
+    def get_ephem(self, *, ephem_id: int) -> SolarSystemEphem | None:
         """
         Get a single ephem point.
         """
@@ -213,14 +211,14 @@ class EphemClientBase(ABC):
         time: int | None,
         position: ICRS | None,
         flux: Quantity | None,
-    ) -> SolarSystemEphem:
+    ) -> SolarSystemEphem | None:
         """
         Update a single ephem point.
         """
         return []
 
     @abstractmethod
-    def delete_ephem(self, *, ephem_id: int) -> SolarSystemEphem:
+    def delete_ephem(self, *, ephem_id: int) -> None:
         """
         Delete a single ephem point.
         """
