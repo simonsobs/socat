@@ -696,6 +696,22 @@ async def get_ephem(ephem_id: int, session: AsyncSession) -> SolarSystemEphem:
     return ephem.to_model()
 
 
+async def get_ephem_points(
+    source: SolarSystemSource, t_min: int, t_max: int, session: AsyncSession
+) -> list[SolarSystemEphem]:
+    ephems = await session.execute(
+        select(SolarSystemEphemTable).where(
+            t_min <= SolarSystemEphemTable.time,
+            SolarSystemEphemTable.time <= t_max,
+            source.sso_id == SolarSystemEphemTable.sso_id,
+        )
+    )
+
+    ephem_list = [e.to_model() for e in ephems.scalars()]
+
+    return ephem_list
+
+
 async def update_ephem(
     ephem_id: int,
     session: AsyncSession,
