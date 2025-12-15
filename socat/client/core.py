@@ -191,14 +191,14 @@ class EphemClientBase(ABC):
         """
         Create a single ephemera point for solar system source.
         """
-        return []
+        return []  # pragma: no cover
 
     @abstractmethod
     def get_ephem(self, *, ephem_id: int) -> SolarSystemEphem | None:
         """
         Get a single ephem point.
         """
-        return []
+        return []  # pragma: no cover
 
     @abstractmethod
     def update_ephem(
@@ -215,11 +215,11 @@ class EphemClientBase(ABC):
         """
         Update a single ephem point.
         """
-        return []
+        return []  # pragma: no cover
 
     @abstractmethod
     def delete_ephem(self, *, ephem_id: int) -> None:
         """
         Delete a single ephem point.
         """
-        return []
+        return []  # pragma: no cover
