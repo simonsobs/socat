@@ -15,8 +15,8 @@ def test_add_and_retrieve(client):
         },
     )
 
-    id = response.json()["id"]
     assert response.status_code == 200
+    id = response.json()["source_id"]
 
     response = client.get("api/v1/source/{}".format(id))
 
@@ -53,7 +53,7 @@ def test_get_box(client):
             "name": "mySrc",
         },
     )
-    id1 = response.json()["id"]
+    id1 = response.json()["source_id"]
     response = client.put(
         "api/v1/source/new",
         json={
@@ -65,7 +65,7 @@ def test_get_box(client):
             "name": "mySrc2",
         },
     )
-    id2 = response.json()["id"]
+    id2 = response.json()["source_id"]
 
     # Check we recover both sources
     response = client.post(
@@ -86,7 +86,7 @@ def test_get_box(client):
 
     id_list = []
     for resp in response.json():
-        id_list.append(resp["id"])
+        id_list.append(resp["source_id"])
 
     assert id1 in id_list
     assert id2 in id_list
@@ -110,7 +110,7 @@ def test_get_box(client):
 
     id_list = []
     for resp in response.json():
-        id_list.append(resp["id"])
+        id_list.append(resp["source_id"])
 
     assert id1 in id_list
     assert id2 not in id_list
@@ -133,7 +133,7 @@ def test_update(client):
         },
     )
 
-    id = response.json()["id"]
+    id = response.json()["source_id"]
     assert response.status_code == 200
 
     response = client.post(
@@ -149,7 +149,7 @@ def test_update(client):
     )
 
     assert response.status_code == 200
-    assert response.json()["id"] == id
+    assert response.json()["source_id"] == id
     assert response.json()["position"]["ra"]["value"] == 2.0
     assert response.json()["position"]["dec"]["value"] == 2.0
     assert response.json()["flux"]["value"] == 2.5

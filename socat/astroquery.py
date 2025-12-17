@@ -8,7 +8,7 @@ from astroquery.query import BaseVOQuery
 from asyncer import asyncify
 from pydantic import BaseModel
 
-from .core import AstroqueryService
+from .database import AstroqueryService
 
 
 class AstroqueryReturn(BaseModel):

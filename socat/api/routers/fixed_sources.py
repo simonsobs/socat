@@ -1,60 +1,22 @@
 """
-The web API to access the socat database.
+The web API to access the socat fixed source database.
 """
-
-from typing import Annotated, Any
 
 import astropy.units as u
 from astropy.coordinates import ICRS
 from astropydantic import AstroPydanticICRS, AstroPydanticQuantity
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 import socat.astroquery as soaq
 import socat.core as core
 from socat.astroquery import AstroqueryReturn
 
-from .database import (
-    ALL_TABLES,
-    AstroqueryService,
-    ExtragalacticSource,
-    async_engine,
-    get_async_session,
-)
-
-
-async def lifespan(f: FastAPI):  # pragma: no cover
-    # Use SQLModel to create the tables.
-    print("Creating tables")
-    for table in ALL_TABLES:
-        print("Creating table", table)
-        async with async_engine.begin() as conn:
-            await conn.run_sync(table.metadata.create_all)
-    yield
-
-
-app = FastAPI(lifespan=lifespan)
+from ...database.sources import RegisteredFixedSource
+from ..async_ses import SessionDependency
+from .services import get_service_name
 
 router = APIRouter(prefix="/api/v1")
-
-SessionDependency = Annotated[AsyncSession, Depends(get_async_session)]
-
-
-class ServiceModificationRequestion(BaseModel):
-    """
-    Class which defines which service atributes are available to modify
-
-    Attributes
-    ----------
-    name : str | None
-        Name of service
-    config: dict[str, Any]  | None
-        json to be deserialized to config options
-    """
-
-    name: str | None
-    config: dict[str, Any]
 
 
 class SourceModificationRequest(BaseModel):
@@ -108,172 +70,10 @@ class ConeRequest(BaseModel):
     radius: AstroPydanticQuantity[u.arcmin]
 
 
-@router.put("/service/new")
-async def create_service(
-    model: ServiceModificationRequestion,
-    session: SessionDependency,
-) -> AstroqueryService:
-    """
-    Create a new astroquery service in the catalog
-
-    Parameters
-    ----------
-    model : ServiceModificationRequest
-        Object which contains name, common_api, and common attributes of service
-    session : SessionDependency
-        Asynchronous session to be used
-
-    Returns
-    -------
-    response : AstroqueryService
-       socat.database.AstroqueryService object which was added to the catalog.
-
-    Raises
-    ------
-    HTTPException
-        If the model does not contain required info or api response is malformed
-    """
-
-    try:
-        response = await core.create_service(
-            name=model.name, config=model.config, session=session
-        )
-    except ValidationError as e:  # pragma: no cover
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
-
-    return response
-
-
-@router.get("/service/{service_id}")
-async def get_service(service_id: int, session: SessionDependency) -> AstroqueryService:
-    """
-    Get a astroquery service by id from the database
-
-    Parameters
-    ----------
-    service_id : int
-        ID of service to querry
-    session : SessionDependency
-        Asynchronous session to use
-
-    Returns:
-    --------
-    response : AstroqueryService
-        socat.database.AstroqueryService corresponding to id
-
-    Raises
-    ------
-    HTTPException
-        If id does not correspond to any service
-    """
-    try:
-        response = await core.get_service(service_id, session=session)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-
-    return response
-
-
-@router.get("/service/")
-async def get_service_name(
-    service_name: str, session: SessionDependency
-) -> list[AstroqueryService]:
-    """
-    Get an astroquery service by name from the database.
-
-    Parameters
-    ----------
-    service_name : str
-        Name of service to query
-    session : SessionDependency
-        Asynchronous session to use
-
-    Returns:
-    --------
-    response : AstroqueryService
-        socat.database.AstroqueryService corresponding to name
-
-    Raises
-    ------
-    HTTPException
-        If name does not correspond to any service
-    """
-    try:
-        response = await core.get_service_name(service_name, session=session)
-    except ValueError as e:  # pragma: no cover
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    return response
-
-
-@router.post("/service/{service_id}")
-async def update_service(
-    service_id: int, model: ServiceModificationRequestion, session: SessionDependency
-) -> AstroqueryService:
-    """
-    Update astroquery service parameters by id
-
-    Parameters
-    ----------
-    service_name : int
-        Name of source to update
-    model : ServiceModificationRequestion
-        Parameters of service to modify
-    session : SessionDependency
-        Asynchronous session to use
-
-    Returns
-    -------
-    response :  AstroqueryService
-        socat.database.AstroqueryService that has been modified
-
-    Raises
-    ------
-    HTTPException
-        If id does not correspond to any source
-    """
-    try:
-        response = await core.update_service(
-            service_id, model.name, config=model.config, session=session
-        )
-    except ValueError as e:  # pragma: no cover
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-
-    return response
-
-
-@router.delete("/service/{service_id}")
-async def delete_service(service_id: int, session: SessionDependency) -> None:
-    """
-    Delete a astroquery service by id
-
-    Parameters
-    ----------
-    service_id : int
-        ID of astroquery service to delete
-    session : SessionDependency
-        Asynchronous session to use
-
-    Returns
-    -------
-    None
-
-
-    Raises
-    ------
-    HTTPException
-        If name does not correspond to any service
-    """
-    try:
-        await core.delete_service(service_id, session=session)
-    except ValueError as e:  # pragma: no cover
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    return
-
-
 @router.put("/source/new")
 async def create_source(
     model: SourceModificationRequest, session: SessionDependency
-) -> ExtragalacticSource:
+) -> RegisteredFixedSource:
     """
     Create a new source in the catalog
 
@@ -286,8 +86,8 @@ async def create_source(
 
     Returns
     -------
-    response : ExtragalacticSource
-        socat.database.ExtragalacticSource object which was added to the catalog.
+    response : RegisteredFixedSource
+        socat.database.RegisteredFixedSource object which was added to the catalog.
 
     Raises
     ------
@@ -317,7 +117,7 @@ async def create_source_name(
     name: str,
     astroquery_service: str,
     session: SessionDependency,
-) -> ExtragalacticSource:
+) -> RegisteredFixedSource:
     """
     Create a new source by name, resolve using astroquery_service.
 
@@ -332,8 +132,8 @@ async def create_source_name(
 
     Returns
     -------
-    response : ExtragalacticSource
-        socat.database.ExtragalacticSource object which was added to the catalog.
+    response : RegisteredFixedSource
+        socat.database.RegisteredFixedSource object which was added to the catalog.
 
     Raises
     ------
@@ -420,7 +220,7 @@ async def get_cone_astroquery(
 @router.post("/source/box")
 async def get_box(
     box: BoxRequest, session: SessionDependency
-) -> list[ExtragalacticSource]:
+) -> list[RegisteredFixedSource]:
     """
     Get all sources in a box bounded by ra_min, ra_max, dec_min, dec_max.
 
@@ -433,8 +233,8 @@ async def get_box(
 
     Returns
     -------
-    response : list[ExtragalacticSource]
-        List of socat.database.ExtragalacticSource sources in box
+    response : list[RegisteredFixedSource]
+        List of socat.database.RegisteredFixedSource sources in box
 
     Raises
     ------
@@ -458,7 +258,9 @@ async def get_box(
 
 
 @router.get("/source/{source_id}")
-async def get_source(source_id: int, session: SessionDependency) -> ExtragalacticSource:
+async def get_source(
+    source_id: int, session: SessionDependency
+) -> RegisteredFixedSource:
     """
     Get a source by id from the database
 
@@ -471,8 +273,8 @@ async def get_source(source_id: int, session: SessionDependency) -> Extragalacti
 
     Returns:
     --------
-    response : ExtragalacticSource
-        socat.database.ExtragalacticSource corresponding to id
+    response : RegisteredFixedSource
+        socat.database.RegisteredFixedSource corresponding to id
 
     Raises
     ------
@@ -490,7 +292,7 @@ async def get_source(source_id: int, session: SessionDependency) -> Extragalacti
 @router.post("/source/{source_id}")
 async def update_source(
     source_id: int, model: SourceModificationRequest, session: SessionDependency
-) -> ExtragalacticSource:
+) -> RegisteredFixedSource:
     """
     Update source parameters by id
 
@@ -505,8 +307,8 @@ async def update_source(
 
     Returns
     -------
-    response :  ExtragalacticSource
-        socat.database.ExtragalacticSource that has been modified
+    response :  RegisteredFixedSource
+        socat.database.RegisteredFixedSource that has been modified
 
     Raises
     ------
@@ -550,6 +352,3 @@ async def delete_source(source_id: int, session: SessionDependency) -> None:
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     return
-
-
-app.include_router(router)

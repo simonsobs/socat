@@ -11,7 +11,7 @@ def test_add_and_remove_service(client):
         },
     )
 
-    id = response.json()["id"]
+    id = response.json()["service_id"]
     assert response.status_code == 200
 
     response = client.get("api/v1/service/{}".format(id))
@@ -48,7 +48,7 @@ def test_update_service(client):
             "config": {"name_col": "main_id", "ra_col": "ra", "dec_col": "dec"},
         },
     )
-    id = response.json()["id"]
+    id = response.json()["service_id"]
     assert response.status_code == 200
 
     response = client.post(
@@ -60,7 +60,7 @@ def test_update_service(client):
     )
 
     assert response.status_code == 200
-    assert response.json()["id"] == id
+    assert response.json()["service_id"] == id
     assert response.json()["name"] == "VizieR"
     assert response.json()["config"]["name_col"] == "name"
     assert response.json()["config"]["ra_col"] == "raDeg"
@@ -102,12 +102,12 @@ def test_add_source_by_name(client):
             "config": {"name_col": "main_id", "ra_col": "ra", "dec_col": "dec"},
         },
     )
-    service_id = response.json()["id"]
+    service_id = response.json()["service_id"]
     response = client.post(
         "api/v1/source/new?name={}&astroquery_service={}".format("m1", "Simbad")
     )
     print("response: ", response)
-    id = response.json()["id"]
+    id = response.json()["source_id"]
     assert response.status_code == 200
 
     response = client.get("api/v1/source/{}".format(id))
@@ -132,7 +132,7 @@ def test_add_source_by_name(client):
         "api/v1/source/new?name={}&astroquery_service={}".format("m2", "Simbad")
     )
 
-    id = response.json()["id"]
+    id = response.json()["source_id"]
     assert response.status_code == 200
 
     response = client.get("api/v1/source/{}".format(id))

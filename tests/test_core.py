@@ -23,12 +23,12 @@ async def test_add_and_retrieve(database_async_sessionmaker):
             await core.create_source(
                 position=position, session=session, name="mySrc", flux=flux
             )
-        ).id
+        ).source_id
 
     async with database_async_sessionmaker() as session:
         source = await core.get_source(id, session=session)
 
-    assert source.id == id
+    assert source.source_id == id
     assert source.position.ra.value == 1.0
     assert source.position.dec.value == 1.0
     assert source.name == "mySrc"
@@ -52,7 +52,7 @@ async def test_box(database_async_sessionmaker):
                 name="mySrc1",
                 flux=flux1,
             )
-        ).id
+        ).source_id
         id2 = (
             await core.create_source(
                 position=position2,
@@ -60,7 +60,7 @@ async def test_box(database_async_sessionmaker):
                 name="mySrc2",
                 flux=flux2,
             )
-        ).id
+        ).source_id
 
     # Test we recover both sources
     lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
@@ -72,7 +72,7 @@ async def test_box(database_async_sessionmaker):
 
         id_list = []
         for source in source_list:
-            id_list.append(source.id)
+            id_list.append(source.source_id)
 
         assert id1 in id_list
         assert id2 in id_list
@@ -87,7 +87,7 @@ async def test_box(database_async_sessionmaker):
 
         id_list = []
         for source in source_list:
-            id_list.append(source.id)
+            id_list.append(source.source_id)
 
         assert id1 in id_list
         assert id2 not in id_list
@@ -110,7 +110,7 @@ async def test_update(database_async_sessionmaker):
                 name="mySrc",
                 flux=flux,
             )
-        ).id
+        ).source_id
 
     position = ICRS(1 * u.deg, 1 * u.deg)
     async with database_async_sessionmaker() as session:
@@ -119,7 +119,7 @@ async def test_update(database_async_sessionmaker):
             position=position,
             session=session,
         )
-    assert source.id == id
+    assert source.source_id == id
     assert source.position.ra.value == 1.0
     assert source.position.dec.value == 1.0
 

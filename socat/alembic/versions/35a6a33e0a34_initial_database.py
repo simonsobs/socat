@@ -20,30 +20,65 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.create_table(
-        "extragalactic_sources",
-        sa.Column("id", sa.Integer, primary_key=True),
+        "fixed_sources",
+        sa.Column("source_id", sa.Integer, primary_key=True),
         sa.Column("ra_deg", sa.Float, nullable=False),
         sa.Column("dec_deg", sa.Float, nullable=False),
         sa.Column("flux_mJy", sa.Float, nullable=True),
-        sa.Column("name", sa.String, nullable=True),
+        sa.Column("name", sa.String, index=True, nullable=True),
     )
 
     op.create_table(
         "astroquery_services",
-        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("service_id", sa.Integer, primary_key=True),
         sa.Column("name", sa.String, nullable=False),
         sa.Column("config", sa.JSON, nullable=False),
     )
 
     op.create_table(
-        "astroquery_sources",
-        sa.Column("id", sa.Integer, primary_key=True),
-        sa.Column("name", sa.String, index=True, nullable=False),
-        sa.Column("config", sa.JSON, nullable=False),
+        "solarsystem_objects",
+        sa.Column("sso_id", sa.Integer, primary_key=True),
+        sa.Column("MPC_id", sa.Integer, index=True, nullable=True, unique=True),
+        sa.Column("name", sa.String, index=True, nullable=False, unique=True),
+    )
+
+    op.create_table(
+        "moving_sources",
+        sa.Column("ephem_id", sa.Integer, primary_key=True),
+        sa.Column(
+            "sso_id",
+            sa.Integer,
+            sa.ForeignKey(
+                "solarsystem_objects.sso_id", ondelete="CASCADE", onupdate="CASCADE"
+            ),
+            nullable=False,
+        ),
+        sa.Column(
+            "MPC_id",
+            sa.Integer,
+            sa.ForeignKey(
+                "solarsystem_objects.MPC_id", ondelete="CASCADE", onupdate="CASCADE"
+            ),
+            nullable=False,
+        ),
+        sa.Column(
+            "name",
+            sa.Integer,
+            sa.ForeignKey(
+                "solarsystem_objects.name", ondelete="CASCADE", onupdate="CASCADE"
+            ),
+            nullable=False,
+        ),
+        sa.Column("time", sa.Integer, index=True, nullable=False),
+        sa.Column("ra_deg", sa.Float, nullable=False),
+        sa.Column("dec_deg", sa.Float, nullable=False),
+        sa.Column("flux_mJy", sa.Float, nullable=True),
+        postgresql_partition_by="LIST (sso_id)",
     )
 
 
 def downgrade() -> None:
-    op.drop_table("extragalactic_sources")
+    op.drop_table("fixed_sources")
     op.drop_table("astroquery_services")
-    op.drop_table("astroquery_sources")
+    op.drop_table("mvoing_sources")
+    op.drop_table("solarsystem_objects")
