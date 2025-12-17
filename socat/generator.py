@@ -7,13 +7,13 @@ from scipy.interpolate import make_interp_spline
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .core import get_ephem_points
-from .database import ExtragalacticSource, SolarSystemSource
+from .database import RegisteredFixedSource, SolarSystemObject
 
 
 class SourceGenerator:
     def __init__(
         self,
-        source: ExtragalacticSource | SolarSystemSource,
+        source: RegisteredFixedSource | SolarSystemObject,
         t_min: int,
         t_max: int,
     ):
@@ -29,7 +29,7 @@ class SourceGenerator:
         interp will always just return the same ra/dec/flux
         (Recall that the RegisteredFixedSource.flux is
         a fixed estimate and not the light curve). If
-        the soure type is SolarSystemSource, then linear
+        the soure type is SolarSystemObject, then linear
         interp ra/dec/flux over the requested time range.
 
         Parameters
@@ -41,7 +41,7 @@ class SourceGenerator:
         -------
         None
         """
-        if type(self.source) is ExtragalacticSource:
+        if type(self.source) is RegisteredFixedSource:
             self.ra_unit = self.source.position.ra.unit
             self.dec_unit = self.source.position.dec.unit
             self.flux_unit = self.source.flux.unit
@@ -51,7 +51,7 @@ class SourceGenerator:
                 self.source.flux.value,
             )
 
-        elif type(self.source) is SolarSystemSource:
+        elif type(self.source) is SolarSystemObject:
             ephems = await get_ephem_points(
                 self.source, t_min=self.t_min, t_max=self.t_max, session=session
             )

@@ -12,9 +12,9 @@ from astroquery.query import BaseVOQuery
 
 from socat.database import (
     AstroqueryService,
-    ExtragalacticSource,
-    SolarSystemEphem,
-    SolarSystemSource,
+    RegisteredFixedSource,
+    RegisteredMovingSource,
+    SolarSystemObject,
 )
 
 from .core import (
@@ -31,8 +31,8 @@ class Client(ClientBase):
 
     Attributes
     ----------
-    catalog : dict[int, ExtragalacticSource]
-        Dictionary of Extragalactic sources replciating a catalog
+    catalog : dict[int, RegisteredFixedSource]
+        Dictionary of fixed sources replciating a catalog
     n : int
         Number of entries in catalog
 
@@ -52,7 +52,7 @@ class Client(ClientBase):
         Delete source by source_id
     """
 
-    catalog: dict[int, ExtragalacticSource]
+    catalog: dict[int, RegisteredFixedSource]
     n: int
 
     def __init__(self):
@@ -64,7 +64,7 @@ class Client(ClientBase):
 
     def create_source(
         self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
-    ) -> ExtragalacticSource:
+    ) -> RegisteredFixedSource:
         """
         Create a new source and add it to the catalog.
 
@@ -79,12 +79,12 @@ class Client(ClientBase):
 
         Returns
         -------
-        source : ExtragalacticSource
-            Extragalactic Source that was added
+        source : RegisteredFixedSource
+            Registered Fixed Source that was added
         """
         if flux is not None:
             flux = flux.to(u.mJy)
-        source = ExtragalacticSource(
+        source = RegisteredFixedSource(
             source_id=self.n,
             position=position,
             flux=flux,
@@ -95,7 +95,9 @@ class Client(ClientBase):
 
         return source
 
-    def create_name(self, *, name: str, astroquery_service: str) -> ExtragalacticSource:
+    def create_name(
+        self, *, name: str, astroquery_service: str
+    ) -> RegisteredFixedSource:
         """
         Create a new source by name and add it to the catalog.
 
@@ -108,8 +110,8 @@ class Client(ClientBase):
 
         Returns
         -------
-        source : ExtragalacticSource
-            Extragalactic Source that was added
+        source : RegisteredFixedSource
+            Registered Fixed Source that was added
         """
 
         service: BaseVOQuery = getattr(
@@ -143,7 +145,7 @@ class Client(ClientBase):
         flux = result_dict.get("flux", None)
         if flux is not None:
             flux *= u.mJy
-        source = ExtragalacticSource(
+        source = RegisteredFixedSource(
             source_id=self.n,
             position=position,
             name=name,
@@ -159,7 +161,7 @@ class Client(ClientBase):
         *,
         lower_left: ICRS,
         upper_right: ICRS,
-    ) -> ExtragalacticSource:
+    ) -> RegisteredFixedSource:
         """
         Get sources within a box.
 
@@ -172,7 +174,7 @@ class Client(ClientBase):
 
         Returns
         -------
-        list(sources) : list[ExtragalacticSource]
+        list(sources) : list[RegisteredFixedSource]
             List of sources in box
         """
         ra_min = lower_left.ra.value
@@ -187,7 +189,7 @@ class Client(ClientBase):
 
         return list(sources)
 
-    def get_source(self, *, source_id: int) -> ExtragalacticSource | None:
+    def get_source(self, *, source_id: int) -> RegisteredFixedSource | None:
         """
         Get source by id
 
@@ -199,14 +201,14 @@ class Client(ClientBase):
 
         Returns
         -------
-        self.catalog.get(source_id, None) : ExtragalacticSource | None
+        self.catalog.get(source_id, None) : RegisteredFixedSource | None
             Source corresponding to source_id. Returns None if source not found
         """
         return self.catalog.get(source_id, None)
 
     def get_forced_photometry_sources(
         self, *, minimum_flux: Quantity
-    ) -> list[ExtragalacticSource]:
+    ) -> list[RegisteredFixedSource]:
         """
         Get all sources that are used for forced photometry based on a minimum flux.
 
@@ -217,7 +219,7 @@ class Client(ClientBase):
 
         Returns
         -------
-        sources : iterable[ExtragalacticSource]
+        sources : iterable[RegisteredFixedSource]
             List of sources with flux greater than minimum_flux
         """
         sources = filter(
@@ -234,7 +236,7 @@ class Client(ClientBase):
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
-    ) -> ExtragalacticSource | None:
+    ) -> RegisteredFixedSource | None:
         """
         Update a source by id
 
@@ -249,7 +251,7 @@ class Client(ClientBase):
 
         Returns
         -------
-        new : ExtragalacticSource
+        new : RegisteredFixedSource
             Source that has been updated
         """
         current = self.get_source(source_id=source_id)
@@ -257,7 +259,7 @@ class Client(ClientBase):
         if current is None:
             return None
 
-        new = ExtragalacticSource(
+        new = RegisteredFixedSource(
             source_id=current.source_id,
             position=current.position if position is None else position,
             name=current.name if name is None else name,
@@ -435,7 +437,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
     Attributes
     ----------
-    catalog : dict[int, SolarSystemSource]
+    catalog : dict[int, SolarSystemObject]
         Dictionary of solar system sources replicating a catalog
     n : int
         Number of entries in catalog
@@ -456,7 +458,7 @@ class SolarSystemClient(SolarSystemClientBase):
         Delete a solar system source.
     """
 
-    catalog: dict[int, SolarSystemSource]
+    catalog: dict[int, SolarSystemObject]
     n: int
 
     def __init__(self):
@@ -466,7 +468,7 @@ class SolarSystemClient(SolarSystemClientBase):
         self.catalog = {}
         self.n = 0
 
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemSource:
+    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
         """
         Create a new solar system source.
 
@@ -479,16 +481,16 @@ class SolarSystemClient(SolarSystemClientBase):
 
         Returns
         -------
-        solar_source : SolarSystemSource
+        solar_source : SolarSystemObject
             Solar system source that was added.
         """
-        solar_source = SolarSystemSource(sso_id=self.n, name=name, MPC_id=MPC_id)
+        solar_source = SolarSystemObject(sso_id=self.n, name=name, MPC_id=MPC_id)
         self.catalog[self.n] = solar_source
         self.n += 1
 
         return solar_source
 
-    def get_sso(self, *, sso_id: int) -> SolarSystemSource | None:
+    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
         """
         Get a solar system source.
 
@@ -506,7 +508,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
         return solar_source
 
-    def get_sso_name(self, *, name: str) -> list[SolarSystemSource] | None:
+    def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
         """
         Get a solar system source by name.
 
@@ -517,7 +519,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
         Returns
         -------
-        solars : list[SolarSystemSource] | None
+        solars : list[SolarSystemObject] | None
             Requested solar system source.
         """
         solars = []
@@ -530,7 +532,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
         return solars
 
-    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemSource] | None:
+    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemObject] | None:
         """
         Get a solar system source by Minor Planet Center ID.
 
@@ -541,7 +543,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
         Returns
         -------
-        solars : list[SolarSystemSource] | None
+        solars : list[SolarSystemObject] | None
             List of sources with requested MPC ID
         """
         solars = []
@@ -556,7 +558,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
     def update_sso(
         self, *, sso_id: int, name: str | None, MPC_id: int | None
-    ) -> SolarSystemSource | None:
+    ) -> SolarSystemObject | None:
         """
         Update a solar system source by ID.
         If a variable is None, dont update it.
@@ -572,7 +574,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
         Returns
         -------
-        new : SolarSystemSource | None
+        new : SolarSystemObject | None
             Updated solar system source
         """
         current = self.get_sso(sso_id=sso_id)
@@ -580,7 +582,7 @@ class SolarSystemClient(SolarSystemClientBase):
         if current is None:
             return None
 
-        new = SolarSystemSource(
+        new = SolarSystemObject(
             sso_id=current.sso_id,
             name=current.name if name is None else name,
             MPC_id=current.MPC_id if MPC_id is None else MPC_id,
@@ -614,7 +616,7 @@ class EphemClient(EphemClientBase):
 
     Attributes
     ----------
-    catalog : dict[int, SolarSystemSource]
+    catalog : dict[int, SolarSystemObject]
         Dictionary of solar system sources replicating a catalog
     n : int
         Number of entries in catalog
@@ -650,7 +652,7 @@ class EphemClient(EphemClientBase):
         time: int,
         position: ICRS,
         flux: Quantity | None = None,
-    ) -> SolarSystemEphem:
+    ) -> RegisteredMovingSource:
         """
         Create a single ephem point associated with a SSO.
 
@@ -671,10 +673,10 @@ class EphemClient(EphemClientBase):
 
         Returns
         -------
-        ephem : SolarSystemEphem
+        ephem : RegisteredMovingSource
             Ephemeris point that was added.
         """
-        ephem = SolarSystemEphem(
+        ephem = RegisteredMovingSource(
             ephem_id=self.n,
             sso_id=sso_id,
             MPC_id=MPC_id,
@@ -688,7 +690,7 @@ class EphemClient(EphemClientBase):
 
         return ephem
 
-    def get_ephem(self, *, ephem_id: int) -> SolarSystemEphem | None:
+    def get_ephem(self, *, ephem_id: int) -> RegisteredMovingSource | None:
         """
         Get an ephem point by ID.
         Returns None if ephem not found.
@@ -700,7 +702,7 @@ class EphemClient(EphemClientBase):
 
         Returns
         -------
-        ephem : SolarSystemEphem | None
+        ephem : RegisteredMovingSource | None
             Get requested ephem.
         """
 
@@ -718,7 +720,7 @@ class EphemClient(EphemClientBase):
         time: int | None,
         position: ICRS | None,
         flux: Quantity | None,
-    ) -> SolarSystemEphem | None:
+    ) -> RegisteredMovingSource | None:
         """
         Update a solar system ephem.
         Returns None if ephem not found.
@@ -740,7 +742,7 @@ class EphemClient(EphemClientBase):
 
         Returns
         -------
-        new : SolarSystemEphem | None
+        new : RegisteredMovingSource | None
             Ephemeris point that was updated.
         """
         current = self.get_ephem(ephem_id=ephem_id)
@@ -748,7 +750,7 @@ class EphemClient(EphemClientBase):
         if current is None:
             return None
 
-        new = SolarSystemEphem(
+        new = RegisteredMovingSource(
             ephem_id=current.ephem_id,
             sso_id=current.sso_id if sso_id is None else sso_id,
             MPC_id=current.MPC_id if MPC_id is None else MPC_id,

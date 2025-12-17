@@ -15,8 +15,8 @@ def test_add_and_retrieve(client):
         },
     )
 
-    id = response.json()["source_id"]
     assert response.status_code == 200
+    id = response.json()["source_id"]
 
     response = client.get("api/v1/source/{}".format(id))
 

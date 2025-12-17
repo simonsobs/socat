@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.create_table(
-        "extragalactic_sources",
+        "fixed_sources",
         sa.Column("source_id", sa.Integer, primary_key=True),
         sa.Column("ra_deg", sa.Float, nullable=False),
         sa.Column("dec_deg", sa.Float, nullable=False),
@@ -36,20 +36,20 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        "solarsystem_sources",
+        "solarsystem_objects",
         sa.Column("sso_id", sa.Integer, primary_key=True),
         sa.Column("MPC_id", sa.Integer, index=True, nullable=True, unique=True),
         sa.Column("name", sa.String, index=True, nullable=False, unique=True),
     )
 
     op.create_table(
-        "solarsystem_ephem",
+        "moving_sources",
         sa.Column("ephem_id", sa.Integer, primary_key=True),
         sa.Column(
             "sso_id",
             sa.Integer,
             sa.ForeignKey(
-                "solarsystem_sources.sso_id", ondelete="CASCADE", onupdate="CASCADE"
+                "solarsystem_objects.sso_id", ondelete="CASCADE", onupdate="CASCADE"
             ),
             nullable=False,
         ),
@@ -57,7 +57,7 @@ def upgrade() -> None:
             "MPC_id",
             sa.Integer,
             sa.ForeignKey(
-                "solarsystem_sources.MPC_id", ondelete="CASCADE", onupdate="CASCADE"
+                "solarsystem_objects.MPC_id", ondelete="CASCADE", onupdate="CASCADE"
             ),
             nullable=False,
         ),
@@ -65,7 +65,7 @@ def upgrade() -> None:
             "name",
             sa.Integer,
             sa.ForeignKey(
-                "solarsystem_sources.name", ondelete="CASCADE", onupdate="CASCADE"
+                "solarsystem_objects.name", ondelete="CASCADE", onupdate="CASCADE"
             ),
             nullable=False,
         ),
@@ -78,6 +78,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_table("extragalactic_sources")
+    op.drop_table("fixed_sources")
     op.drop_table("astroquery_services")
-    op.drop_table("astroquery_sources")
+    op.drop_table("mvoing_sources")
+    op.drop_table("solarsystem_objects")

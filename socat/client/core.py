@@ -12,9 +12,9 @@ from astropy.units import Quantity
 
 from socat.database import (
     AstroqueryService,
-    ExtragalacticSource,
-    SolarSystemEphem,
-    SolarSystemSource,
+    RegisteredFixedSource,
+    RegisteredMovingSource,
+    SolarSystemObject,
 )
 
 
@@ -22,7 +22,7 @@ class ClientBase(ABC):
     @abstractmethod
     def create_source(
         self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
-    ) -> ExtragalacticSource:
+    ) -> RegisteredFixedSource:
         """
         Create a new source in the catlaog.
         """
@@ -31,7 +31,7 @@ class ClientBase(ABC):
     @abstractmethod
     def create_name(
         self, *, name: float, astroquery_service: float
-    ) -> ExtragalacticSource:
+    ) -> RegisteredFixedSource:
         """
         Create a new source in the catalog by name.
         """
@@ -43,14 +43,14 @@ class ClientBase(ABC):
         *,
         lower_left: ICRS,
         upper_right: ICRS,
-    ) -> list[ExtragalacticSource]:
+    ) -> list[RegisteredFixedSource]:
         """
         Get all sources within a box on the sky.
         """
         return []  # pragma: no cover
 
     @abstractmethod
-    def get_source(self, *, source_id: int) -> ExtragalacticSource | None:
+    def get_source(self, *, source_id: int) -> RegisteredFixedSource | None:
         """
         Get information about a specific source. If the source is not found, we return None.
         """
@@ -59,7 +59,7 @@ class ClientBase(ABC):
     @abstractmethod
     def get_forced_photometry_sources(
         self, *, minimum_flux: Quantity
-    ) -> list[ExtragalacticSource]:
+    ) -> list[RegisteredFixedSource]:
         """
         Get all sources that are used for forced photometry based on a minimum flux.
         """
@@ -73,7 +73,7 @@ class ClientBase(ABC):
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
-    ) -> ExtragalacticSource | None:
+    ) -> RegisteredFixedSource | None:
         """
         Update a source. If the source is updated, return its new value. Else, return None.
         """
@@ -132,28 +132,28 @@ class AstroqueryClientBase(ABC):
 
 class SolarSystemClientBase(ABC):
     @abstractmethod
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemSource:
+    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
         """
         Create a new solar system source in the catalog.
         """
         return  # pragma: no cover
 
     @abstractmethod
-    def get_sso(self, *, solar_id: int) -> SolarSystemSource | None:
+    def get_sso(self, *, solar_id: int) -> SolarSystemObject | None:
         """
         Get information about a specific solar system source. If the service is not found, we return None.
         """
         return None  # pragma: no cover
 
     @abstractmethod
-    def get_sso_name(self, *, name: str) -> list[SolarSystemSource] | None:
+    def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
         """
         Get information about a specific solar system source by name.
         """
         return []  # pragma: no cover
 
     @abstractmethod
-    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemSource] | None:
+    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemObject] | None:
         """
         Get information about a solar system source by Minor Planet Center ID.
         """
@@ -162,7 +162,7 @@ class SolarSystemClientBase(ABC):
     @abstractmethod
     def update_sso(
         self, *, solar_id: int, name: str | None, MPC_id: int | None
-    ) -> SolarSystemSource | None:
+    ) -> SolarSystemObject | None:
         """
         Update information about a solar system source.
         """
@@ -187,14 +187,14 @@ class EphemClientBase(ABC):
         time: int,
         position: ICRS,
         flux: Quantity | None = None,
-    ) -> SolarSystemEphem:
+    ) -> RegisteredMovingSource:
         """
         Create a single ephemera point for solar system source.
         """
         return []  # pragma: no cover
 
     @abstractmethod
-    def get_ephem(self, *, ephem_id: int) -> SolarSystemEphem | None:
+    def get_ephem(self, *, ephem_id: int) -> RegisteredMovingSource | None:
         """
         Get a single ephem point.
         """
@@ -211,7 +211,7 @@ class EphemClientBase(ABC):
         time: int | None,
         position: ICRS | None,
         flux: Quantity | None,
-    ) -> SolarSystemEphem | None:
+    ) -> RegisteredMovingSource | None:
         """
         Update a single ephem point.
         """
