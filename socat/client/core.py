@@ -10,14 +10,19 @@ from typing import Any
 from astropy.coordinates import ICRS
 from astropy.units import Quantity
 
-from socat.database import AstroqueryService, ExtragalacticSource
+from socat.database import (
+    AstroqueryService,
+    RegisteredFixedSource,
+    RegisteredMovingSource,
+    SolarSystemObject,
+)
 
 
 class ClientBase(ABC):
     @abstractmethod
-    def create(
+    def create_source(
         self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
-    ) -> ExtragalacticSource:
+    ) -> RegisteredFixedSource:
         """
         Create a new source in the catlaog.
         """
@@ -26,7 +31,7 @@ class ClientBase(ABC):
     @abstractmethod
     def create_name(
         self, *, name: float, astroquery_service: float
-    ) -> ExtragalacticSource:
+    ) -> RegisteredFixedSource:
         """
         Create a new source in the catalog by name.
         """
@@ -38,14 +43,14 @@ class ClientBase(ABC):
         *,
         lower_left: ICRS,
         upper_right: ICRS,
-    ) -> list[ExtragalacticSource]:
+    ) -> list[RegisteredFixedSource]:
         """
         Get all sources within a box on the sky.
         """
         return []  # pragma: no cover
 
     @abstractmethod
-    def get_source(self, *, id: int) -> ExtragalacticSource | None:
+    def get_source(self, *, source_id: int) -> RegisteredFixedSource | None:
         """
         Get information about a specific source. If the source is not found, we return None.
         """
@@ -54,7 +59,7 @@ class ClientBase(ABC):
     @abstractmethod
     def get_forced_photometry_sources(
         self, *, minimum_flux: Quantity
-    ) -> list[ExtragalacticSource]:
+    ) -> list[RegisteredFixedSource]:
         """
         Get all sources that are used for forced photometry based on a minimum flux.
         """
@@ -64,18 +69,18 @@ class ClientBase(ABC):
     def update_source(
         self,
         *,
-        id: int,
+        source_id: int,
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
-    ) -> ExtragalacticSource | None:
+    ) -> RegisteredFixedSource | None:
         """
         Update a source. If the source is updated, return its new value. Else, return None.
         """
         return None  # pragma: no cover
 
     @abstractmethod
-    def delete_source(self, *, id: int) -> None:
+    def delete_source(self, *, source_id: int) -> None:
         """
         Delete a source from the catalog.
         """
@@ -84,14 +89,14 @@ class ClientBase(ABC):
 
 class AstroqueryClientBase(ABC):
     @abstractmethod
-    def create(self, *, name: str, config: dict[str, Any]) -> AstroqueryService:
+    def create_service(self, *, name: str, config: dict[str, Any]) -> AstroqueryService:
         """
         Create a new service in the catalog.
         """
         return  # pragma: no cover
 
     @abstractmethod
-    def get_service(self, *, id: int) -> AstroqueryService | None:
+    def get_service(self, *, service_id: int) -> AstroqueryService | None:
         """
         Get information about a specific service. If the service is not found, we return None.
         """
@@ -108,7 +113,7 @@ class AstroqueryClientBase(ABC):
     def update_service(
         self,
         *,
-        id: int,
+        service_id: int,
         name: str | None = None,
         config: dict[str, Any] | None = None,
     ) -> AstroqueryService | None:
@@ -118,8 +123,103 @@ class AstroqueryClientBase(ABC):
         return None  # pragma: no cover
 
     @abstractmethod
-    def delete_service(self, *, id: int) -> None:
+    def delete_service(self, *, service_id: int) -> None:
         """
         Delete a service from the catalog.
         """
         return None  # pragma: no cover
+
+
+class SolarSystemClientBase(ABC):
+    @abstractmethod
+    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
+        """
+        Create a new solar system source in the catalog.
+        """
+        return  # pragma: no cover
+
+    @abstractmethod
+    def get_sso(self, *, solar_id: int) -> SolarSystemObject | None:
+        """
+        Get information about a specific solar system source. If the service is not found, we return None.
+        """
+        return None  # pragma: no cover
+
+    @abstractmethod
+    def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
+        """
+        Get information about a specific solar system source by name.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemObject] | None:
+        """
+        Get information about a solar system source by Minor Planet Center ID.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def update_sso(
+        self, *, solar_id: int, name: str | None, MPC_id: int | None
+    ) -> SolarSystemObject | None:
+        """
+        Update information about a solar system source.
+        """
+        return []  #  pragma: no cover
+
+    @abstractmethod
+    def delete_sso(self, *, solar_id: int) -> None:
+        """
+        Delete solar system source.
+        """
+        return []  # pragma: no cover
+
+
+class EphemClientBase(ABC):
+    @abstractmethod
+    def create_ephem(
+        self,
+        *,
+        sso_id: int,
+        MPC_id: int | None,
+        name: str,
+        time: int,
+        position: ICRS,
+        flux: Quantity | None = None,
+    ) -> RegisteredMovingSource:
+        """
+        Create a single ephemera point for solar system source.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def get_ephem(self, *, ephem_id: int) -> RegisteredMovingSource | None:
+        """
+        Get a single ephem point.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def update_ephem(
+        self,
+        *,
+        ephem_id: int,
+        sso_id: int | None,
+        MPC_id: int | None,
+        name: str | None,
+        time: int | None,
+        position: ICRS | None,
+        flux: Quantity | None,
+    ) -> RegisteredMovingSource | None:
+        """
+        Update a single ephem point.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def delete_ephem(self, *, ephem_id: int) -> None:
+        """
+        Delete a single ephem point.
+        """
+        return []  # pragma: no cover

@@ -3,6 +3,7 @@ import os
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 
@@ -44,6 +45,13 @@ async def database_async_sessionmaker(database):
     database_url = f"sqlite+aiosqlite:///{database}"
 
     async_engine = create_async_engine(database_url, echo=True, future=True)
+
+    @event.listens_for(async_engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        """Event listener to set PRAGMA statements on new synchronous connections."""
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
     yield async_sessionmaker(bind=async_engine, expire_on_commit=False)
 
@@ -90,3 +98,23 @@ def mock_client_astroquery(tmp_path_factory):
     from socat.client import mock
 
     yield mock.AstorqueryClient()
+
+
+@pytest.fixture(scope="session")
+def mock_client_sso(tmp_path_factory):
+    """
+    Create a test mock database client for mock test.
+    """
+    from socat.client import mock
+
+    yield mock.SolarSystemClient()
+
+
+@pytest.fixture(scope="session")
+def mock_client_ephem(tmp_path_factory):
+    """
+    Create a test mock database client for mock test.
+    """
+    from socat.client import mock
+
+    yield mock.EphemClient()
