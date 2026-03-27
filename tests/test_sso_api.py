@@ -43,7 +43,7 @@ def test_add_and_retrieve(client):
 
     # Update
     response = client.post(
-        "api/v1/sso/{}".format(sso_id),
+        f"api/v1/sso/{sso_id}",
         json={"MPC_id": 423, "name": "Diotima"},
     )
     sso_id = response.json()["sso_id"]
@@ -52,7 +52,7 @@ def test_add_and_retrieve(client):
     assert response.json()["name"] == "Diotima"
 
     response = client.post(
-        "api/v1/ephem/{}".format(ephem_id),
+        f"api/v1/ephem/{ephem_id}",
         json={
             "sso_id": sso_id,
             "MPC_id": 423,
@@ -80,40 +80,40 @@ def test_add_and_retrieve(client):
     assert response.json()["flux"]["unit"] == "mJy"
 
     # Delete SSO
-    response = client.delete("api/v1/sso/{}".format(sso_id))
+    response = client.delete(f"api/v1/sso/{sso_id}")
     assert response.status_code == 200
-    response = client.get("api/v1/sso/{}".format(sso_id))
+    response = client.get(f"api/v1/sso/{sso_id}")
     assert response.status_code == 404
 
     # Delete Ephem
-    response = client.delete("api/v1/ephem/{}".format(ephem_id))
+    response = client.delete(f"api/v1/ephem/{ephem_id}")
     assert response.status_code == 200
-    response = client.get("api/v1/ephem/{}".format(ephem_id))
+    response = client.get(f"api/v1/ephem/{ephem_id}")
     assert response.status_code == 404
 
 
 def test_bad_id(client):
     with pytest.raises(HTTPStatusError):
-        response = client.get("api/v1/sso/{}".format(999999))
+        response = client.get(f"api/v1/sso/{999999}")
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
         response = client.post(
-            "api/v1/sso/{}".format(999999), json={"MPC_id": 511, "name": "Davida"}
+            f"api/v1/sso/{999999}", json={"MPC_id": 511, "name": "Davida"}
         )
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
-        response = client.delete("api/v1/sso/{}".format(999999))
+        response = client.delete(f"api/v1/sso/{999999}")
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
-        response = client.get("api/v1/ephem/{}".format(999999))
+        response = client.get(f"api/v1/ephem/{999999}")
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
         response = client.post(
-            "api/v1/ephem/{}".format(999999),
+            f"api/v1/ephem/{999999}",
             json={
                 "sso_id": 1,
                 "MPC_id": 423,
@@ -129,5 +129,5 @@ def test_bad_id(client):
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
-        response = client.delete("api/v1/ephem/{}".format(999999))
+        response = client.delete(f"api/v1/ephem/{999999}")
         response.raise_for_status()

@@ -99,7 +99,7 @@ async def get_box(
 
     Returns
     -------
-    source_list : list[RegisteredFixedSource]
+    [s.to_model() for s in sources.scalars()] : list[RegisteredFixedSource]
         List of sources in box
     """
     # Unclear why float casts are needed but
@@ -115,9 +115,7 @@ async def get_box(
         )
     )
 
-    source_list = [s.to_model() for s in sources.scalars()]
-
-    return source_list
+    return [s.to_model() for s in sources.scalars()]
 
 
 async def update_source(
@@ -201,5 +199,3 @@ async def delete_source(source_id: int, session: AsyncSession) -> None:
 
         await session.delete(source)
         await session.commit()
-
-    return

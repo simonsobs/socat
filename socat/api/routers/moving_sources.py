@@ -7,7 +7,7 @@ from astropydantic import AstroPydanticICRS, AstroPydanticQuantity
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ValidationError
 
-import socat.core as core
+from socat import core
 
 from ...database import RegisteredMovingSource
 from ..async_ses import SessionDependency
@@ -189,4 +189,3 @@ async def delete_ephem(ephem_id: int, session: SessionDependency) -> None:
         await core.delete_ephem(ephem_id, session=session)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    return

@@ -84,7 +84,7 @@ class ClientBase(ABC):
         """
         Delete a source from the catalog.
         """
-        return None  # pragma: no cover
+        return  # pragma: no cover
 
 
 class AstroqueryClientBase(ABC):
@@ -127,7 +127,7 @@ class AstroqueryClientBase(ABC):
         """
         Delete a service from the catalog.
         """
-        return None  # pragma: no cover
+        return  # pragma: no cover
 
 
 class SolarSystemClientBase(ABC):

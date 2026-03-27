@@ -78,7 +78,7 @@ async def get_all_services(session: AsyncSession) -> list[AstroqueryService]:
 
     Returns
     -------
-    service_list : list[AstroqueryService]
+    [s.to_model() for s in services.scalars().all()] : list[AstroqueryService]
         List of all available astroquery services
     """
 
@@ -86,9 +86,7 @@ async def get_all_services(session: AsyncSession) -> list[AstroqueryService]:
         stmt = select(AstroqueryServiceTable)
         services = await session.execute(stmt)
 
-    service_list = [s.to_model() for s in services.scalars().all()]
-
-    return service_list
+    return [s.to_model() for s in services.scalars().all()]
 
 
 async def get_service_name(
@@ -204,5 +202,3 @@ async def delete_service(service_id: int, session: AsyncSession) -> None:
 
         await session.delete(service)
         await session.commit()
-
-    return

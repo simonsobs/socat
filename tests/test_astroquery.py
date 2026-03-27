@@ -14,7 +14,7 @@ def test_add_and_remove_service(client):
     id = response.json()["service_id"]
     assert response.status_code == 200
 
-    response = client.get("api/v1/service/{}".format(id))
+    response = client.get(f"api/v1/service/{id}")
 
     assert response.status_code == 200
     assert response.json()["name"] == "Simbad"
@@ -29,11 +29,11 @@ def test_add_and_remove_service(client):
     # There can be more than one source with the same name, so can't check anything else
     assert response.status_code == 200
 
-    response = client.delete("api/v1/service/{}".format(id))
+    response = client.delete(f"api/v1/service/{id}")
 
     assert response.status_code == 200
 
-    response = client.get("api/v1/service/{}".format(id))
+    response = client.get(f"api/v1/service/{id}")
 
     assert (
         response.status_code == 404
@@ -52,7 +52,7 @@ def test_update_service(client):
     assert response.status_code == 200
 
     response = client.post(
-        "api/v1/service/{}".format(id),
+        f"api/v1/service/{id}",
         json={
             "name": "VizieR",
             "config": {"name_col": "name", "ra_col": "raDeg", "dec_col": "decDeg"},
@@ -66,13 +66,13 @@ def test_update_service(client):
     assert response.json()["config"]["ra_col"] == "raDeg"
     assert response.json()["config"]["dec_col"] == "decDeg"
 
-    response = client.delete("api/v1/service/{}".format(id))
+    response = client.delete(f"api/v1/service/{id}")
     assert response.status_code == 200
 
 
 def test_bad_service(client):
     with pytest.raises(HTTPStatusError):
-        response = client.delete("api/v1/service/{}".format(999999))
+        response = client.delete(f"api/v1/service/{999999}")
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
@@ -80,12 +80,12 @@ def test_bad_service(client):
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
-        response = client.get("api/v1/service/{}".format(999999))
+        response = client.get(f"api/v1/service/{999999}")
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
         response = client.post(
-            "api/v1/service/{}".format(999999),
+            f"api/v1/service/{999999}",
             json={
                 "name": "VizieR",
                 "config": {"name_col": "name", "ra_col": "raDeg", "dec_col": "decDeg"},
@@ -110,18 +110,18 @@ def test_add_source_by_name(client):
     id = response.json()["source_id"]
     assert response.status_code == 200
 
-    response = client.get("api/v1/source/{}".format(id))
+    response = client.get(f"api/v1/source/{id}")
 
     assert response.status_code == 200
     assert response.json()["position"]["ra"]["value"] == 83.6324
     assert response.json()["position"]["dec"]["value"] == 22.0174
     assert response.json()["name"] == "m1"
 
-    response = client.delete("api/v1/source/{}".format(id))
+    response = client.delete(f"api/v1/source/{id}")
 
     assert response.status_code == 200
 
-    response = client.get("api/v1/source/{}".format(id))
+    response = client.get(f"api/v1/source/{id}")
 
     assert (
         response.status_code == 404
@@ -135,18 +135,18 @@ def test_add_source_by_name(client):
     id = response.json()["source_id"]
     assert response.status_code == 200
 
-    response = client.get("api/v1/source/{}".format(id))
+    response = client.get(f"api/v1/source/{id}")
 
     assert response.status_code == 200
     assert response.json()["position"]["ra"]["value"] == 323.36258333333336
     assert response.json()["position"]["dec"]["value"] == -0.8232499999999998
     assert response.json()["name"] == "m2"
 
-    response = client.delete("api/v1/source/{}".format(id))
+    response = client.delete(f"api/v1/source/{id}")
 
     assert response.status_code == 200
 
-    response = client.delete("api/v1/service/{}".format(service_id))
+    response = client.delete(f"api/v1/service/{service_id}")
     assert response.status_code == 200
 
 

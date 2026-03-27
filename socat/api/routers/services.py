@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ValidationError
 
-import socat.core as core
+from socat import core
 
 from ...database.services import AstroqueryService
 from ..async_ses import SessionDependency
@@ -190,4 +190,3 @@ async def delete_service(service_id: int, session: SessionDependency) -> None:
         await core.delete_service(service_id, session=session)
     except ValueError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    return

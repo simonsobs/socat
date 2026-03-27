@@ -13,14 +13,14 @@ from .sources import (
 )
 
 __all__ = [
+    "AstroqueryService",
+    "AstroqueryServiceTable",
     "RegisteredFixedSource",
     "RegisteredFixedSourceTable",
     "RegisteredMovingSource",
     "RegisteredMovingSourceTable",
     "SolarSystemObject",
     "SolarSystemObjectTable",
-    "AstroqueryService",
-    "AstroqueryServiceTable",
 ]
 
 ALL_TABLES = [

@@ -18,7 +18,7 @@ def test_add_and_retrieve(client):
     assert response.status_code == 200
     id = response.json()["source_id"]
 
-    response = client.get("api/v1/source/{}".format(id))
+    response = client.get(f"api/v1/source/{id}")
 
     assert response.status_code == 200
 
@@ -30,11 +30,11 @@ def test_add_and_retrieve(client):
     assert response.json()["flux"]["unit"] == "mJy"
     assert response.json()["name"] == "mySrc"
 
-    response = client.delete("api/v1/source/{}".format(id))
+    response = client.delete(f"api/v1/source/{id}")
 
     assert response.status_code == 200
 
-    response = client.get("api/v1/source/{}".format(id))
+    response = client.get(f"api/v1/source/{id}")
 
     assert (
         response.status_code == 404
@@ -84,9 +84,7 @@ def test_get_box(client):
 
     assert response.status_code == 200
 
-    id_list = []
-    for resp in response.json():
-        id_list.append(resp["source_id"])
+    id_list = [resp["source_id"] for resp in response.json()]
 
     assert id1 in id_list
     assert id2 in id_list
@@ -108,15 +106,13 @@ def test_get_box(client):
 
     assert response.status_code == 200
 
-    id_list = []
-    for resp in response.json():
-        id_list.append(resp["source_id"])
+    id_list = [resp["source_id"] for resp in response.json()]
 
     assert id1 in id_list
     assert id2 not in id_list
 
     for id in id_list:
-        response = client.delete("api/v1/source/{}".format(id))
+        response = client.delete(f"api/v1/source/{id}")
         assert response.status_code == 200
 
 
@@ -137,7 +133,7 @@ def test_update(client):
     assert response.status_code == 200
 
     response = client.post(
-        "api/v1/source/{}".format(id),
+        f"api/v1/source/{id}",
         json={
             "position": {
                 "ra": {"value": 2.0, "unit": "deg"},
@@ -155,7 +151,7 @@ def test_update(client):
     assert response.json()["flux"]["value"] == 2.5
     assert response.json()["name"] == "mySrcUpdate"
 
-    response = client.delete("api/v1/source/{}".format(id))
+    response = client.delete(f"api/v1/source/{id}")
     assert response.status_code == 200
 
 
@@ -165,17 +161,15 @@ def test_bad_id(client):
     #    response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
-        response = client.get("api/v1/source/{}".format(999999))
+        response = client.get(f"api/v1/source/{999999}")
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
-        response = client.post(
-            "api/v1/source/{}".format(999999), json={"position": None}
-        )
+        response = client.post(f"api/v1/source/{999999}", json={"position": None})
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
-        response = client.delete("api/v1/source/{}".format(999999))
+        response = client.delete(f"api/v1/source/{999999}")
         response.raise_for_status()
 
     # TODO: should move to a different func

@@ -71,9 +71,7 @@ def test_box(mock_client):
     upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
     sources = mock_client.get_box(lower_left=lower_left, upper_right=upper_right)
 
-    id_list = []
-    for source in sources:
-        id_list.append(source.source_id)
+    id_list = [source.source_id for source in sources]
 
     assert id1 in id_list
     assert id2 in id_list
@@ -82,9 +80,7 @@ def test_box(mock_client):
     upper_right = ICRS(1.5 * u.deg, 1.5 * u.deg)
     sources = mock_client.get_box(lower_left=lower_left, upper_right=upper_right)
 
-    id_list = []
-    for source in sources:
-        id_list.append(source.source_id)
+    id_list = [source.source_id for source in sources]
 
     assert id1 in id_list
     assert id2 not in id_list

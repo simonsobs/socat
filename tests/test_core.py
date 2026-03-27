@@ -70,9 +70,7 @@ async def test_box(database_async_sessionmaker):
             lower_left=lower_left, upper_right=upper_right, session=session
         )
 
-        id_list = []
-        for source in source_list:
-            id_list.append(source.source_id)
+        id_list = [source.source_id for source in source_list]
 
         assert id1 in id_list
         assert id2 in id_list
@@ -85,9 +83,7 @@ async def test_box(database_async_sessionmaker):
             lower_left=lower_left, upper_right=upper_right, session=session
         )
 
-        id_list = []
-        for source in source_list:
-            id_list.append(source.source_id)
+        id_list = [source.source_id for source in source_list]
 
         assert id1 in id_list
         assert id2 not in id_list
