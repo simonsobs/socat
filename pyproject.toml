@@ -24,7 +24,9 @@ dependencies = [
     "astropy",
     "scipy",
     "astroquery",
-    "astropydantic"
+    "astropydantic",
+    "pandas",
+    "pyarrow",
 ]
 
 [project.optional-dependencies]
