@@ -83,7 +83,7 @@ async def get_source_info(
     # some reason.
     result_table["ra"].convert_unit_to("deg")
     result_table["dec"].convert_unit_to("deg")
-    if "flux" in result_table:
+    if "flux" in result_table.columns:
         result_table["flux"].convert_unit_to("mJy")  # pragma: no cover
     if len(result_table) > 1:
         warnings.warn(
@@ -147,7 +147,7 @@ async def cone_search(
         )
         result_table["ra"].convert_unit_to("deg")
         result_table["dec"].convert_unit_to("deg")
-        if "flux" in result_table:
+        if "flux" in result_table.columns:
             result_table["flux"].convert_unit_to("mJy")  # pragma: no cover
         for i in range(len(result_table)):
             name = result_table[service.config["name_col"]].value.data[i]

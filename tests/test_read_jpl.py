@@ -38,3 +38,6 @@ async def test_read_jpl(database_async_sessionmaker, tmp_path):
             assert ephem.position.ra.value == data["ra_deg"][i]
             assert ephem.position.dec.value == data["dec_deg"][i]
             assert ephem.flux == data["flux_mJy"][i] * u.mJy
+
+    async with database_async_sessionmaker() as session:
+        await core.delete_sso(sso[0].sso_id, session=session)

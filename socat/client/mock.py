@@ -124,7 +124,7 @@ class Client(ClientBase):
         result_table = service.query_object(name)
         result_table["ra"].convert_unit_to("deg")
         result_table["dec"].convert_unit_to("deg")
-        if "flux" in result_table:
+        if "flux" in result_table.columns:
             result_table["flux"].convert_unit_to("mJy")  # pragma: no cover
         result_dict = {param: None for param in requested_params}
         if len(result_table) == 0:
