@@ -1,9 +1,11 @@
 *.pyc
 dist/*
+build/*
 *.egg-info
 *.swp
 *.db
 *.coverage
 *.fits
 *.pickle
+*.parquet
 *.pk
