@@ -61,6 +61,21 @@ class Client(ClientBase):
         """
         self.catalog = {}
         self.n = 0
+        self._astroquery = AstorqueryClient()
+        self._sso = SolarSystemClient()
+        self._ephem = EphemClient()
+
+    @property
+    def astroquery(self) -> AstroqueryClientBase:
+        return self._astroquery
+
+    @property
+    def sso(self) -> SolarSystemClientBase:
+        return self._sso
+
+    @property
+    def ephem(self) -> EphemClientBase:
+        return self._ephem
 
     def create_source(
         self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None

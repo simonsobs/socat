@@ -23,7 +23,10 @@ from socat.database import (
     SolarSystemObject,
     SolarSystemObjectTable,
 )
-from socat.database.session import create_sync_session_interface
+from socat.database.session import (
+    create_sync_session_factory,
+    create_sync_session_interface,
+)
 
 from .core import (
     AstroqueryClientBase,
@@ -47,11 +50,33 @@ class Client(ClientBase):
         engine: Engine | None = None,
         session_factory: sessionmaker | None = None,
     ):
+        if session_factory is None:
+            session_factory = create_sync_session_factory(
+                db_url=db_url,
+                engine=engine,
+            )
+
         self._get_session = create_sync_session_interface(
             db_url=db_url,
             engine=engine,
             session_factory=session_factory,
         )
+
+        self._astroquery = AstorqueryClient(session_factory=session_factory)
+        self._sso = SolarSystemClient(session_factory=session_factory)
+        self._ephem = EphemClient(session_factory=session_factory)
+
+    @property
+    def astroquery(self) -> AstroqueryClientBase:
+        return self._astroquery
+
+    @property
+    def sso(self) -> SolarSystemClientBase:
+        return self._sso
+
+    @property
+    def ephem(self) -> EphemClientBase:
+        return self._ephem
 
     def create_source(
         self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None

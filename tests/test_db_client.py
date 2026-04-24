@@ -1,15 +1,11 @@
 import astropy.units as u
 from astropy.coordinates import ICRS
 
-from socat.client.db import AstorqueryClient, Client, EphemClient, SolarSystemClient
+from socat.client.db import AstorqueryClient, EphemClient, SolarSystemClient
 
 
-def _db_url(database: str) -> str:
-    return f"sqlite:///{database}"
-
-
-def test_fixed_source_crud_and_queries(database):
-    client = Client(db_url=_db_url(database))
+def test_fixed_source_crud_and_queries(db_client):
+    client = db_client
 
     source_1 = client.create_source(
         position=ICRS(1.0 * u.deg, 1.0 * u.deg),
@@ -60,8 +56,8 @@ def test_fixed_source_crud_and_queries(database):
     assert client.get_source(source_id=source_1.source_id) is None
 
 
-def test_service_crud_and_lookup(database):
-    client = AstorqueryClient(db_url=_db_url(database))
+def test_service_crud_and_lookup(db_client):
+    client = db_client.astroquery
 
     service = client.create_service(
         name="Simbad",
@@ -90,9 +86,10 @@ def test_service_crud_and_lookup(database):
     assert client.get_service(service_id=service.service_id) is None
 
 
-def test_sso_and_ephem_crud_and_cascade(database):
-    sso_client = SolarSystemClient(db_url=_db_url(database))
-    ephem_client = EphemClient(db_url=_db_url(database))
+def test_sso_and_ephem_crud_and_cascade(db_client):
+    client = db_client
+    sso_client = client.sso
+    ephem_client = client.ephem
 
     sso = sso_client.create_sso(name="db-davida", MPC_id=4511)
     assert sso.name == "db-davida"
@@ -141,11 +138,11 @@ def test_sso_and_ephem_crud_and_cascade(database):
     assert ephem_client.get_ephem(ephem_id=ephem.ephem_id) is None
 
 
-def test_not_found_behavior(database):
-    fixed = Client(db_url=_db_url(database))
-    services = AstorqueryClient(db_url=_db_url(database))
-    sso = SolarSystemClient(db_url=_db_url(database))
-    ephem = EphemClient(db_url=_db_url(database))
+def test_not_found_behavior(db_client):
+    fixed = db_client
+    services = fixed.astroquery
+    sso = fixed.sso
+    ephem = fixed.ephem
 
     assert fixed.get_source(source_id=999999) is None
     assert (
@@ -185,3 +182,28 @@ def test_not_found_behavior(database):
     services.delete_service(service_id=999999)
     sso.delete_sso(sso_id=999999)
     ephem.delete_ephem(ephem_id=999999)
+
+
+def test_direct_secondary_client_backcompat(database):
+    db_url = f"sqlite:///{database}"
+    services = AstorqueryClient(db_url=db_url)
+    sso = SolarSystemClient(db_url=db_url)
+    ephem = EphemClient(db_url=db_url)
+
+    service = services.create_service(
+        name="backcompat-service",
+        config={"a": 1},
+    )
+    assert services.get_service(service_id=service.service_id) is not None
+
+    obj = sso.create_sso(name="backcompat-object", MPC_id=999001)
+    point = ephem.create_ephem(
+        sso_id=obj.sso_id,
+        MPC_id=obj.MPC_id,
+        name=obj.name,
+        time=42,
+        position=ICRS(0.0 * u.deg, 0.0 * u.deg),
+    )
+
+    assert sso.get_sso(sso_id=obj.sso_id) is not None
+    assert ephem.get_ephem(ephem_id=point.ephem_id) is not None
