@@ -2,19 +2,21 @@
 The web API to access the socat database.
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from ..database import (
     ALL_TABLES,
 )
-from ..settings import settings
+from ..settings import Settings
 from .routers import fixed_sources, moving_sources, services, sso
 
-async_engine = create_async_engine(settings.database_url, echo=True, future=True)
 
-
-async def lifespan(f: FastAPI):  # pragma: no cover
+@asynccontextmanager
+async def lifespan(_app: FastAPI):  # pragma: no cover
+    async_engine = create_async_engine(Settings().database_url, echo=True, future=True)
     # Use SQLModel to create the tables.
     print("Creating tables")
     for table in ALL_TABLES:

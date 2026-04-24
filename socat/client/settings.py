@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class SOCatClientSettings(BaseSettings):
-    client_type: Literal["http", "pickle"] = "pickle"
+    client_type: Literal["http", "pickle", "db"] = "pickle"
 
     # Pickle
     pickle_path: Path | None = None
@@ -30,11 +30,18 @@ class SOCatClientSettings(BaseSettings):
     def _http_client(self):
         raise NotImplementedError
 
+    def _db_client(self):
+        from .db import Client
+
+        return Client()
+
     @property
     def client(self):
         if self.client_type == "pickle":
             return self._pickle_client()
+        if self.client_type == "db":
+            return self._db_client()
         else:
             raise NotImplementedError(
-                "Only the pickle client works with the settings functionality"
+                "Supported client settings backends are pickle and db"
             )

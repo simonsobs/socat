@@ -8,9 +8,9 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ValidationError
 
 from socat import core
+from socat.database.session import SessionDependency
 
 from ...database.services import AstroqueryService
-from ..async_ses import SessionDependency
 
 router = APIRouter(prefix="/api/v1")
 

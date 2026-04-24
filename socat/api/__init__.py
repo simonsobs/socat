@@ -2,8 +2,9 @@
 The web API to access the socat database.
 """
 
+from socat.database.session import SessionDependency
+
 from .app import app
-from .async_ses import SessionDependency
 from .routers.fixed_sources import (
     create_source,
     create_source_name,
