@@ -85,9 +85,7 @@ def test_add_and_retrieve(client):
     response = client.get(f"api/v1/sso/{sso_id}")
     assert response.status_code == 404
 
-    # Delete Ephem
-    response = client.delete(f"api/v1/ephem/{ephem_id}")
-    assert response.status_code == 200
+    # Ephem should have been deleted through cascade
     response = client.get(f"api/v1/ephem/{ephem_id}")
     assert response.status_code == 404
 
