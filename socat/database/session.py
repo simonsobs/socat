@@ -16,8 +16,32 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import Session, sessionmaker
+from sqlmodel import SQLModel
 
 from socat.settings import Settings
+
+
+def initialize_database_schema(engine: Engine) -> None:
+    """
+    Ensure all SOCat tables exist for a synchronous engine.
+    """
+    # Import table models before touching SQLModel metadata.
+    from socat.database import ALL_TABLES
+
+    del ALL_TABLES
+    SQLModel.metadata.create_all(bind=engine)
+
+
+async def initialize_database_schema_async(engine: AsyncEngine) -> None:
+    """
+    Ensure all SOCat tables exist for an asynchronous engine.
+    """
+    # Import table models before touching SQLModel metadata.
+    from socat.database import ALL_TABLES
+
+    del ALL_TABLES
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
 
 
 def _enable_sqlite_foreign_keys(engine: Engine) -> None:
@@ -44,6 +68,7 @@ def create_sync_session_factory(
         engine = create_engine(db_url or Settings().sync_database_url, future=True)
 
     _enable_sqlite_foreign_keys(engine)
+    initialize_database_schema(engine)
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 
