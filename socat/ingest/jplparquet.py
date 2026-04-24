@@ -8,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 from astropy import units as u
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from tqdm import tqdm
 
 from socat.client.mock import EphemClient, SolarSystemClient
@@ -81,7 +82,7 @@ def ingest_jpl_parquet_file(
             if "flux_mJy" in row.index and pd.notna(row["flux_mJy"]):
                 flux = row["flux_mJy"] * u.mJy
 
-            unix_time = int(round((float(row["julian_day"]) - 2440587.5) * 86400))
+            unix_time = Time(row["julian_day"], format="jd").unix
 
             ephem_client.create_ephem(
                 sso_id=sso.sso_id,
