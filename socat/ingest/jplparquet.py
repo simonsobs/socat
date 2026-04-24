@@ -11,7 +11,7 @@ from astropy.coordinates import ICRS
 from astropy.time import Time
 from tqdm import tqdm
 
-from socat.client.mock import Client
+from socat.client.core import ClientBase
 
 
 def _parse_designation(designation: str) -> tuple[int | None, str | None]:
@@ -34,7 +34,7 @@ def _parse_designation(designation: str) -> tuple[int | None, str | None]:
 
 
 def ingest_jpl_parquet_file(
-    client: Client,
+    client: ClientBase,
     filename: Path,
 ) -> tuple[int, int]:
     """
@@ -42,8 +42,8 @@ def ingest_jpl_parquet_file(
 
     Parameters
     ----------
-    client : MockClient
-        Mock SOCat client that will hold both the SSO entries and the time-dependent ephemeris positions.
+    client : ClientBase
+        SOCat client that will hold both the SSO entries and the time-dependent ephemeris positions.
     filename : Path
         Path to the JPL parquet file.
 
@@ -101,7 +101,10 @@ def ingest_jpl_parquet_file(
 
 def build_mock_database(filename: Path) -> dict:
     """Build a serializable mock database from a JPL parquet file."""
-    client = Client()
+    from socat.client.settings import SOCatClientSettings
+
+    settings = SOCatClientSettings()
+    client = settings.client
 
     number_of_ssos, number_of_ephems = ingest_jpl_parquet_file(
         client,
