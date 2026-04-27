@@ -22,22 +22,43 @@ from socat.database.sources import (
 def create_name(
     name: str, astroquery_service: str
 ) -> tuple[ICRS, str, Quantity | None]:
-    """"""
+    """
+    Create a name in the database by querying an astroquery service.
+
+    Parameters
+    ----------
+    name : str
+        Name of source to create
+    astroquery_service : str
+        Name of the astroquery service to use
+
+    Returns
+    -------
+    tuple[ICRS, str, Quantity | None]:
+        Tuple containing the position, name, and flux of the source.
+
+    Raises
+    ------
+    ValueError
+        If no results are found for the given name in the specified astroquery service.
+    """
     service: BaseVOQuery = getattr(
         import_module(f"astroquery.{astroquery_service.lower()}"),
         astroquery_service,
     )
 
-    requested_params = ["ra", "dec"]
+    requested_params = ["ra", "dec", "flux"]
 
     result_table = service.query_object(name)
     result_table["ra"].convert_unit_to("deg")
     result_table["dec"].convert_unit_to("deg")
     if "flux" in result_table.columns:
         result_table["flux"].convert_unit_to("mJy")  # pragma: no cover
-    result_dict = {param: None for param in requested_params}
+
     if len(result_table) == 0:
-        return None
+        raise ValueError(f"No results found for {name} in {astroquery_service}.")
+
+    result_dict = {param: None for param in requested_params}
     for param in requested_params:
         try:
             result_dict[param] = result_table[param].value.data[0]
@@ -69,7 +90,7 @@ def get_box(lower_left: ICRS, upper_right: ICRS) -> select:
     Returns
     -------
     select:
-        Databse statement.
+        Database statement.
 
     """
     return select(RegisteredFixedSourceTable).where(
@@ -124,23 +145,31 @@ def update_source(
     -------
     update:
         Database statement.
+
+    Raises
+    ------
+    ValueError
+        If no fields are provided to update.
     """
     stmt = update(RegisteredFixedSourceTable).where(
         RegisteredFixedSourceTable.source_id == source_id
     )
 
-    if position is not None:
-        stmt = stmt.values(
-            ra_deg=position.ra.to_value("deg"), dec_deg=position.dec.to_value("deg")
-        )
+    values = {
+        k: v
+        for k, v in {
+            "ra_deg": position.ra.to_value("deg") if position is not None else None,
+            "dec_deg": position.dec.to_value("deg") if position is not None else None,
+            "flux_mJy": flux.to_value("mJy") if flux is not None else None,
+            "name": name,
+        }.items()
+        if v is not None
+    }
 
-    if flux is not None:
-        stmt = stmt.values(flux_mJy=flux.to_value("mJy"))
-
-    if name is not None:
-        stmt = stmt.values(name=name)
-
-    return stmt
+    if values:
+        return stmt.values(**values)
+    else:
+        raise ValueError("At least one field must be provided to update the source")
 
 
 def update_service(
@@ -164,18 +193,29 @@ def update_service(
     -------
     update:
         Database statement
+
+    Raises
+    ------
+    ValueError
+        If no fields are provided to update.
     """
     stmt = update(AstroqueryServiceTable).where(
         AstroqueryServiceTable.service_id == service_id
     )
 
-    if name is not None:
-        stmt = stmt.values(name=name)
+    values = {
+        k: v
+        for k, v in {
+            "name": name,
+            "config": config,
+        }.items()
+        if v is not None
+    }
 
-    if config is not None:
-        stmt = stmt.values(config=config)
-
-    return stmt
+    if values:
+        return stmt.values(**values)
+    else:
+        raise ValueError("At least one field must be provided to update the service")
 
 
 def update_sso(
@@ -199,16 +239,29 @@ def update_sso(
     -------
     update:
         Database statement.
+
+    Raises
+    ------
+    ValueError
+        If no fields are provided to update.
     """
     stmt = update(SolarSystemObjectTable).where(SolarSystemObjectTable.sso_id == sso_id)
 
-    if name is not None:
-        stmt = stmt.values(name=name)
+    values = {
+        k: v
+        for k, v in {
+            "name": name,
+            "MPC_id": MPC_id,
+        }.items()
+        if v is not None
+    }
 
-    if MPC_id is not None:
-        stmt = stmt.values(MPC_id=MPC_id)
-
-    return stmt
+    if values:
+        return stmt.values(**values)
+    else:
+        raise ValueError(
+            "At least one field must be provided to update the solar system object"
+        )
 
 
 def update_ephem(
@@ -244,6 +297,11 @@ def update_ephem(
     -------
     update:
         Database statement.
+
+    Raises
+    ------
+    ValueError
+        If no fields are provided to update.
     """
     stmt = update(RegisteredMovingSourceTable).where(
         RegisteredMovingSourceTable.ephem_id == ephem_id
@@ -266,4 +324,6 @@ def update_ephem(
     if values:
         return stmt.values(**values)
     else:
-        return stmt
+        raise ValueError(
+            "At least one field must be provided to update the ephemeris point"
+        )
