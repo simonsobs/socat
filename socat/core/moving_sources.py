@@ -100,6 +100,25 @@ async def get_ephem(ephem_id: int, session: AsyncSession) -> RegisteredMovingSou
 async def get_ephem_points(
     source: SolarSystemObject, t_min: int, t_max: int, session: AsyncSession
 ) -> list[RegisteredMovingSource]:
+    """
+    Get all solar system ephemeris points for a given source within a time range.
+
+    Parameters
+    ----------
+    source : SolarSystemObject
+        Source for which to get ephemeris points
+    t_min : int
+        Minimum time of ephemeris points to retrieve
+    t_max : int
+        Maximum time of ephemeris points to retrieve
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    list[RegisteredMovingSource]
+        List of requested ephemeris points
+    """
     ephems = await session.execute(
         select(RegisteredMovingSourceTable).where(
             t_min <= RegisteredMovingSourceTable.time,
@@ -108,9 +127,35 @@ async def get_ephem_points(
         )
     )
 
-    ephem_list = [e.to_model() for e in ephems.scalars()]
+    return [e.to_model() for e in ephems.scalars()]
 
-    return ephem_list
+
+async def get_ephem_by_sso_id(
+    sso_id: int, session: AsyncSession
+) -> list[RegisteredMovingSource]:
+    """
+    Get all solar system ephemeris points for a given source.
+
+    Parameters
+    ----------
+    sso_id : int
+        Internal ID of source for which to get ephemeris points
+    session : AsyncSession
+        Asynchronous session to use
+
+    Returns
+    -------
+    list[RegisteredMovingSource]
+        List of requested ephemeris points
+
+    """
+    ephems = await session.execute(
+        select(RegisteredMovingSourceTable).where(
+            RegisteredMovingSourceTable.sso_id == sso_id
+        )
+    )
+
+    return [e.to_model() for e in ephems.scalars()]
 
 
 async def update_ephem(
@@ -208,5 +253,3 @@ async def delete_ephem(ephem_id: int, session: AsyncSession) -> None:
 
         await session.delete(ephem)
         await session.commit()
-
-    return

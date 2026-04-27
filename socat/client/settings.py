@@ -25,8 +25,7 @@ class SOCatClientSettings(BaseSettings):
 
     def _pickle_client(self):
         with open(self.pickle_path, "rb") as handle:
-            client = pickle.load(handle)
-        return client
+            return pickle.load(handle)
 
     def _http_client(self):
         raise NotImplementedError

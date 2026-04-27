@@ -211,5 +211,3 @@ async def delete_sso(sso_id: int, session: AsyncSession) -> None:
 
         await session.delete(source)
         await session.commit()
-
-    return

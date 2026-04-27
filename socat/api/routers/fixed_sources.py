@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ValidationError
 
 import socat.astroquery as soaq
-import socat.core as core
+from socat import core
 from socat.astroquery import AstroqueryReturn
 
 from ...database.sources import RegisteredFixedSource
@@ -146,7 +146,7 @@ async def create_source_name(
     if len(services) == 0:  # pragma: no cover
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Service {} is not available.".format(astroquery_service),
+            detail=f"Service {astroquery_service} is not available.",
         )
 
     result_table = await soaq.get_source_info(
@@ -157,7 +157,7 @@ async def create_source_name(
     if result_table.get("ra", None) is None or result_table.get("dec", None) is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="RA or Dec unresolved by {}.".format(astroquery_service),
+            detail=f"RA or Dec unresolved by {astroquery_service}.",
         )
 
     # Note the conversion to degrees happens in soaq.get_source_info
@@ -203,18 +203,16 @@ async def get_cone_astroquery(
 
     Returns
     -------
-    source_list : list[AstroqueryReturn]
+    soaq.cone_search : list[AstroqueryReturn]
         List of AstroqueryReturn objects specifying name, ra, dec, provider, and distance from center of source
     """
     service_list = await core.get_all_services(session=session)
 
-    source_list = await soaq.cone_search(
+    return await soaq.cone_search(
         position=cone.position,
         service_list=service_list,
         radius=cone.radius,
     )
-
-    return source_list
 
 
 @router.post("/source/box")
@@ -233,7 +231,7 @@ async def get_box(
 
     Returns
     -------
-    response : list[RegisteredFixedSource]
+    core.get_box : list[RegisteredFixedSource]
         List of socat.database.RegisteredFixedSource sources in box
 
     Raises
@@ -250,11 +248,9 @@ async def get_box(
             detail="RA/Dec min must be <= max",
         )
 
-    response = await core.get_box(
+    return await core.get_box(
         lower_left=box.lower_left, upper_right=box.upper_right, session=session
     )
-
-    return response
 
 
 @router.get("/source/{source_id}")
@@ -351,4 +347,3 @@ async def delete_source(source_id: int, session: SessionDependency) -> None:
         await core.delete_source(source_id, session=session)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    return

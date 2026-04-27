@@ -124,7 +124,7 @@ class Client(ClientBase):
         result_table = service.query_object(name)
         result_table["ra"].convert_unit_to("deg")
         result_table["dec"].convert_unit_to("deg")
-        if "flux" in result_table.keys():
+        if "flux" in result_table.columns:
             result_table["flux"].convert_unit_to("mJy")  # pragma: no cover
         result_dict = {param: None for param in requested_params}
         if len(result_table) == 0:
@@ -182,8 +182,10 @@ class Client(ClientBase):
         ra_max = upper_right.ra.value
         dec_max = upper_right.dec.value
         sources = filter(
-            lambda x: (ra_min <= x.position.ra.value <= ra_max)
-            and (dec_min <= x.position.dec.value <= dec_max),
+            lambda x: (
+                (ra_min <= x.position.ra.value <= ra_max)
+                and (dec_min <= x.position.dec.value <= dec_max)
+            ),
             self.catalog.values(),
         )
 
@@ -219,15 +221,13 @@ class Client(ClientBase):
 
         Returns
         -------
-        sources : iterable[RegisteredFixedSource]
+        filter : iterable[RegisteredFixedSource]
             List of sources with flux greater than minimum_flux
         """
-        sources = filter(
+        return filter(
             lambda x: x.flux is not None and x.flux >= minimum_flux,
             self.catalog.values(),
         )
-
-        return sources
 
     def update_source(
         self,
@@ -368,10 +368,11 @@ class AstorqueryClient(AstroqueryClientBase):
          : list[AstroqueryService] | None
             List of services corresponding to service_id. Returns None if service not found
         """
-        service = []
-        for service_id in self.catalog:
-            if self.catalog[service_id].name == name:
-                service.append(self.catalog[service_id])
+        service = [
+            self.catalog[service_id]
+            for service_id in self.catalog
+            if self.catalog[service_id].name == name
+        ]
 
         if len(service) == 0:
             service = None
@@ -501,12 +502,10 @@ class SolarSystemClient(SolarSystemClientBase):
 
         Returns
         -------
-        solar_source : SolarSytemSource
+        self.catalog.get(sso_id, None) : SolarSytemSource
             Reuqested solar system source.
         """
-        solar_source = self.catalog.get(sso_id, None)
-
-        return solar_source
+        return self.catalog.get(sso_id, None)
 
     def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
         """
@@ -522,10 +521,9 @@ class SolarSystemClient(SolarSystemClientBase):
         solars : list[SolarSystemObject] | None
             Requested solar system source.
         """
-        solars = []
-        for id in self.catalog:
-            if self.catalog[id].name == name:
-                solars.append(self.catalog[id])
+        solars = [
+            self.catalog[id] for id in self.catalog if self.catalog[id].name == name
+        ]
 
         if len(solars) == 0:
             solars = None
@@ -546,10 +544,9 @@ class SolarSystemClient(SolarSystemClientBase):
         solars : list[SolarSystemObject] | None
             List of sources with requested MPC ID
         """
-        solars = []
-        for id in self.catalog:
-            if self.catalog[id].MPC_id == MPC_id:
-                solars.append(self.catalog[id])
+        solars = [
+            self.catalog[id] for id in self.catalog if self.catalog[id].MPC_id == MPC_id
+        ]
 
         if len(solars) == 0:
             solars = None
@@ -702,13 +699,11 @@ class EphemClient(EphemClientBase):
 
         Returns
         -------
-        ephem : RegisteredMovingSource | None
+        self.catalog.get(ephem_id, None) : RegisteredMovingSource | None
             Get requested ephem.
         """
 
-        ephem = self.catalog.get(ephem_id, None)
-
-        return ephem
+        return self.catalog.get(ephem_id, None)
 
     def update_ephem(
         self,

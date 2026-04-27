@@ -1,5 +1,3 @@
-from functools import lru_cache
-
 import numpy as np
 from astropy.coordinates import ICRS
 from astropy.units import Quantity
@@ -70,7 +68,7 @@ class SourceGenerator:
             self.flux_unit = ephem.flux.unit
             self.interp = make_interp_spline(x, y, k=1)
 
-    @lru_cache(maxsize=128)  # This can cause memory leaks so we might not want it
+    # @lru_cache(maxsize=128)  # This can cause memory leaks so we might not want it
     def at_time(self, t: int) -> tuple[ICRS, Quantity]:
         """
         Get the ra/dec/flux of the source at the requested time.
@@ -98,9 +96,7 @@ class SourceGenerator:
             )
         if t < self.t_min or self.t_max < t:
             raise ValueError(
-                "Error, requested t={} outside initialized bounds {}-{}".format(
-                    t, self.t_min, self.t_max
-                )
+                f"Error, requested t={t} outside initialized bounds {self.t_min}-{self.t_max}"
             )
 
         ra, dec, flux = self.interp(t)

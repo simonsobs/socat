@@ -40,7 +40,9 @@ class AstroqueryReturn(BaseModel):
 
 
 async def get_source_info(
-    name: str, astroquery_service: str, requested_params: list[str] = ["ra", "dec"]
+    name: str,
+    astroquery_service: str,
+    requested_params: list[str] | None = None,
 ) -> dict:
     """
     Get source info by name using astroquery
@@ -66,6 +68,9 @@ async def get_source_info(
         If no source found in astroquery_service
     """
 
+    if requested_params is None:
+        requested_params = ["ra", "dec"]
+
     service: BaseVOQuery = getattr(
         import_module(f"astroquery.{astroquery_service.lower()}"),
         astroquery_service,
@@ -78,7 +83,7 @@ async def get_source_info(
     # some reason.
     result_table["ra"].convert_unit_to("deg")
     result_table["dec"].convert_unit_to("deg")
-    if "flux" in result_table.keys():
+    if "flux" in result_table.columns:
         result_table["flux"].convert_unit_to("mJy")  # pragma: no cover
     if len(result_table) > 1:
         warnings.warn(
@@ -142,7 +147,7 @@ async def cone_search(
         )
         result_table["ra"].convert_unit_to("deg")
         result_table["dec"].convert_unit_to("deg")
-        if "flux" in result_table.keys():
+        if "flux" in result_table.columns:
             result_table["flux"].convert_unit_to("mJy")  # pragma: no cover
         for i in range(len(result_table)):
             name = result_table[service.config["name_col"]].value.data[i]
