@@ -11,6 +11,7 @@ from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
 from sqlmodel import select, update
 
+from socat.database.services import AstroqueryServiceTable
 from socat.database.sources import RegisteredFixedSourceTable
 
 
@@ -102,7 +103,7 @@ def update_source(
     name: str | None = None,
 ) -> update:
     """
-    Update a source in the database.
+    Generate an update statement for a source.
 
     Parameters
     ----------
@@ -134,5 +135,40 @@ def update_source(
 
     if name is not None:
         stmt = stmt.values(name=name)
+
+    return stmt
+
+
+def update_service(
+    service_id: int,
+    name: str | None,
+    config: dict | None,
+) -> update:
+    """
+    Generate an update statement for an astroquery service.
+
+    Parameters
+    ----------
+    service_id : int
+        The ID of the astroquery service to be updated.
+    name: str | None
+        The new name of the service.
+    config: dict | None
+        The new config for the service.
+
+    Returns
+    -------
+    update:
+        Database statement
+    """
+    stmt = update(AstroqueryServiceTable).where(
+        AstroqueryServiceTable.service_id == service_id
+    )
+
+    if name is not None:
+        stmt = stmt.values(name=name)
+
+    if config is not None:
+        stmt = stmt.values(config=config)
 
     return stmt

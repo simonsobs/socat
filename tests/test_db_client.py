@@ -157,7 +157,8 @@ def test_not_found_behavior(db_client):
 
     assert services.get_service(service_id=999999) is None
     assert services.get_service_name(name="missing-service") is None
-    assert services.update_service(service_id=999999, name="x", config={}) is None
+    with pytest.raises(ValueError):
+        services.update_service(service_id=999999, name="x", config={})
 
     assert sso.get_sso(sso_id=999999) is None
     assert sso.get_sso_name(name="missing-sso") is None

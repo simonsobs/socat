@@ -232,18 +232,20 @@ class AstorqueryClient(AstroqueryClientBase):
         config: dict[str, Any] | None,
     ) -> AstroqueryService | None:
         with self._get_session() as session:
+            session.execute(
+                statements.update_service(
+                    service_id=service_id, name=name, config=config
+                )
+            )
             service = session.get(AstroqueryServiceTable, service_id)
 
             if service is None:
-                return None
+                raise ValueError(f"Source with ID {service_id} not found")
 
-            service.name = service.name if name is None else name
-            service.config = service.config if config is None else config
-
+            model = service.to_model()
             session.commit()
-            session.refresh(service)
 
-            return service.to_model()
+            return model
 
     def delete_service(self, *, service_id: int) -> None:
         with self._get_session() as session:

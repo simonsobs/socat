@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from socat.database import (
     AstroqueryService,
     AstroqueryServiceTable,
+    statements,
 )
 
 
@@ -160,17 +161,19 @@ async def update_service(
     """
 
     async with session.begin():
+        await session.execute(
+            statements.update_service(service_id=service_id, name=name, config=config)
+        )
         service = await session.get(AstroqueryServiceTable, service_id)
 
         if service is None:
             raise ValueError(f"Source with ID {service_id} not found")
 
-        service.name = name if name is not None else service.name
-        service.config = config if config is not None else service.config
+        model = service.to_model()
 
         await session.commit()
 
-    return service.to_model()
+    return model
 
 
 async def delete_service(service_id: int, session: AsyncSession) -> None:
