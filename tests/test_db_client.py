@@ -163,10 +163,11 @@ def test_not_found_behavior(db_client):
     assert sso.get_sso(sso_id=999999) is None
     assert sso.get_sso_name(name="missing-sso") is None
     assert sso.get_sso_MPC_id(MPC_id=999999) is None
-    assert sso.update_sso(sso_id=999999, name="x", MPC_id=1) is None
+    with pytest.raises(ValueError):
+        sso.update_sso(sso_id=999999, name="x", MPC_id=1)
 
     assert ephem.get_ephem(ephem_id=999999) is None
-    assert (
+    with pytest.raises(ValueError):
         ephem.update_ephem(
             ephem_id=999999,
             sso_id=1,
@@ -176,8 +177,6 @@ def test_not_found_behavior(db_client):
             position=ICRS(0.0 * u.deg, 0.0 * u.deg),
             flux=1.0 * u.mJy,
         )
-        is None
-    )
 
     fixed.delete_source(source_id=999999)
     services.delete_service(service_id=999999)

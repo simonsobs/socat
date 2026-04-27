@@ -12,7 +12,11 @@ from astroquery.query import BaseVOQuery
 from sqlmodel import select, update
 
 from socat.database.services import AstroqueryServiceTable
-from socat.database.sources import RegisteredFixedSourceTable
+from socat.database.sources import (
+    RegisteredFixedSourceTable,
+    RegisteredMovingSourceTable,
+    SolarSystemObjectTable,
+)
 
 
 def create_name(
@@ -172,3 +176,94 @@ def update_service(
         stmt = stmt.values(config=config)
 
     return stmt
+
+
+def update_sso(
+    sso_id: int,
+    name: str | None,
+    MPC_id: int | None,
+) -> update:
+    """
+    Generate an update statement for a sso source.
+
+    Parameters
+    ----------
+    sso_id: int
+        The ID of the sso source to be updated.
+    name: str
+        The new name to use.
+    MPC_id: int
+        The new MPC ID to use.
+
+    Returns
+    -------
+    update:
+        Database statement.
+    """
+    stmt = update(SolarSystemObjectTable).where(SolarSystemObjectTable.sso_id == sso_id)
+
+    if name is not None:
+        stmt = stmt.values(name=name)
+
+    if MPC_id is not None:
+        stmt = stmt.values(MPC_id=MPC_id)
+
+    return stmt
+
+
+def update_ephem(
+    ephem_id: int,
+    sso_id: int | None,
+    MPC_id: int | None,
+    name: str | None,
+    time: int | None,
+    position: ICRS | None,
+    flux: Quantity | None,
+) -> update:
+    """
+    Generate an update statement for an ephemeris point.
+
+    Parameters
+    ----------
+    ephem_id : int
+        The ID of the ephemeris point to be updated.
+    sso_id : int | None
+        The new SSO ID for the ephemeris point.
+    MPC_id : int | None
+        The new MPC ID for the ephemeris point.
+    name : str | None
+        The new name for the ephemeris point.
+    time : int | None
+        The new time for the ephemeris point.
+    position : ICRS | None
+        The new position for the ephemeris point.
+    flux : Quantity | None
+        The new flux for the ephemeris point.
+
+    Returns
+    -------
+    update:
+        Database statement.
+    """
+    stmt = update(RegisteredMovingSourceTable).where(
+        RegisteredMovingSourceTable.ephem_id == ephem_id
+    )
+
+    values = {
+        k: v
+        for k, v in {
+            "sso_id": sso_id,
+            "MPC_id": MPC_id,
+            "name": name,
+            "time": time,
+            "ra_deg": position.ra.to_value("deg") if position is not None else None,
+            "dec_deg": position.dec.to_value("deg") if position is not None else None,
+            "flux_mJy": flux.to_value("mJy") if flux is not None else None,
+        }.items()
+        if v is not None
+    }
+
+    if values:
+        return stmt.values(**values)
+    else:
+        return stmt

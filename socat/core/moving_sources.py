@@ -11,6 +11,7 @@ from socat.database import (
     RegisteredMovingSource,
     RegisteredMovingSourceTable,
     SolarSystemObject,
+    statements,
 )
 
 
@@ -202,26 +203,27 @@ async def update_ephem(
     """
 
     async with session.begin():
+        await session.execute(
+            statements.update_ephem(
+                ephem_id=ephem_id,
+                sso_id=sso_id,
+                MPC_id=MPC_id,
+                name=name,
+                time=time,
+                position=position,
+                flux=flux,
+            )
+        )
         ephem = await session.get(RegisteredMovingSourceTable, ephem_id)
 
         if ephem is None:
             raise ValueError(f"Ephem point with ID {ephem_id} not found.")
 
-        ephem.sso_id = sso_id if sso_id is not None else ephem.sso_id
-        ephem.MPC_id = MPC_id if MPC_id is not None else ephem.MPC_id
-        ephem.name = name if name is not None else ephem.name
-        ephem.time = time if time is not None else ephem.time
-        ephem.ra_deg = (
-            position.ra.to_value("deg") if position.ra is not None else ephem.ra_deg
-        )
-        ephem.dec_deg = (
-            position.dec.to_value("deg") if position.dec is not None else ephem.dec_deg
-        )
-        ephem.flux_mJy = flux.to_value("mJy") if flux is not None else ephem.flux_mJy
+        model = ephem.to_model()
 
         await session.commit()
 
-    return ephem.to_model()
+    return model
 
 
 async def delete_ephem(ephem_id: int, session: AsyncSession) -> None:

@@ -328,18 +328,19 @@ class SolarSystemClient(SolarSystemClientBase):
         self, *, sso_id: int, name: str | None, MPC_id: int | None
     ) -> SolarSystemObject | None:
         with self._get_session() as session:
+            session.execute(
+                statements.update_sso(sso_id=sso_id, name=name, MPC_id=MPC_id)
+            )
             source = session.get(SolarSystemObjectTable, sso_id)
 
             if source is None:
-                return None
+                raise ValueError(f"Source with SSO ID {sso_id} not found")
 
-            source.name = source.name if name is None else name
-            source.MPC_id = source.MPC_id if MPC_id is None else MPC_id
+            model = source.to_model()
 
             session.commit()
-            session.refresh(source)
 
-            return source.to_model()
+        return model
 
     def delete_sso(self, *, sso_id: int) -> None:
         with self._get_session() as session:
@@ -421,24 +422,28 @@ class EphemClient(EphemClientBase):
         flux: Quantity | None,
     ) -> RegisteredMovingSource | None:
         with self._get_session() as session:
+            session.execute(
+                statements.update_ephem(
+                    ephem_id=ephem_id,
+                    sso_id=sso_id,
+                    MPC_id=MPC_id,
+                    name=name,
+                    time=time,
+                    position=position,
+                    flux=flux,
+                )
+            )
+
             ephem = session.get(RegisteredMovingSourceTable, ephem_id)
 
             if ephem is None:
-                return None
+                raise ValueError(f"Ephemeris point with ID {ephem_id} not found")
 
-            ephem.sso_id = ephem.sso_id if sso_id is None else sso_id
-            ephem.MPC_id = ephem.MPC_id if MPC_id is None else MPC_id
-            ephem.name = ephem.name if name is None else name
-            ephem.time = ephem.time if time is None else time
-            if position is not None:
-                ephem.ra_deg = position.ra.to_value("deg")
-                ephem.dec_deg = position.dec.to_value("deg")
-            ephem.flux_mJy = ephem.flux_mJy if flux is None else flux.to_value("mJy")
+            model = ephem.to_model()
 
             session.commit()
-            session.refresh(ephem)
 
-            return ephem.to_model()
+        return model
 
     def delete_ephem(self, *, ephem_id: int) -> None:
         with self._get_session() as session:
