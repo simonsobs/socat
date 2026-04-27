@@ -1,4 +1,5 @@
 import astropy.units as u
+import pytest
 from astropy.coordinates import ICRS
 
 from socat.client.db import AstorqueryClient, EphemClient, SolarSystemClient
@@ -145,15 +146,14 @@ def test_not_found_behavior(db_client):
     ephem = fixed.ephem
 
     assert fixed.get_source(source_id=999999) is None
-    assert (
+
+    with pytest.raises(ValueError):
         fixed.update_source(
             source_id=999999,
             position=ICRS(1.0 * u.deg, 1.0 * u.deg),
             name="missing",
             flux=1.0 * u.mJy,
         )
-        is None
-    )
 
     assert services.get_service(service_id=999999) is None
     assert services.get_service_name(name="missing-service") is None

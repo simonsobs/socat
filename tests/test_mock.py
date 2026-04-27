@@ -1,5 +1,7 @@
 import astropy.units as u
+import pytest
 from astropy.coordinates import ICRS
+from astroquery.exceptions import NoResultsWarning
 
 
 def test_add_and_remove(mock_client):
@@ -46,8 +48,11 @@ def test_add_and_remove_by_name(mock_client):
 
 
 def test_bad_create_name(mock_client):
-    source = mock_client.create_name(name="NOT_A_SOURCE", astroquery_service="Simbad")
-    assert source is None
+    with pytest.warns(NoResultsWarning):
+        source = mock_client.create_name(
+            name="NOT_A_SOURCE", astroquery_service="Simbad"
+        )
+        assert source is None
 
 
 def test_bad_id(mock_client):

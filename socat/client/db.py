@@ -2,13 +2,10 @@
 Uses a SQLAlchemy database connection to implement the client core.
 """
 
-from importlib import import_module
 from typing import Any, Callable, ContextManager
 
-import astropy.units as u
 from astropy.coordinates import ICRS
 from astropy.units import Quantity
-from astroquery.query import BaseVOQuery
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
@@ -22,6 +19,7 @@ from socat.database import (
     RegisteredMovingSourceTable,
     SolarSystemObject,
     SolarSystemObjectTable,
+    statements,
 )
 from socat.database.session import (
     create_sync_session_factory,
@@ -100,34 +98,7 @@ class Client(ClientBase):
     def create_name(
         self, *, name: str, astroquery_service: str
     ) -> RegisteredFixedSource:
-        service: BaseVOQuery = getattr(
-            import_module(f"astroquery.{astroquery_service.lower()}"),
-            astroquery_service,
-        )
-
-        requested_params = ["ra", "dec"]
-
-        result_table = service.query_object(name)
-        result_table["ra"].convert_unit_to("deg")
-        result_table["dec"].convert_unit_to("deg")
-        if "flux" in result_table.columns:
-            result_table["flux"].convert_unit_to("mJy")  # pragma: no cover
-        result_dict = {param: None for param in requested_params}
-        if len(result_table) == 0:
-            return None
-        for param in requested_params:
-            try:
-                result_dict[param] = result_table[param].value.data[0]
-            except KeyError:  # pragma: no cover
-                continue
-
-        position = ICRS(
-            ra=result_dict["ra"] * u.deg,
-            dec=result_dict["dec"] * u.deg,
-        )
-        flux = result_dict.get("flux", None)
-        if flux is not None:
-            flux *= u.mJy
+        position, name, flux = statements.create_name(name, astroquery_service)
 
         return self.create_source(position=position, name=name, flux=flux)
 
@@ -139,16 +110,7 @@ class Client(ClientBase):
     ) -> list[RegisteredFixedSource]:
         with self._get_session() as session:
             sources = session.execute(
-                select(RegisteredFixedSourceTable).where(
-                    float(lower_left.ra.to_value("deg"))
-                    <= RegisteredFixedSourceTable.ra_deg,
-                    RegisteredFixedSourceTable.ra_deg
-                    <= float(upper_right.ra.to_value("deg")),
-                    float(lower_left.dec.to_value("deg"))
-                    <= RegisteredFixedSourceTable.dec_deg,
-                    RegisteredFixedSourceTable.dec_deg
-                    <= float(upper_right.dec.to_value("deg")),
-                )
+                statements.get_box(lower_left=lower_left, upper_right=upper_right)
             )
 
             return [s.to_model() for s in sources.scalars().all()]
@@ -163,14 +125,9 @@ class Client(ClientBase):
     def get_forced_photometry_sources(
         self, *, minimum_flux: Quantity
     ) -> list[RegisteredFixedSource]:
-        minimum_flux_mJy = minimum_flux.to_value("mJy")
-
         with self._get_session() as session:
             sources = session.execute(
-                select(RegisteredFixedSourceTable).where(
-                    RegisteredFixedSourceTable.flux_mJy.is_not(None),
-                    RegisteredFixedSourceTable.flux_mJy >= minimum_flux_mJy,
-                )
+                statements.get_forced_photometry_sources(minimum_flux=minimum_flux)
             )
             return [s.to_model() for s in sources.scalars().all()]
 
@@ -183,21 +140,26 @@ class Client(ClientBase):
         flux: Quantity | None = None,
     ) -> RegisteredFixedSource | None:
         with self._get_session() as session:
+            session.execute(
+                statements.update_source(
+                    source_id=source_id,
+                    position=position,
+                    name=name,
+                    flux=flux,
+                )
+            )
             source = session.get(RegisteredFixedSourceTable, source_id)
 
             if source is None:
-                return None
+                raise ValueError(
+                    f"Unable to update and/or find source with ID {source_id}"
+                )
 
-            if position is not None:
-                source.ra_deg = position.ra.to_value("deg")
-                source.dec_deg = position.dec.to_value("deg")
-            source.name = source.name if name is None else name
-            source.flux_mJy = source.flux_mJy if flux is None else flux.to_value("mJy")
+            model = source.to_model()
 
             session.commit()
-            session.refresh(source)
 
-            return source.to_model()
+            return model
 
     def delete_source(self, *, source_id: int) -> None:
         with self._get_session() as session:
