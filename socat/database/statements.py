@@ -129,8 +129,8 @@ def get_time_box(lower_left: ICRS, upper_right: ICRS, t_min: int, t_max: int) ->
             RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
         )
         .where(
-            t_min <= RegisteredMovingSourceTable.time,
-            RegisteredMovingSourceTable.time <= t_max,
+            t_min.unix <= RegisteredMovingSourceTable.time,
+            RegisteredMovingSourceTable.time <= t_max.unix,
             float(lower_left.ra.to_value("deg")) <= RegisteredMovingSourceTable.ra_deg,
             RegisteredMovingSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
             float(lower_left.dec.to_value("deg"))

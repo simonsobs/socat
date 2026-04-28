@@ -2,7 +2,7 @@
 The web API to access the socat moving source database.
 """
 
-from astropydantic import AstroPydanticICRS
+from astropydantic import AstroPydanticICRS, AstroPydanticTime
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ValidationError
 
@@ -30,7 +30,7 @@ class SolarSystemObjectRequest(BaseModel):
     MPC_id: int | None = None
 
 
-class BoxRequest(BaseModel):
+class TimeBoxRequest(BaseModel):
     """
     Class which defines attributes of box requests
 
@@ -40,10 +40,16 @@ class BoxRequest(BaseModel):
         Bottom left corner of box
     top_right : AstroPydanticICRS
         Top right corner of box
+    t_min : AstroPydanticTime
+        Start time of box
+    t_max : AstroPydanticTime
+        End time of box
     """
 
     lower_left: AstroPydanticICRS
     upper_right: AstroPydanticICRS
+    t_min: AstroPydanticTime
+    t_max: AstroPydanticTime
 
 
 @router.put("/sso/new")
@@ -119,9 +125,7 @@ async def get_sso(sso_id: int, session: SessionDependency) -> SolarSystemObject:
 
 @router.post("/sso/box")
 async def get_sso_box(
-    box: BoxRequest,
-    t_min: int,
-    t_max: int,
+    box: TimeBoxRequest,
     session: SessionDependency,
 ) -> list[SolarSystemObject]:
     """
@@ -130,12 +134,8 @@ async def get_sso_box(
 
     Parameters
     ----------
-    box : BoxRequest
+    box : TimeBoxRequest
         Box to search for SSOs
-    t_min : int
-        Minimum time in unix time for box search. TODO: Maybe should accept some sort of Astropydantic time quantity that can be converted to unix.
-    t_max : int
-        Maximum time in unix time for box search.
     session : SessionDependency
         Asynchronous session to use
 
@@ -157,17 +157,17 @@ async def get_sso_box(
             detail="RA/Dec min must be <= max",
         )
 
-    if t_max <= t_min:  # pragma: no cover
+    if box.t_max <= box.t_min:  # pragma: no cover
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="t_min must be strictly less than t_max.",
         )
 
-    return await core.get_time_box(
+    return await core.get_sso_box(
         lower_left=box.lower_left,
         upper_right=box.upper_right,
-        t_min=t_min,
-        t_max=t_max,
+        t_min=box.t_min,
+        t_max=box.t_max,
         session=session,
     )
 

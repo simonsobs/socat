@@ -1,4 +1,5 @@
 import pytest
+from astropy.time import Time
 from httpx import HTTPStatusError
 
 
@@ -101,6 +102,7 @@ def test_get_box(client):
         json={"MPC_id": 511, "name": "Davida"},
     )
     sso_id_1 = response.json()["sso_id"]
+    start_time = Time("2025-01-01T00:00:00.00", format="isot", scale="utc")
     for i in range(3):
         response = client.put(
             "api/v1/ephem/new",
@@ -108,7 +110,7 @@ def test_get_box(client):
                 "sso_id": sso_id_1,
                 "MPC_id": 511,
                 "name": "Davida",
-                "time": i * 100,
+                "time": start_time.unix + i * 100,
                 "position": {
                     "ra": {"value": i, "unit": "deg"},
                     "dec": {"value": i, "unit": "deg"},
@@ -129,7 +131,7 @@ def test_get_box(client):
                 "sso_id": sso_id_2,
                 "MPC_id": 423,
                 "name": "Diotima",
-                "time": 200 + i * 100,
+                "time": start_time.unix + 200 + i * 100,
                 "position": {
                     "ra": {"value": i, "unit": "deg"},
                     "dec": {"value": i, "unit": "deg"},
@@ -150,7 +152,7 @@ def test_get_box(client):
                 "sso_id": sso_id_3,
                 "MPC_id": 1,
                 "name": "Ceres",
-                "time": i * 100,
+                "time": start_time.unix + i * 100,
                 "position": {
                     "ra": {"value": (4 + i), "unit": "deg"},
                     "dec": {"value": (4 + i), "unit": "deg"},
@@ -170,8 +172,8 @@ def test_get_box(client):
                 "ra": {"value": 3.0, "unit": "deg"},
                 "dec": {"value": 3.0, "unit": "deg"},
             },
-            "t_min": 0,
-            "t_max": 100,
+            "t_min": "2025-01-01T00:00:00.00",
+            "t_max": "2025-01-01T00:01:40.00",
         },
     )
     assert response.status_code == 200
