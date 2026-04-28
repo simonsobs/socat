@@ -119,7 +119,7 @@ class Client(ClientBase):
         with self._get_session() as session:
             source = session.get(RegisteredFixedSourceTable, source_id)
             if source is None:
-                return None
+                raise ValueError(f"Source with ID {source_id} not found")
             return source.to_model()
 
     def get_forced_photometry_sources(
@@ -206,7 +206,7 @@ class AstorqueryClient(AstroqueryClientBase):
             service = session.get(AstroqueryServiceTable, service_id)
 
             if service is None:
-                return None
+                raise ValueError(f"Service with ID {service_id} not found.")
 
             return service.to_model()
 
@@ -220,7 +220,7 @@ class AstorqueryClient(AstroqueryClientBase):
 
             service_list = [s.to_model() for s in services.scalars().all()]
             if len(service_list) == 0:
-                return None
+                raise ValueError(f"Service with name {name} not found.")
 
             return service_list
 
@@ -292,7 +292,7 @@ class SolarSystemClient(SolarSystemClientBase):
             source = session.get(SolarSystemObjectTable, sso_id)
 
             if source is None:
-                return None
+                raise ValueError(f"Source with ID {sso_id} not found.")
 
             return source.to_model()
 
@@ -306,7 +306,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
             source_list = [s.to_model() for s in sources.scalars().all()]
             if len(source_list) == 0:
-                return None
+                raise ValueError(f"Source with name {name} not found.")
 
             return source_list
 
@@ -320,7 +320,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
             source_list = [s.to_model() for s in sources.scalars().all()]
             if len(source_list) == 0:
-                return None
+                raise ValueError(f"Source with MPC ID {MPC_id} not found.")
 
             return source_list
 
@@ -406,7 +406,7 @@ class EphemClient(EphemClientBase):
             ephem = session.get(RegisteredMovingSourceTable, ephem_id)
 
             if ephem is None:
-                return None
+                raise ValueError(f"Ephemeris point with ID {ephem_id} not found")
 
             return ephem.to_model()
 

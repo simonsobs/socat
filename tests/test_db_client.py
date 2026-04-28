@@ -54,7 +54,8 @@ def test_fixed_source_crud_and_queries(db_client):
 
     client.delete_source(source_id=source_1.source_id)
     client.delete_source(source_id=source_2.source_id)
-    assert client.get_source(source_id=source_1.source_id) is None
+    with pytest.raises(ValueError):
+        client.get_source(source_id=source_1.source_id)
 
 
 def test_service_crud_and_lookup(db_client):
@@ -84,7 +85,8 @@ def test_service_crud_and_lookup(db_client):
     assert updated.service_id in {svc.service_id for svc in by_name}
 
     client.delete_service(service_id=service.service_id)
-    assert client.get_service(service_id=service.service_id) is None
+    with pytest.raises(ValueError):
+        client.get_service(service_id=service.service_id)
 
 
 def test_sso_and_ephem_crud_and_cascade(db_client):
@@ -135,8 +137,10 @@ def test_sso_and_ephem_crud_and_cascade(db_client):
     assert updated_sso.sso_id in {source.sso_id for source in by_mpc}
 
     sso_client.delete_sso(sso_id=sso.sso_id)
-    assert sso_client.get_sso(sso_id=sso.sso_id) is None
-    assert ephem_client.get_ephem(ephem_id=ephem.ephem_id) is None
+    with pytest.raises(ValueError):
+        sso_client.get_sso(sso_id=sso.sso_id)
+    with pytest.raises(ValueError):
+        ephem_client.get_ephem(ephem_id=ephem.ephem_id)
 
 
 def test_not_found_behavior(db_client):
@@ -145,7 +149,8 @@ def test_not_found_behavior(db_client):
     sso = fixed.sso
     ephem = fixed.ephem
 
-    assert fixed.get_source(source_id=999999) is None
+    with pytest.raises(ValueError):
+        fixed.get_source(source_id=999999)
 
     with pytest.raises(ValueError):
         fixed.update_source(
@@ -155,18 +160,30 @@ def test_not_found_behavior(db_client):
             flux=1.0 * u.mJy,
         )
 
-    assert services.get_service(service_id=999999) is None
-    assert services.get_service_name(name="missing-service") is None
+    with pytest.raises(ValueError):
+        services.get_service(service_id=999999)
+
+    with pytest.raises(ValueError):
+        services.get_service_name(name="missing-service")
+
     with pytest.raises(ValueError):
         services.update_service(service_id=999999, name="x", config={})
 
-    assert sso.get_sso(sso_id=999999) is None
-    assert sso.get_sso_name(name="missing-sso") is None
-    assert sso.get_sso_MPC_id(MPC_id=999999) is None
+    with pytest.raises(ValueError):
+        sso.get_sso(sso_id=999999)
+
+    with pytest.raises(ValueError):
+        sso.get_sso_name(name="missing-sso")
+
+    with pytest.raises(ValueError):
+        sso.get_sso_MPC_id(MPC_id=999999)
+
     with pytest.raises(ValueError):
         sso.update_sso(sso_id=999999, name="x", MPC_id=1)
 
-    assert ephem.get_ephem(ephem_id=999999) is None
+    with pytest.raises(ValueError):
+        ephem.get_ephem(ephem_id=999999)
+
     with pytest.raises(ValueError):
         ephem.update_ephem(
             ephem_id=999999,
