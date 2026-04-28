@@ -22,7 +22,7 @@ from .routers.services import (
     get_service_name,
     update_service,
 )
-from .routers.sso import create_sso, delete_sso, get_sso, update_sso
+from .routers.sso import create_sso, delete_sso, get_sso, get_sso_box, update_sso
 
 __all__ = [
     "SessionDependency",
@@ -43,6 +43,7 @@ __all__ = [
     "get_service_name",
     "get_source",
     "get_sso",
+    "get_sso_box",
     "update_ephem",
     "update_service",
     "update_source",

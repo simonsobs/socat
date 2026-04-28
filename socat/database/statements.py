@@ -101,6 +101,46 @@ def get_box(lower_left: ICRS, upper_right: ICRS) -> select:
     )
 
 
+def get_time_box(lower_left: ICRS, upper_right: ICRS, t_min: int, t_max: int) -> select:
+    """
+    Equivelent of get_box for SSO objects. Only gets objects which have at least one ephem point
+    inside the box between t_min and t_max
+
+    Parameters
+    ----------
+    lower_left : ICRS
+        Lower left corner of box
+    upper_right : ICRS
+        Upper right corner of box
+    t_min : int
+        Start time of box
+    t_max : int
+        End time of box
+
+    Returns
+    -------
+    select:
+        Database statement.
+    """
+    return (
+        select(SolarSystemObjectTable)
+        .outerjoin(
+            RegisteredMovingSourceTable,
+            RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
+        )
+        .where(
+            t_min <= RegisteredMovingSourceTable.time,
+            RegisteredMovingSourceTable.time <= t_max,
+            float(lower_left.ra.to_value("deg")) <= RegisteredMovingSourceTable.ra_deg,
+            RegisteredMovingSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
+            float(lower_left.dec.to_value("deg"))
+            <= RegisteredMovingSourceTable.dec_deg,
+            RegisteredMovingSourceTable.dec_deg
+            <= float(upper_right.dec.to_value("deg")),
+        )
+    )
+
+
 def get_forced_photometry_sources(minimum_flux: Quantity) -> select:
     """
     Get sources for which to perform forced photometry, i.e. sources with flux

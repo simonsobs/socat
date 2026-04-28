@@ -2,7 +2,8 @@
 Uses a SQLAlchemy database connection to implement the client core.
 """
 
-from typing import Any, Callable, ContextManager
+from collections.abc import Callable
+from typing import Any, ContextManager
 
 from astropy.coordinates import ICRS
 from astropy.units import Quantity

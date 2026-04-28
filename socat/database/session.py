@@ -2,9 +2,10 @@
 Shared SQLAlchemy session factories for async API and sync client access.
 """
 
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import contextmanager
 from functools import lru_cache
-from typing import Annotated, AsyncIterator, Callable, ContextManager, Iterator
+from typing import Annotated, ContextManager
 
 from fastapi import Depends
 from sqlalchemy import create_engine, event
