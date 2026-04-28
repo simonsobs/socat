@@ -4,10 +4,9 @@ Core functionality providing access to the fixed sourcedatabase.
 
 from astropy.coordinates import ICRS
 from astropy.units import Quantity
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socat.database import RegisteredFixedSource, RegisteredFixedSourceTable
+from socat.database import RegisteredFixedSource, RegisteredFixedSourceTable, statements
 
 
 async def create_source(
@@ -37,6 +36,7 @@ async def create_source(
     """
     if flux is not None:
         flux = flux.to_value("mJy")
+
     source = RegisteredFixedSourceTable(
         ra_deg=position.ra.to_value("deg"),
         dec_deg=position.dec.to_value("deg"),
@@ -106,13 +106,7 @@ async def get_box(
     # comparisons raise TypeError: Boolean value of this clause is not defined
     # without the cast.
     sources = await session.execute(
-        select(RegisteredFixedSourceTable).where(
-            float(lower_left.ra.to_value("deg")) <= RegisteredFixedSourceTable.ra_deg,
-            RegisteredFixedSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
-            float(lower_left.dec.to_value("deg")) <= RegisteredFixedSourceTable.dec_deg,
-            RegisteredFixedSourceTable.dec_deg
-            <= float(upper_right.dec.to_value("deg")),
-        )
+        statements.get_box(lower_left=lower_left, upper_right=upper_right)
     )
 
     return [s.to_model() for s in sources.scalars()]
@@ -151,23 +145,25 @@ async def update_source(
     """
 
     async with session.begin():
+        await session.execute(
+            statements.update_source(
+                source_id=source_id,
+                position=position,
+                flux=flux,
+                name=name,
+            )
+        )
+
         source = await session.get(RegisteredFixedSourceTable, source_id)
 
         if source is None:
             raise ValueError(f"Source with ID {source_id} not found")
 
-        source.ra_deg = (
-            position.ra.to_value("deg") if position.ra is not None else source.ra_deg
-        )
-        source.dec_deg = (
-            position.dec.to_value("deg") if position.dec is not None else source.dec_deg
-        )
-        source.flux_mJy = flux.to_value("mJy") if flux is not None else source.flux_mJy
-        source.name = name if name is not None else source.name
+        model = source.to_model()
 
         await session.commit()
 
-    return source.to_model()
+    return model
 
 
 async def delete_source(source_id: int, session: AsyncSession) -> None:

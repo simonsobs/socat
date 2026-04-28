@@ -2,8 +2,8 @@ import astropy.units as u
 from astropy.coordinates import ICRS
 
 
-def test_add_and_remove(mock_client_sso, mock_client_ephem):
-    sso = mock_client_sso.create_sso(name="Davida", MPC_id=511)
+def test_add_and_remove(mock_client):
+    sso = mock_client.sso.create_sso(name="Davida", MPC_id=511)
 
     assert sso.sso_id == 0
     assert sso.name == "Davida"
@@ -11,7 +11,7 @@ def test_add_and_remove(mock_client_sso, mock_client_ephem):
 
     position = ICRS(0.0 * u.deg, 0.0 * u.deg)
     flux = 1.0 * u.mJy
-    ephem = mock_client_ephem.create_ephem(
+    ephem = mock_client.ephem.create_ephem(
         sso_id=sso.sso_id,
         MPC_id=511,
         name="Davida",
@@ -29,7 +29,7 @@ def test_add_and_remove(mock_client_sso, mock_client_ephem):
     assert ephem.position.dec.value == 0.0
     assert ephem.flux.value == 1.0
 
-    sso = mock_client_sso.update_sso(sso_id=sso.sso_id, name="Diotima", MPC_id=423)
+    sso = mock_client.sso.update_sso(sso_id=sso.sso_id, name="Diotima", MPC_id=423)
 
     assert sso.sso_id == 0
     assert sso.name == "Diotima"
@@ -37,7 +37,7 @@ def test_add_and_remove(mock_client_sso, mock_client_ephem):
 
     position = ICRS(1.0 * u.deg, 1.0 * u.deg)
     flux = 1.5 * u.mJy
-    ephem = mock_client_ephem.update_ephem(
+    ephem = mock_client.ephem.update_ephem(
         ephem_id=ephem.ephem_id,
         sso_id=sso.sso_id,
         MPC_id=423,
@@ -57,31 +57,31 @@ def test_add_and_remove(mock_client_sso, mock_client_ephem):
     assert ephem.flux.value == 1.5
 
     # Check getting sso by name and MPC ID
-    ssos = mock_client_sso.get_sso_name(name="Diotima")
+    ssos = mock_client.sso.get_sso_name(name="Diotima")
     assert len(ssos) == 1  # TODO: Should probably add a second source to the catalog
     sso = ssos[0]
     assert sso.sso_id == 0
     assert sso.name == "Diotima"
     assert sso.MPC_id == 423
 
-    sso = mock_client_sso.get_sso_MPC_id(MPC_id=423)
+    sso = mock_client.sso.get_sso_MPC_id(MPC_id=423)
     assert len(ssos) == 1  # TODO: Should probably add a second source to the catalog
     sso = ssos[0]
     assert sso.sso_id == 0
     assert sso.name == "Diotima"
     assert sso.MPC_id == 423
 
-    mock_client_sso.delete_sso(sso_id=0)
-    mock_client_ephem.delete_ephem(ephem_id=0)
+    mock_client.sso.delete_sso(sso_id=0)
+    mock_client.ephem.delete_ephem(ephem_id=0)
 
 
-def test_bad_id(mock_client_sso, mock_client_ephem):
-    sso = mock_client_sso.update_sso(sso_id=999999, name="Davida", MPC_id=411)
+def test_bad_id(mock_client):
+    sso = mock_client.sso.update_sso(sso_id=999999, name="Davida", MPC_id=411)
     assert sso is None
 
     position = ICRS(1.0 * u.deg, 1.0 * u.deg)
     flux = 2.0 * u.mJy
-    ephem = mock_client_ephem.update_ephem(
+    ephem = mock_client.ephem.update_ephem(
         ephem_id=999999,
         sso_id=0,
         MPC_id=423,
@@ -92,8 +92,8 @@ def test_bad_id(mock_client_sso, mock_client_ephem):
     )
     assert ephem is None
 
-    sso = mock_client_sso.get_sso_name(name="notAName")
+    sso = mock_client.sso.get_sso_name(name="notAName")
     assert sso is None
 
-    sso = mock_client_sso.get_sso_MPC_id(MPC_id=999999)
+    sso = mock_client.sso.get_sso_MPC_id(MPC_id=999999)
     assert sso is None

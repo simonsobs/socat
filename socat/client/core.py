@@ -86,6 +86,30 @@ class ClientBase(ABC):
         """
         return  # pragma: no cover
 
+    @property
+    @abstractmethod
+    def astroquery(self) -> "AstroqueryClientBase":
+        """
+        Access the astroquery-service client.
+        """
+        return  # pragma: no cover
+
+    @property
+    @abstractmethod
+    def sso(self) -> "SolarSystemClientBase":
+        """
+        Access the solar-system-object client.
+        """
+        return  # pragma: no cover
+
+    @property
+    @abstractmethod
+    def ephem(self) -> "EphemClientBase":
+        """
+        Access the ephemeris client.
+        """
+        return  # pragma: no cover
+
 
 class AstroqueryClientBase(ABC):
     @abstractmethod

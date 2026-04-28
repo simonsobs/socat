@@ -91,30 +91,34 @@ def mock_client(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
-def mock_client_astroquery(tmp_path_factory):
+def mock_client_astroquery(mock_client):
     """
     Create a test mock database client for mock test.
     """
-    from socat.client import mock
-
-    yield mock.AstorqueryClient()
+    yield mock_client.astroquery
 
 
 @pytest.fixture(scope="session")
-def mock_client_sso(tmp_path_factory):
+def mock_client_sso(mock_client):
     """
     Create a test mock database client for mock test.
     """
-    from socat.client import mock
-
-    yield mock.SolarSystemClient()
+    yield mock_client.sso
 
 
 @pytest.fixture(scope="session")
-def mock_client_ephem(tmp_path_factory):
+def mock_client_ephem(mock_client):
     """
     Create a test mock database client for mock test.
     """
-    from socat.client import mock
+    yield mock_client.ephem
 
-    yield mock.EphemClient()
+
+@pytest.fixture()
+def db_client(database):
+    """
+    Create a DB-backed composite client for tests.
+    """
+    from socat.client.db import Client
+
+    yield Client(db_url=f"sqlite:///{database}")

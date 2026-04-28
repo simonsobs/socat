@@ -11,7 +11,7 @@ from astropy.coordinates import ICRS
 from astropy.time import Time
 from tqdm import tqdm
 
-from socat.client.mock import EphemClient, SolarSystemClient
+from socat.client.core import ClientBase
 
 
 def _parse_designation(designation: str) -> tuple[int | None, str | None]:
@@ -34,8 +34,7 @@ def _parse_designation(designation: str) -> tuple[int | None, str | None]:
 
 
 def ingest_jpl_parquet_file(
-    ephem_client: EphemClient,
-    solar_system_client: SolarSystemClient,
+    client: ClientBase,
     filename: Path,
 ) -> tuple[int, int]:
     """
@@ -43,8 +42,8 @@ def ingest_jpl_parquet_file(
 
     Parameters
     ----------
-    client : MockClient
-        Mock SOCat client that will hold both the SSO entries and the time-dependent ephemeris positions.
+    client : ClientBase
+        SOCat client that will hold both the SSO entries and the time-dependent ephemeris positions.
     filename : Path
         Path to the JPL parquet file.
 
@@ -71,9 +70,9 @@ def ingest_jpl_parquet_file(
 
     for designation, rows in data.groupby("designation", sort=False):
         mpc_id, name = _parse_designation(designation)
-        solar_system_client.create_sso(name=name, MPC_id=mpc_id)
+        client.sso.create_sso(name=name, MPC_id=mpc_id)
         number_of_ssos += 1
-        sso = solar_system_client.get_sso_MPC_id(MPC_id=mpc_id)[0]
+        sso = client.sso.get_sso_MPC_id(MPC_id=mpc_id)[0]
 
         for _, row in tqdm(
             rows[::10].iterrows(), desc=f"Ingesting {designation}", total=len(rows[:10])
@@ -84,7 +83,7 @@ def ingest_jpl_parquet_file(
 
             unix_time = Time(row["julian_day"], format="jd").unix
 
-            ephem_client.create_ephem(
+            client.ephem.create_ephem(
                 sso_id=sso.sso_id,
                 MPC_id=mpc_id,
                 name=name,
@@ -102,18 +101,19 @@ def ingest_jpl_parquet_file(
 
 def build_mock_database(filename: Path) -> dict:
     """Build a serializable mock database from a JPL parquet file."""
-    ephem_client = EphemClient()
-    solar_system_client = SolarSystemClient()
+    from socat.client.settings import SOCatClientSettings
+
+    settings = SOCatClientSettings()
+    client = settings.client
 
     number_of_ssos, number_of_ephems = ingest_jpl_parquet_file(
-        ephem_client,
-        solar_system_client,
+        client,
         filename=filename,
     )
 
     return {
-        "solar_system": solar_system_client,
-        "ephem": ephem_client,
+        "solar_system": client.sso,
+        "ephem": client.ephem,
         "meta": {
             "source_file": str(filename),
             "number_of_ssos": number_of_ssos,

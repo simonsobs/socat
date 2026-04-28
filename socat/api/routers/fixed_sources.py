@@ -11,9 +11,9 @@ from pydantic import BaseModel, ValidationError
 import socat.astroquery as soaq
 from socat import core
 from socat.astroquery import AstroqueryReturn
+from socat.database.session import SessionDependency
 
 from ...database.sources import RegisteredFixedSource
-from ..async_ses import SessionDependency
 from .services import get_service_name
 
 router = APIRouter(prefix="/api/v1")
