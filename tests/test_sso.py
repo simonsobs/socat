@@ -5,6 +5,7 @@ Test the solar system object functions
 import astropy.units as u
 import pytest
 from astropy.coordinates import ICRS
+from astropy.time import Time
 
 from socat import core
 
@@ -202,8 +203,8 @@ async def test_time_box(database_async_sessionmaker):
     async with database_async_sessionmaker() as session:
         lower_left = ICRS(1.0 * u.deg, 1.0 * u.deg)
         upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
-        t_min = 0
-        t_max = 100
+        t_min = Time(0, format="unix", scale="utc")
+        t_max = Time(200, format="unix", scale="utc")
         ssos = await core.get_sso_box(
             lower_left=lower_left,
             upper_right=upper_right,
