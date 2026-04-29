@@ -138,7 +138,7 @@ async def test_update(database_async_sessionmaker):
 @pytest.mark.asyncio
 async def test_time_box(database_async_sessionmaker):
     # Make three asteroids, on three trajectories, of which one will be in our box.
-    # Our box will run from 1 to 3 and from t = 0 to t = 100.
+    # Our box will run from 0 to 2  and from t = 0 to t = 100.
     # Davida will be in the time-box
     # Diotima will overlap in time but not space
     # Ceres will overlap in space but not time
@@ -149,7 +149,7 @@ async def test_time_box(database_async_sessionmaker):
         flux = 1.5 * u.mJy
         for i in range(3):
             position = ICRS(
-                i * u.deg, i * u.deg
+                (1 + i) * u.deg, (1 + i) * u.deg
             )  # this is totally unphysical but who cares
             time = i * 100
             await core.create_ephem(
@@ -168,7 +168,7 @@ async def test_time_box(database_async_sessionmaker):
         flux = 0.5 * u.mJy
         for i in range(3):
             position = ICRS(
-                i * u.deg, i * u.deg
+                (1 + i) * u.deg, (1 + i) * u.deg
             )  # this is totally unphysical but who cares
             time = 200 + i * 100
             await core.create_ephem(
@@ -201,10 +201,10 @@ async def test_time_box(database_async_sessionmaker):
             )
 
     async with database_async_sessionmaker() as session:
-        lower_left = ICRS(1.0 * u.deg, 1.0 * u.deg)
+        lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
         upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
         t_min = Time(0, format="unix", scale="utc")
-        t_max = Time(200, format="unix", scale="utc")
+        t_max = Time(100, format="unix", scale="utc")
         ssos = await core.get_sso_box(
             lower_left=lower_left,
             upper_right=upper_right,
@@ -212,7 +212,6 @@ async def test_time_box(database_async_sessionmaker):
             t_max=t_max,
             session=session,
         )
-
     assert len(ssos) == 1
     assert ssos[0].name == "Davida"
     assert ssos[0].MPC_id == 511

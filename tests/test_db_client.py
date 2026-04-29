@@ -224,3 +224,5 @@ def test_direct_secondary_client_backcompat(database):
 
     assert sso.get_sso(sso_id=obj.sso_id) is not None
     assert ephem.get_ephem(ephem_id=point.ephem_id) is not None
+
+    sso.delete_sso(sso_id=obj.sso_id)

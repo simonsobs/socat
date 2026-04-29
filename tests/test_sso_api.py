@@ -112,8 +112,8 @@ def test_get_box(client):
                 "name": "Davida",
                 "time": start_time.unix + i * 100,
                 "position": {
-                    "ra": {"value": i, "unit": "deg"},
-                    "dec": {"value": i, "unit": "deg"},
+                    "ra": {"value": (1 + i), "unit": "deg"},
+                    "dec": {"value": (1 + i), "unit": "deg"},
                 },
                 "flux": {"value": 1.5, "unit": "mJy"},
             },
@@ -133,8 +133,8 @@ def test_get_box(client):
                 "name": "Diotima",
                 "time": start_time.unix + 200 + i * 100,
                 "position": {
-                    "ra": {"value": i, "unit": "deg"},
-                    "dec": {"value": i, "unit": "deg"},
+                    "ra": {"value": (1 + i), "unit": "deg"},
+                    "dec": {"value": (1 + i), "unit": "deg"},
                 },
                 "flux": {"value": 0.5, "unit": "mJy"},
             },
@@ -165,8 +165,8 @@ def test_get_box(client):
         "api/v1/sso/box",
         json={
             "lower_left": {
-                "ra": {"value": 1.0, "unit": "deg"},
-                "dec": {"value": 1.0, "unit": "deg"},
+                "ra": {"value": 0.0, "unit": "deg"},
+                "dec": {"value": 0.0, "unit": "deg"},
             },
             "upper_right": {
                 "ra": {"value": 3.0, "unit": "deg"},

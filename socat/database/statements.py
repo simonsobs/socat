@@ -138,6 +138,7 @@ def get_time_box(lower_left: ICRS, upper_right: ICRS, t_min: int, t_max: int) ->
             RegisteredMovingSourceTable.dec_deg
             <= float(upper_right.dec.to_value("deg")),
         )
+        .distinct()
     )
 
 

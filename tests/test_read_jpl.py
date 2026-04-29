@@ -40,4 +40,5 @@ async def test_read_jpl(database_async_sessionmaker, tmp_path):
             assert ephem.flux == data["flux_mJy"][i] * u.mJy
 
     async with database_async_sessionmaker() as session:
-        await core.delete_sso(sso[0].sso_id, session=session)
+        for i in range(len(sso)):
+            await core.delete_sso(sso[i].sso_id, session=session)
