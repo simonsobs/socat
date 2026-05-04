@@ -87,7 +87,7 @@ def ingest_jpl_parquet_file(
                 sso_id=sso.sso_id,
                 MPC_id=mpc_id,
                 name=name,
-                time=unix_time,
+                time=int(unix_time),
                 position=ICRS(
                     ra=float(row["ra_deg"]) * u.deg,
                     dec=float(row["dec_deg"]) * u.deg,
