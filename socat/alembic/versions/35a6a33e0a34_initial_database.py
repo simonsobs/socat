@@ -9,6 +9,7 @@ Create Date: 2024-10-23 09:53:07.953912
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -69,7 +70,7 @@ def upgrade() -> None:
             ),
             nullable=False,
         ),
-        sa.Column("time", sa.Integer, index=True, nullable=False),
+        sa.Column("time", sa.DateTime, index=True, nullable=False),
         sa.Column("ra_deg", sa.Float, nullable=False),
         sa.Column("dec_deg", sa.Float, nullable=False),
         sa.Column("flux_mJy", sa.Float, nullable=True),

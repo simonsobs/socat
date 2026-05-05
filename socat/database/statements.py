@@ -7,6 +7,7 @@ from importlib import import_module
 
 import astropy.units as u
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
 from sqlmodel import select, update
@@ -101,7 +102,9 @@ def get_box(lower_left: ICRS, upper_right: ICRS) -> select:
     )
 
 
-def get_time_box(lower_left: ICRS, upper_right: ICRS, t_min: int, t_max: int) -> select:
+def get_time_box(
+    lower_left: ICRS, upper_right: ICRS, t_min: Time, t_max: Time
+) -> select:
     """
     Equivelent of get_box for SSO objects. Only gets objects which have at least one ephem point
     inside the box between t_min and t_max
@@ -112,9 +115,9 @@ def get_time_box(lower_left: ICRS, upper_right: ICRS, t_min: int, t_max: int) ->
         Lower left corner of box
     upper_right : ICRS
         Upper right corner of box
-    t_min : int
+    t_min : AstroPydanticTime
         Start time of box
-    t_max : int
+    t_max : AstroPydanticTime
         End time of box
 
     Returns
@@ -129,8 +132,8 @@ def get_time_box(lower_left: ICRS, upper_right: ICRS, t_min: int, t_max: int) ->
             RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
         )
         .where(
-            t_min.unix <= RegisteredMovingSourceTable.time,
-            RegisteredMovingSourceTable.time <= t_max.unix,
+            t_min.datetime <= RegisteredMovingSourceTable.time,
+            RegisteredMovingSourceTable.time <= t_max.datetime,
             float(lower_left.ra.to_value("deg")) <= RegisteredMovingSourceTable.ra_deg,
             RegisteredMovingSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
             float(lower_left.dec.to_value("deg"))
@@ -310,7 +313,7 @@ def update_ephem(
     sso_id: int | None,
     MPC_id: int | None,
     name: str | None,
-    time: int | None,
+    time: Time | None,
     position: ICRS | None,
     flux: Quantity | None,
 ) -> update:
@@ -327,7 +330,7 @@ def update_ephem(
         The new MPC ID for the ephemeris point.
     name : str | None
         The new name for the ephemeris point.
-    time : int | None
+    time : Time | None
         The new time for the ephemeris point.
     position : ICRS | None
         The new position for the ephemeris point.
@@ -354,7 +357,7 @@ def update_ephem(
             "sso_id": sso_id,
             "MPC_id": MPC_id,
             "name": name,
-            "time": time,
+            "time": time.datetime if time is not None else None,
             "ra_deg": position.ra.to_value("deg") if position is not None else None,
             "dec_deg": position.dec.to_value("deg") if position is not None else None,
             "flux_mJy": flux.to_value("mJy") if flux is not None else None,

@@ -3,6 +3,7 @@ Core functionality providing access to the sso database.
 """
 
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,7 +47,7 @@ async def get_sso(sso_id: int, session: AsyncSession) -> SolarSystemObject:
 
     Parameters
     ----------
-    source_id :  int
+    sso_id :  int
         ID of source
     session : AsyncSession
         Asynchronous session to use
@@ -73,8 +74,8 @@ async def get_sso(sso_id: int, session: AsyncSession) -> SolarSystemObject:
 async def get_sso_box(
     lower_left: ICRS,
     upper_right: ICRS,
-    t_min: int,
-    t_max: int,
+    t_min: Time,
+    t_max: Time,
     session: AsyncSession,
 ) -> list[SolarSystemObject]:
     """
@@ -88,9 +89,9 @@ async def get_sso_box(
         Lower left corner of box
     upper_right : ICRS
         Upper right corner of box
-    t_min : int
+    t_min : Time
         Start time of box
-    t_max : int
+    t_max : Time
         End time of box
 
     Returns

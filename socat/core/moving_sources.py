@@ -3,6 +3,7 @@ Core functionality providing access to the moving source ephem database.
 """
 
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from astropy.units import Quantity
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +21,7 @@ async def create_ephem(
     sso_id: int,
     MPC_id: int | None,
     name: str,
-    time: int,
+    time: Time,
     position: ICRS,
     flux: Quantity | None = None,
 ) -> RegisteredMovingSource:
@@ -37,8 +38,8 @@ async def create_ephem(
         MPC ID of source
     name : str
         Name of source
-    time : int
-        Time of source ephem, unix time
+    time : Time
+        Time of source ephem
     position : AstroPydanticICRS
         Position of source at time in ICRS coordinates
     flux : Quantity  | None
@@ -56,7 +57,7 @@ async def create_ephem(
         sso_id=sso_id,
         MPC_id=MPC_id,
         name=name,
-        time=time,
+        time=time.datetime,
         ra_deg=position.ra.to_value("deg"),
         dec_deg=position.dec.to_value("deg"),
         flux_mJy=flux,
@@ -99,7 +100,7 @@ async def get_ephem(ephem_id: int, session: AsyncSession) -> RegisteredMovingSou
 
 
 async def get_ephem_points(
-    source: SolarSystemObject, t_min: int, t_max: int, session: AsyncSession
+    source: SolarSystemObject, t_min: Time, t_max: Time, session: AsyncSession
 ) -> list[RegisteredMovingSource]:
     """
     Get all solar system ephemeris points for a given source within a time range.
@@ -108,9 +109,9 @@ async def get_ephem_points(
     ----------
     source : SolarSystemObject
         Source for which to get ephemeris points
-    t_min : int
+    t_min : Time
         Minimum time of ephemeris points to retrieve
-    t_max : int
+    t_max : Time
         Maximum time of ephemeris points to retrieve
     session : AsyncSession
         Asynchronous session to use
@@ -122,8 +123,8 @@ async def get_ephem_points(
     """
     ephems = await session.execute(
         select(RegisteredMovingSourceTable).where(
-            t_min <= RegisteredMovingSourceTable.time,
-            RegisteredMovingSourceTable.time <= t_max,
+            t_min.unix <= RegisteredMovingSourceTable.time.unix,
+            RegisteredMovingSourceTable.time.unix <= t_max.unix,
             source.sso_id == RegisteredMovingSourceTable.sso_id,
         )
     )
@@ -165,7 +166,7 @@ async def update_ephem(
     sso_id: int | None,
     MPC_id: int | None,
     name: str | None,
-    time: int | None,
+    time: Time | None,
     position: ICRS | None,
     flux: Quantity | None = None,
 ) -> RegisteredMovingSource:
@@ -184,8 +185,8 @@ async def update_ephem(
         MPC ID of source
     name : str | None
         Name of source
-    time : int | None
-        Time of source ephem, unix time
+    time : Time | None
+        Time of source ephem
     position : AstroPydanticICRS | None
         Position of source in ICRS coordinates
     flux : Quantity  | None

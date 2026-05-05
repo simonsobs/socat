@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from astropy.units import Quantity
 
 from socat.database import (
@@ -168,6 +169,15 @@ class SolarSystemClientBase(ABC):
         Get information about a specific solar system source. If the service is not found, we return None.
         """
         return None  # pragma: no cover
+
+    @abstractmethod
+    def get_sso_box(
+        self, *, lower_left: ICRS, upper_right: ICRS, t_min: Time, t_max: Time
+    ) -> list[SolarSystemObject] | None:
+        """
+        Get all ssos inside a given box within a given time range.
+        """
+        return []  # pragma: no cover
 
     @abstractmethod
     def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:

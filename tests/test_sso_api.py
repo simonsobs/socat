@@ -1,3 +1,4 @@
+import astropy.units as u
 import pytest
 from astropy.time import Time
 from httpx import HTTPStatusError
@@ -20,7 +21,7 @@ def test_add_and_retrieve(client):
             "sso_id": sso_id,
             "MPC_id": 511,
             "name": "Davida",
-            "time": 123456789,
+            "time": "2025-01-01T00:00:00.00",
             "position": {
                 "ra": {"value": 1.0, "unit": "deg"},
                 "dec": {"value": 1.0, "unit": "deg"},
@@ -58,7 +59,7 @@ def test_add_and_retrieve(client):
             "sso_id": sso_id,
             "MPC_id": 423,
             "name": "Diotima",
-            "time": 987654321,
+            "time": "2025-01-02T00:00:00.00",
             "position": {
                 "ra": {"value": 0.0, "unit": "deg"},
                 "dec": {"value": 0.0, "unit": "deg"},
@@ -110,7 +111,7 @@ def test_get_box(client):
                 "sso_id": sso_id_1,
                 "MPC_id": 511,
                 "name": "Davida",
-                "time": start_time.unix + i * 100,
+                "time": (start_time + (i * 100) * u.s).isot,
                 "position": {
                     "ra": {"value": (1 + i), "unit": "deg"},
                     "dec": {"value": (1 + i), "unit": "deg"},
@@ -131,7 +132,7 @@ def test_get_box(client):
                 "sso_id": sso_id_2,
                 "MPC_id": 423,
                 "name": "Diotima",
-                "time": start_time.unix + 200 + i * 100,
+                "time": (start_time + (200 + i * 100) * u.s).isot,
                 "position": {
                     "ra": {"value": (1 + i), "unit": "deg"},
                     "dec": {"value": (1 + i), "unit": "deg"},
@@ -152,7 +153,7 @@ def test_get_box(client):
                 "sso_id": sso_id_3,
                 "MPC_id": 1,
                 "name": "Ceres",
-                "time": start_time.unix + i * 100,
+                "time": (start_time + (i * 100) * u.s).isot,
                 "position": {
                     "ra": {"value": (4 + i), "unit": "deg"},
                     "dec": {"value": (4 + i), "unit": "deg"},
@@ -215,7 +216,7 @@ def test_bad_id(client):
                 "sso_id": 1,
                 "MPC_id": 423,
                 "name": "Diotima",
-                "time": 987654321,
+                "time": "2025-01-01T00:00:00.00",
                 "position": {
                     "ra": {"value": 0.0, "unit": "deg"},
                     "dec": {"value": 0.0, "unit": "deg"},

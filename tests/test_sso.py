@@ -19,6 +19,7 @@ async def test_database_exists(database_async_sessionmaker):
 async def test_add_and_retrieve(database_async_sessionmaker):
     position = ICRS(1 * u.deg, 1 * u.deg)
     flux = 1.5 * u.mJy
+    time = Time("2025-01-01T00:00:00.00")
     async with database_async_sessionmaker() as session:
         sso_id = (
             await core.create_sso(name="Davida", MPC_id=511, session=session)
@@ -29,7 +30,7 @@ async def test_add_and_retrieve(database_async_sessionmaker):
                 sso_id=sso_id,
                 MPC_id=511,
                 name="Davida",
-                time=123456789,
+                time=time,
                 position=position,
                 flux=flux,
                 session=session,
@@ -48,7 +49,7 @@ async def test_add_and_retrieve(database_async_sessionmaker):
     assert ephem.sso_id == sso_id
     assert ephem.MPC_id == 511
     assert ephem.name == "Davida"
-    assert ephem.time == 123456789
+    assert ephem.time.unix == 1735689600.0
     assert ephem.position.ra.value == 1.0
     assert ephem.position.dec.value == 1.0
     assert ephem.flux == flux
@@ -84,6 +85,7 @@ async def test_add_and_retrieve(database_async_sessionmaker):
 async def test_update(database_async_sessionmaker):
     position = ICRS(1 * u.deg, 1 * u.deg)
     flux = 1.5 * u.mJy
+    time = Time("2025-01-01T00:00:00.00")
     async with database_async_sessionmaker() as session:
         sso_id = (
             await core.create_sso(name="Davida", MPC_id=511, session=session)
@@ -94,7 +96,7 @@ async def test_update(database_async_sessionmaker):
                 sso_id=sso_id,
                 MPC_id=511,
                 name="Davida",
-                time=123456789,
+                time=time,
                 position=position,
                 flux=flux,
                 session=session,
@@ -103,6 +105,7 @@ async def test_update(database_async_sessionmaker):
 
     position = ICRS(0 * u.deg, 0 * u.deg)
     flux = 2.5 * u.mJy
+    time = Time("2025-01-02T00:00:00.00")
     async with database_async_sessionmaker() as session:
         sso = await core.update_sso(
             sso_id=sso_id, name="Diotima", MPC_id=423, session=session
@@ -112,7 +115,7 @@ async def test_update(database_async_sessionmaker):
             sso_id=sso.sso_id,
             MPC_id=423,
             name="Diotima",
-            time=987654321,
+            time=time,
             position=position,
             flux=flux,
             session=session,
@@ -126,7 +129,7 @@ async def test_update(database_async_sessionmaker):
     assert ephem.sso_id == sso.sso_id
     assert ephem.MPC_id == 423
     assert ephem.name == "Diotima"
-    assert ephem.time == 987654321
+    assert ephem.time.unix == 1735776000.0
     assert ephem.position.ra.value == 0.0
     assert ephem.position.dec.value == 0.0
     assert ephem.flux == flux
@@ -147,11 +150,12 @@ async def test_time_box(database_async_sessionmaker):
             await core.create_sso(name="Davida", MPC_id=511, session=session)
         ).sso_id
         flux = 1.5 * u.mJy
+        start_time = Time("2025-02-01T00:00:00.00")
         for i in range(3):
             position = ICRS(
                 (1 + i) * u.deg, (1 + i) * u.deg
             )  # this is totally unphysical but who cares
-            time = i * 100
+            time = start_time + (i * 100) * u.s
             await core.create_ephem(
                 sso_id=sso_id_1,
                 MPC_id=511,
@@ -170,7 +174,7 @@ async def test_time_box(database_async_sessionmaker):
             position = ICRS(
                 (1 + i) * u.deg, (1 + i) * u.deg
             )  # this is totally unphysical but who cares
-            time = 200 + i * 100
+            time = start_time + (200 + i * 100) * u.s
             await core.create_ephem(
                 sso_id=sso_id_2,
                 MPC_id=423,
@@ -189,7 +193,7 @@ async def test_time_box(database_async_sessionmaker):
             position = ICRS(
                 (4 + i) * u.deg, (4 + i) * u.deg
             )  # this is totally unphysical but who cares
-            time = i * 100
+            time = start_time + (i * 100) * u.s
             await core.create_ephem(
                 sso_id=sso_id_3,
                 MPC_id=1,
@@ -203,8 +207,8 @@ async def test_time_box(database_async_sessionmaker):
     async with database_async_sessionmaker() as session:
         lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
         upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
-        t_min = Time(0, format="unix", scale="utc")
-        t_max = Time(100, format="unix", scale="utc")
+        t_min = start_time
+        t_max = start_time + 100 * u.s
         ssos = await core.get_sso_box(
             lower_left=lower_left,
             upper_right=upper_right,
@@ -259,7 +263,7 @@ async def test_bad_id(database_async_sessionmaker):
                 sso_id=1,
                 name="Davida",
                 MPC_id=511,
-                time=123456789,
+                time=Time("2025-01-01T00:00:00.00"),
                 position=position,
                 flux=flux,
             )
