@@ -66,7 +66,7 @@ async def test_box(database_async_sessionmaker):
     lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
     upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
     async with database_async_sessionmaker() as session:
-        source_list = await core.get_box(
+        source_list = await core.get_box_fixed(
             lower_left=lower_left, upper_right=upper_right, session=session
         )
 
@@ -79,7 +79,7 @@ async def test_box(database_async_sessionmaker):
     lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
     upper_right = ICRS(1.5 * u.deg, 1.5 * u.deg)
     async with database_async_sessionmaker() as session:
-        source_list = await core.get_box(
+        source_list = await core.get_box_fixed(
             lower_left=lower_left, upper_right=upper_right, session=session
         )
 

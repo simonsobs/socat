@@ -209,7 +209,7 @@ async def test_time_box(database_async_sessionmaker):
         upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
         t_min = start_time
         t_max = start_time + 100 * u.s
-        ssos = await core.get_sso_box(
+        ssos = await core.get_box_sso(
             lower_left=lower_left,
             upper_right=upper_right,
             t_min=t_min,

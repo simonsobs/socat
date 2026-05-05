@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Any, ContextManager
 
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from astropy.units import Quantity
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
@@ -103,7 +104,7 @@ class Client(ClientBase):
 
         return self.create_source(position=position, name=name, flux=flux)
 
-    def get_box(
+    def get_box_fixed(
         self,
         *,
         lower_left: ICRS,
@@ -111,7 +112,7 @@ class Client(ClientBase):
     ) -> list[RegisteredFixedSource]:
         with self._get_session() as session:
             sources = session.execute(
-                statements.get_box(lower_left=lower_left, upper_right=upper_right)
+                statements.get_box_fixed(lower_left=lower_left, upper_right=upper_right)
             )
 
             return [s.to_model() for s in sources.scalars().all()]
@@ -297,6 +298,21 @@ class SolarSystemClient(SolarSystemClientBase):
 
             return source.to_model()
 
+    def get_box_sso(
+        self, *, lower_left: ICRS, upper_right: ICRS, t_min: Time, t_max: Time
+    ) -> list[SolarSystemObject] | None:
+        with self._get_session() as session:
+            sources = session.execute(
+                statements.get_box_sso(
+                    lower_left=lower_left,
+                    upper_right=upper_right,
+                    t_min=t_min,
+                    t_max=t_max,
+                )
+            )
+
+            return [s.to_model() for s in sources.scalars()]
+
     def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
         with self._get_session() as session:
             sources = session.execute(
@@ -379,7 +395,7 @@ class EphemClient(EphemClientBase):
         sso_id: int,
         MPC_id: int | None,
         name: str,
-        time: int,
+        time: Time,
         position: ICRS,
         flux: Quantity | None = None,
     ) -> RegisteredMovingSource:
@@ -389,7 +405,7 @@ class EphemClient(EphemClientBase):
             sso_id=sso_id,
             MPC_id=MPC_id,
             name=name,
-            time=time,
+            time=time.datetime,
             ra_deg=position.ra.to_value("deg"),
             dec_deg=position.dec.to_value("deg"),
             flux_mJy=flux_mJy,
@@ -418,7 +434,7 @@ class EphemClient(EphemClientBase):
         sso_id: int | None,
         MPC_id: int | None,
         name: str | None,
-        time: int | None,
+        time: Time | None,
         position: ICRS | None,
         flux: Quantity | None,
     ) -> RegisteredMovingSource | None:

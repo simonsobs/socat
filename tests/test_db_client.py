@@ -1,6 +1,7 @@
 import astropy.units as u
 import pytest
 from astropy.coordinates import ICRS
+from astropy.time import Time
 
 from socat.client.db import AstorqueryClient, EphemClient, SolarSystemClient
 
@@ -19,7 +20,7 @@ def test_fixed_source_crud_and_queries(db_client):
         flux=21.0 * u.mJy,
     )
 
-    full_box = client.get_box(
+    full_box = client.get_box_fixed(
         lower_left=ICRS(0.0 * u.deg, 0.0 * u.deg),
         upper_right=ICRS(3.0 * u.deg, 3.0 * u.deg),
     )
@@ -27,7 +28,7 @@ def test_fixed_source_crud_and_queries(db_client):
     assert source_1.source_id in full_ids
     assert source_2.source_id in full_ids
 
-    partial_box = client.get_box(
+    partial_box = client.get_box_fixed(
         lower_left=ICRS(0.0 * u.deg, 0.0 * u.deg),
         upper_right=ICRS(1.5 * u.deg, 1.5 * u.deg),
     )
@@ -101,7 +102,7 @@ def test_sso_and_ephem_crud_and_cascade(db_client):
         sso_id=sso.sso_id,
         MPC_id=sso.MPC_id,
         name=sso.name,
-        time=123456789,
+        time=Time("2025-01-01T00:00:00.00"),
         position=ICRS(0.0 * u.deg, 0.0 * u.deg),
         flux=1.0 * u.mJy,
     )
@@ -119,13 +120,13 @@ def test_sso_and_ephem_crud_and_cascade(db_client):
         sso_id=sso.sso_id,
         MPC_id=4423,
         name="db-diotima",
-        time=987654321,
+        time=Time("2025-01-02T00:00:00.00"),
         position=ICRS(1.0 * u.deg, 1.0 * u.deg),
         flux=1.5 * u.mJy,
     )
     assert updated_ephem is not None
     assert updated_ephem.name == "db-diotima"
-    assert updated_ephem.time == 987654321
+    assert updated_ephem.time == Time("2025-01-02T00:00:00.00")
     assert updated_ephem.position.ra.value == 1.0
 
     by_name = sso_client.get_sso_name(name="db-diotima")
@@ -190,7 +191,7 @@ def test_not_found_behavior(db_client):
             sso_id=1,
             MPC_id=1,
             name="x",
-            time=1,
+            time=Time("2025-01-01T00:00:00.00"),
             position=ICRS(0.0 * u.deg, 0.0 * u.deg),
             flux=1.0 * u.mJy,
         )
@@ -218,7 +219,7 @@ def test_direct_secondary_client_backcompat(database):
         sso_id=obj.sso_id,
         MPC_id=obj.MPC_id,
         name=obj.name,
-        time=42,
+        time=Time("2025-01-01T00:00:00.00"),
         position=ICRS(0.0 * u.deg, 0.0 * u.deg),
     )
 

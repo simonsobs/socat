@@ -71,7 +71,7 @@ async def get_sso(sso_id: int, session: AsyncSession) -> SolarSystemObject:
     return source
 
 
-async def get_sso_box(
+async def get_box_sso(
     lower_left: ICRS,
     upper_right: ICRS,
     t_min: Time,
@@ -100,7 +100,7 @@ async def get_sso_box(
         List of solarsystem objects in boundint time-box
     """
     ssos: SolarSystemObjectTable = await session.execute(
-        statements.get_time_box(
+        statements.get_box_sso(
             lower_left=lower_left, upper_right=upper_right, t_min=t_min, t_max=t_max
         )
     )

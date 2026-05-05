@@ -5,7 +5,7 @@ Core functions for working with dbs
 from .fixed_sources import (
     create_source,
     delete_source,
-    get_box,
+    get_box_fixed,
     get_source,
     update_source,
 )
@@ -28,8 +28,8 @@ from .services import (
 from .sso import (
     create_sso,
     delete_sso,
+    get_box_sso,
     get_sso,
-    get_sso_box,
     get_sso_MPC_id,
     get_sso_name,
     update_sso,
@@ -45,7 +45,9 @@ __all__ = [
     "delete_source",
     "delete_sso",
     "get_all_services",
-    "get_box",
+    "get_box_fixed",
+    "get_box_sso",
+    "get_box_sso",
     "get_ephem",
     "get_ephem_by_sso_id",
     "get_ephem_points",
@@ -54,7 +56,6 @@ __all__ = [
     "get_source",
     "get_sso",
     "get_sso_MPC_id",
-    "get_sso_box",
     "get_sso_name",
     "update_ephem",
     "update_service",

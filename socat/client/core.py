@@ -39,7 +39,7 @@ class ClientBase(ABC):
         return  # pragma: no cover
 
     @abstractmethod
-    def get_box(
+    def get_box_fixed(
         self,
         *,
         lower_left: ICRS,
@@ -171,7 +171,7 @@ class SolarSystemClientBase(ABC):
         return None  # pragma: no cover
 
     @abstractmethod
-    def get_sso_box(
+    def get_box_sso(
         self, *, lower_left: ICRS, upper_right: ICRS, t_min: Time, t_max: Time
     ) -> list[SolarSystemObject] | None:
         """
@@ -218,7 +218,7 @@ class EphemClientBase(ABC):
         sso_id: int,
         MPC_id: int | None,
         name: str,
-        time: int,
+        time: Time,
         position: ICRS,
         flux: Quantity | None = None,
     ) -> RegisteredMovingSource:
@@ -242,7 +242,7 @@ class EphemClientBase(ABC):
         sso_id: int | None,
         MPC_id: int | None,
         name: str | None,
-        time: int | None,
+        time: Time | None,
         position: ICRS | None,
         flux: Quantity | None,
     ) -> RegisteredMovingSource | None:

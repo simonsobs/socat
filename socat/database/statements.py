@@ -77,7 +77,7 @@ def create_name(
     return position, name, flux
 
 
-def get_box(lower_left: ICRS, upper_right: ICRS) -> select:
+def get_box_fixed(lower_left: ICRS, upper_right: ICRS) -> select:
     """
     Get the box coordinates for a given lower left and upper right corner.
 
@@ -102,7 +102,7 @@ def get_box(lower_left: ICRS, upper_right: ICRS) -> select:
     )
 
 
-def get_time_box(
+def get_box_sso(
     lower_left: ICRS, upper_right: ICRS, t_min: Time, t_max: Time
 ) -> select:
     """

@@ -124,7 +124,7 @@ async def get_sso(sso_id: int, session: SessionDependency) -> SolarSystemObject:
 
 
 @router.post("/sso/box")
-async def get_sso_box(
+async def get_box_sso(
     box: TimeBoxRequest,
     session: SessionDependency,
 ) -> list[SolarSystemObject]:
@@ -163,7 +163,7 @@ async def get_sso_box(
             detail="t_min must be strictly less than t_max.",
         )
 
-    return await core.get_sso_box(
+    return await core.get_box_sso(
         lower_left=box.lower_left,
         upper_right=box.upper_right,
         t_min=box.t_min,

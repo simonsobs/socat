@@ -9,7 +9,7 @@ from .routers.fixed_sources import (
     create_source,
     create_source_name,
     delete_source,
-    get_box,
+    get_box_fixed,
     get_cone_astroquery,
     get_source,
     update_source,
@@ -22,7 +22,7 @@ from .routers.services import (
     get_service_name,
     update_service,
 )
-from .routers.sso import create_sso, delete_sso, get_sso, get_sso_box, update_sso
+from .routers.sso import create_sso, delete_sso, get_box_sso, get_sso, update_sso
 
 __all__ = [
     "SessionDependency",
@@ -36,14 +36,14 @@ __all__ = [
     "delete_service",
     "delete_source",
     "delete_sso",
-    "get_box",
+    "get_box_fixed",
+    "get_box_sso",
     "get_cone_astroquery",
     "get_ephem",
     "get_service",
     "get_service_name",
     "get_source",
     "get_sso",
-    "get_sso_box",
     "update_ephem",
     "update_service",
     "update_source",

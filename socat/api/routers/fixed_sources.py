@@ -216,7 +216,7 @@ async def get_cone_astroquery(
 
 
 @router.post("/source/box")
-async def get_box(
+async def get_box_fixed(
     box: BoxRequest, session: SessionDependency
 ) -> list[RegisteredFixedSource]:
     """
@@ -248,7 +248,7 @@ async def get_box(
             detail="RA/Dec min must be <= max",
         )
 
-    return await core.get_box(
+    return await core.get_box_fixed(
         lower_left=box.lower_left, upper_right=box.upper_right, session=session
     )
 
