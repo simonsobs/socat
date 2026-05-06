@@ -155,61 +155,6 @@ class AstroqueryClientBase(ABC):
         return  # pragma: no cover
 
 
-class SolarSystemClientBase(ABC):
-    @abstractmethod
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
-        """
-        Create a new solar system source in the catalog.
-        """
-        return  # pragma: no cover
-
-    @abstractmethod
-    def get_sso(self, *, solar_id: int) -> SolarSystemObject | None:
-        """
-        Get information about a specific solar system source. If the service is not found, we return None.
-        """
-        return None  # pragma: no cover
-
-    @abstractmethod
-    def get_box_sso(
-        self, *, lower_left: ICRS, upper_right: ICRS, t_min: Time, t_max: Time
-    ) -> list[SolarSystemObject] | None:
-        """
-        Get all ssos inside a given box within a given time range.
-        """
-        return []  # pragma: no cover
-
-    @abstractmethod
-    def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
-        """
-        Get information about a specific solar system source by name.
-        """
-        return []  # pragma: no cover
-
-    @abstractmethod
-    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemObject] | None:
-        """
-        Get information about a solar system source by Minor Planet Center ID.
-        """
-        return []  # pragma: no cover
-
-    @abstractmethod
-    def update_sso(
-        self, *, solar_id: int, name: str | None, MPC_id: int | None
-    ) -> SolarSystemObject | None:
-        """
-        Update information about a solar system source.
-        """
-        return []  #  pragma: no cover
-
-    @abstractmethod
-    def delete_sso(self, *, solar_id: int) -> None:
-        """
-        Delete solar system source.
-        """
-        return []  # pragma: no cover
-
-
 class EphemClientBase(ABC):
     @abstractmethod
     def create_ephem(
@@ -255,5 +200,66 @@ class EphemClientBase(ABC):
     def delete_ephem(self, *, ephem_id: int) -> None:
         """
         Delete a single ephem point.
+        """
+        return []  # pragma: no cover
+
+
+class SolarSystemClientBase(ABC):
+    @abstractmethod
+    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
+        """
+        Create a new solar system source in the catalog.
+        """
+        return  # pragma: no cover
+
+    @abstractmethod
+    def get_sso(self, *, solar_id: int) -> SolarSystemObject | None:
+        """
+        Get information about a specific solar system source. If the service is not found, we return None.
+        """
+        return None  # pragma: no cover
+
+    @abstractmethod
+    def get_box_sso(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+        ephem_cat: EphemClientBase,
+    ) -> list[SolarSystemObject] | None:
+        """
+        Get all ssos inside a given box within a given time range.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
+        """
+        Get information about a specific solar system source by name.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemObject] | None:
+        """
+        Get information about a solar system source by Minor Planet Center ID.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def update_sso(
+        self, *, solar_id: int, name: str | None, MPC_id: int | None
+    ) -> SolarSystemObject | None:
+        """
+        Update information about a solar system source.
+        """
+        return []  #  pragma: no cover
+
+    @abstractmethod
+    def delete_sso(self, *, solar_id: int) -> None:
+        """
+        Delete solar system source.
         """
         return []  # pragma: no cover

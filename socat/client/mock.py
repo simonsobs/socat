@@ -7,6 +7,7 @@ from typing import Any
 
 import astropy.units as u
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
 
@@ -171,12 +172,12 @@ class Client(ClientBase):
 
         return source
 
-    def get_box(
+    def get_box_fixed(
         self,
         *,
         lower_left: ICRS,
         upper_right: ICRS,
-    ) -> RegisteredFixedSource:
+    ) -> list[RegisteredFixedSource]:
         """
         Get sources within a box.
 
@@ -447,181 +448,6 @@ class AstorqueryClient(AstroqueryClientBase):
             self.n -= 1
 
 
-class SolarSystemClient(SolarSystemClientBase):
-    """
-    Mock solar system client for testing.
-
-    Attributes
-    ----------
-    catalog : dict[int, SolarSystemObject]
-        Dictionary of solar system sources replicating a catalog
-    n : int
-        Number of entries in catalog
-
-    Methods
-    -------
-    create_sso(self, *, name: str, MPC_id: int | None)
-        Create a solar system source.
-    get_sso(self, *, sso_id: int)
-        Get a solar system source.
-    get_sso_name(self, *, name: str)
-        Get a solar system source by name.
-    get_sso_MPC_id(self, *, MPC_id: int)
-        Get a solar system source by MPC ID.
-    update_sso(self, *, sso_id: int, name: str | None, MPC_id: int | None)
-        Update a solar system source.
-    delete_sso(sefl, *, sso_id: int)
-        Delete a solar system source.
-    """
-
-    catalog: dict[int, SolarSystemObject]
-    n: int
-
-    def __init__(self):
-        """
-        Initialize an empty catalog.
-        """
-        self.catalog = {}
-        self.n = 0
-
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
-        """
-        Create a new solar system source.
-
-        Parameters
-        ----------
-        name : str
-            Name of source
-        MPC_id : int
-            Minor Planet Center ID of source
-
-        Returns
-        -------
-        solar_source : SolarSystemObject
-            Solar system source that was added.
-        """
-        solar_source = SolarSystemObject(sso_id=self.n, name=name, MPC_id=MPC_id)
-        self.catalog[self.n] = solar_source
-        self.n += 1
-
-        return solar_source
-
-    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
-        """
-        Get a solar system source.
-
-        Parameters
-        ----------
-        sso_id : int
-            Internal SO ID of solar system source
-
-        Returns
-        -------
-        self.catalog.get(sso_id, None) : SolarSytemSource
-            Reuqested solar system source.
-        """
-        return self.catalog.get(sso_id, None)
-
-    def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
-        """
-        Get a solar system source by name.
-
-        Parameters
-        ----------
-        name : str
-            Name of solar system source
-
-        Returns
-        -------
-        solars : list[SolarSystemObject] | None
-            Requested solar system source.
-        """
-        solars = [
-            self.catalog[id] for id in self.catalog if self.catalog[id].name == name
-        ]
-
-        if len(solars) == 0:
-            solars = None
-
-        return solars
-
-    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemObject] | None:
-        """
-        Get a solar system source by Minor Planet Center ID.
-
-        Parameters
-        ----------
-        MPC_id : int
-            Minor planet center ID of source
-
-        Returns
-        -------
-        solars : list[SolarSystemObject] | None
-            List of sources with requested MPC ID
-        """
-        solars = [
-            self.catalog[id] for id in self.catalog if self.catalog[id].MPC_id == MPC_id
-        ]
-
-        if len(solars) == 0:
-            solars = None
-
-        return solars
-
-    def update_sso(
-        self, *, sso_id: int, name: str | None, MPC_id: int | None
-    ) -> SolarSystemObject | None:
-        """
-        Update a solar system source by ID.
-        If a variable is None, dont update it.
-
-        Parameters
-        ----------
-        sso_id : int
-            Internal SO ID of solar system source
-        name : str | None
-            Name of source
-        MPC_id : int | None
-            Minor planet center ID of source
-
-        Returns
-        -------
-        new : SolarSystemObject | None
-            Updated solar system source
-        """
-        current = self.get_sso(sso_id=sso_id)
-
-        if current is None:
-            return None
-
-        new = SolarSystemObject(
-            sso_id=current.sso_id,
-            name=current.name if name is None else name,
-            MPC_id=current.MPC_id if MPC_id is None else MPC_id,
-        )
-
-        self.catalog[sso_id] = new
-
-        return new
-
-    def delete_sso(self, *, sso_id: int) -> None:
-        """
-        Delete solar system source by ID.
-
-        Parameters:
-        -----------
-        sso_id : int
-            Internal SO ID of source
-
-        Returns
-        -------
-        None
-        """
-        check = self.catalog.pop(sso_id, None)
-        if check is not None:
-            self.n -= 1
-
-
 class EphemClient(EphemClientBase):
     """
     Mock ephemeris client.
@@ -788,5 +614,232 @@ class EphemClient(EphemClientBase):
         None
         """
         check = self.catalog.pop(ephem_id, None)
+        if check is not None:
+            self.n -= 1
+
+
+class SolarSystemClient(SolarSystemClientBase):
+    """
+    Mock solar system client for testing.
+
+    Attributes
+    ----------
+    catalog : dict[int, SolarSystemObject]
+        Dictionary of solar system sources replicating a catalog
+    n : int
+        Number of entries in catalog
+
+    Methods
+    -------
+    create_sso(self, *, name: str, MPC_id: int | None)
+        Create a solar system source.
+    get_sso(self, *, sso_id: int)
+        Get a solar system source.
+    get_sso_name(self, *, name: str)
+        Get a solar system source by name.
+    get_sso_MPC_id(self, *, MPC_id: int)
+        Get a solar system source by MPC ID.
+    update_sso(self, *, sso_id: int, name: str | None, MPC_id: int | None)
+        Update a solar system source.
+    delete_sso(sefl, *, sso_id: int)
+        Delete a solar system source.
+    """
+
+    catalog: dict[int, SolarSystemObject]
+    n: int
+
+    def __init__(self):
+        """
+        Initialize an empty catalog.
+        """
+        self.catalog = {}
+        self.n = 0
+
+    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
+        """
+        Create a new solar system source.
+
+        Parameters
+        ----------
+        name : str
+            Name of source
+        MPC_id : int
+            Minor Planet Center ID of source
+
+        Returns
+        -------
+        solar_source : SolarSystemObject
+            Solar system source that was added.
+        """
+        solar_source = SolarSystemObject(sso_id=self.n, name=name, MPC_id=MPC_id)
+        self.catalog[self.n] = solar_source
+        self.n += 1
+
+        return solar_source
+
+    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
+        """
+        Get a solar system source.
+
+        Parameters
+        ----------
+        sso_id : int
+            Internal SO ID of solar system source
+
+        Returns
+        -------
+        self.catalog.get(sso_id, None) : SolarSytemSource
+            Requested solar system source.
+        """
+        return self.catalog.get(sso_id, None)
+
+    def get_box_sso(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+        ephem_cat: EphemClient,
+    ) -> list[SolarSystemObject]:
+        """
+        Get solar system objects which are within a given box in a given time range.
+        Note somewhat awkwardly you have to pass ephem_cat to this function, which is
+        different from how the real function works. I can't think of another way to
+        link these mock tables.
+
+        Parameters
+        ----------
+        lower_left : ICRS
+            Lower left corner of box in ICRS coordinates
+        upper_right : ICRS
+            Upper right corner of box in ICRS coordinates
+        t_min : Time
+            Minimum time
+        t_max : Time
+            Maximum time
+        ephem_cat : EphemClient
+            Associated ephemeris catalog
+
+        Returns
+        -------
+        list(solar_sources) : list[SolarSystemObject]
+            List of solar system sources in box and time range.
+        """
+        ra_min = lower_left.ra.value
+        dec_min = lower_left.dec.value
+        ra_max = upper_right.ra.value
+        dec_max = upper_right.dec.value
+        ephems = filter(
+            lambda x: (
+                (ra_min <= x.position.ra.value <= ra_max)
+                and (dec_min <= x.position.dec.value <= dec_max)
+                and (t_min <= x.time <= t_max)
+            ),
+            ephem_cat.catalog.values(),
+        )
+
+        ephem_ids = {ephem.sso_id for ephem in ephems}
+
+        sources = filter(lambda x: x.sso_id in ephem_ids, self.catalog.values())
+
+        return list(sources)
+
+    def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
+        """
+        Get a solar system source by name.
+
+        Parameters
+        ----------
+        name : str
+            Name of solar system source
+
+        Returns
+        -------
+        solars : list[SolarSystemObject] | None
+            Requested solar system source.
+        """
+        solars = [
+            self.catalog[id] for id in self.catalog if self.catalog[id].name == name
+        ]
+
+        if len(solars) == 0:
+            solars = None
+
+        return solars
+
+    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemObject] | None:
+        """
+        Get a solar system source by Minor Planet Center ID.
+
+        Parameters
+        ----------
+        MPC_id : int
+            Minor planet center ID of source
+
+        Returns
+        -------
+        solars : list[SolarSystemObject] | None
+            List of sources with requested MPC ID
+        """
+        solars = [
+            self.catalog[id] for id in self.catalog if self.catalog[id].MPC_id == MPC_id
+        ]
+
+        if len(solars) == 0:
+            solars = None
+
+        return solars
+
+    def update_sso(
+        self, *, sso_id: int, name: str | None, MPC_id: int | None
+    ) -> SolarSystemObject | None:
+        """
+        Update a solar system source by ID.
+        If a variable is None, dont update it.
+
+        Parameters
+        ----------
+        sso_id : int
+            Internal SO ID of solar system source
+        name : str | None
+            Name of source
+        MPC_id : int | None
+            Minor planet center ID of source
+
+        Returns
+        -------
+        new : SolarSystemObject | None
+            Updated solar system source
+        """
+        current = self.get_sso(sso_id=sso_id)
+
+        if current is None:
+            return None
+
+        new = SolarSystemObject(
+            sso_id=current.sso_id,
+            name=current.name if name is None else name,
+            MPC_id=current.MPC_id if MPC_id is None else MPC_id,
+        )
+
+        self.catalog[sso_id] = new
+
+        return new
+
+    def delete_sso(self, *, sso_id: int) -> None:
+        """
+        Delete solar system source by ID.
+
+        Parameters:
+        -----------
+        sso_id : int
+            Internal SO ID of source
+
+        Returns
+        -------
+        None
+        """
+        check = self.catalog.pop(sso_id, None)
         if check is not None:
             self.n -= 1

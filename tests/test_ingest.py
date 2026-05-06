@@ -44,7 +44,7 @@ def test_ingest_act_fits(act_fits_catalog):
     assert n_ingested == 10
 
     # Verify that the sources are in the client
-    sources = client.get_box(
+    sources = client.get_box_fixed(
         lower_left=ICRS(ra=0 * u.deg, dec=-90 * u.deg),
         upper_right=ICRS(ra=359.999 * u.deg, dec=90 * u.deg),
     )

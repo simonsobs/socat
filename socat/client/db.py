@@ -259,116 +259,6 @@ class AstorqueryClient(AstroqueryClientBase):
             session.commit()
 
 
-class SolarSystemClient(SolarSystemClientBase):
-    """
-    DB-backed client implementation for solar system objects.
-    """
-
-    _get_session: Callable[[], ContextManager]
-
-    def __init__(
-        self,
-        *,
-        db_url: str | None = None,
-        engine: Engine | None = None,
-        session_factory: sessionmaker | None = None,
-    ):
-        self._get_session = create_sync_session_interface(
-            db_url=db_url,
-            engine=engine,
-            session_factory=session_factory,
-        )
-
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
-        source = SolarSystemObjectTable(name=name, MPC_id=MPC_id)
-
-        with self._get_session() as session:
-            session.add(source)
-            session.commit()
-            session.refresh(source)
-
-            return source.to_model()
-
-    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
-        with self._get_session() as session:
-            source = session.get(SolarSystemObjectTable, sso_id)
-
-            if source is None:
-                raise ValueError(f"Source with ID {sso_id} not found.")
-
-            return source.to_model()
-
-    def get_box_sso(
-        self, *, lower_left: ICRS, upper_right: ICRS, t_min: Time, t_max: Time
-    ) -> list[SolarSystemObject] | None:
-        with self._get_session() as session:
-            sources = session.execute(
-                statements.get_box_sso(
-                    lower_left=lower_left,
-                    upper_right=upper_right,
-                    t_min=t_min,
-                    t_max=t_max,
-                )
-            )
-
-            return [s.to_model() for s in sources.scalars()]
-
-    def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
-        with self._get_session() as session:
-            sources = session.execute(
-                select(SolarSystemObjectTable).where(
-                    SolarSystemObjectTable.name == name
-                )
-            )
-
-            source_list = [s.to_model() for s in sources.scalars().all()]
-            if len(source_list) == 0:
-                raise ValueError(f"Source with name {name} not found.")
-
-            return source_list
-
-    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemObject] | None:
-        with self._get_session() as session:
-            sources = session.execute(
-                select(SolarSystemObjectTable).where(
-                    SolarSystemObjectTable.MPC_id == MPC_id
-                )
-            )
-
-            source_list = [s.to_model() for s in sources.scalars().all()]
-            if len(source_list) == 0:
-                raise ValueError(f"Source with MPC ID {MPC_id} not found.")
-
-            return source_list
-
-    def update_sso(
-        self, *, sso_id: int, name: str | None, MPC_id: int | None
-    ) -> SolarSystemObject | None:
-        with self._get_session() as session:
-            session.execute(
-                statements.update_sso(sso_id=sso_id, name=name, MPC_id=MPC_id)
-            )
-            source = session.get(SolarSystemObjectTable, sso_id)
-
-            if source is None:
-                raise ValueError(f"Source with SSO ID {sso_id} not found")
-
-            model = source.to_model()
-
-            session.commit()
-
-        return model
-
-    def delete_sso(self, *, sso_id: int) -> None:
-        with self._get_session() as session:
-            source = session.get(SolarSystemObjectTable, sso_id)
-            if source is None:
-                return
-
-            session.delete(source)
-            session.commit()
-
-
 class EphemClient(EphemClientBase):
     """
     DB-backed client implementation for moving-source ephemerides.
@@ -469,4 +359,120 @@ class EphemClient(EphemClientBase):
                 return
 
             session.delete(ephem)
+            session.commit()
+
+
+class SolarSystemClient(SolarSystemClientBase):
+    """
+    DB-backed client implementation for solar system objects.
+    """
+
+    _get_session: Callable[[], ContextManager]
+
+    def __init__(
+        self,
+        *,
+        db_url: str | None = None,
+        engine: Engine | None = None,
+        session_factory: sessionmaker | None = None,
+    ):
+        self._get_session = create_sync_session_interface(
+            db_url=db_url,
+            engine=engine,
+            session_factory=session_factory,
+        )
+
+    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
+        source = SolarSystemObjectTable(name=name, MPC_id=MPC_id)
+
+        with self._get_session() as session:
+            session.add(source)
+            session.commit()
+            session.refresh(source)
+
+            return source.to_model()
+
+    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
+        with self._get_session() as session:
+            source = session.get(SolarSystemObjectTable, sso_id)
+
+            if source is None:
+                raise ValueError(f"Source with ID {sso_id} not found.")
+
+            return source.to_model()
+
+    def get_box_sso(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+        ephem_cat: EphemClient,
+    ) -> list[SolarSystemObject] | None:
+        with self._get_session() as session:
+            sources = session.execute(
+                statements.get_box_sso(
+                    lower_left=lower_left,
+                    upper_right=upper_right,
+                    t_min=t_min,
+                    t_max=t_max,
+                )
+            )
+
+            return [s.to_model() for s in sources.scalars()]
+
+    def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
+        with self._get_session() as session:
+            sources = session.execute(
+                select(SolarSystemObjectTable).where(
+                    SolarSystemObjectTable.name == name
+                )
+            )
+
+            source_list = [s.to_model() for s in sources.scalars().all()]
+            if len(source_list) == 0:
+                raise ValueError(f"Source with name {name} not found.")
+
+            return source_list
+
+    def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemObject] | None:
+        with self._get_session() as session:
+            sources = session.execute(
+                select(SolarSystemObjectTable).where(
+                    SolarSystemObjectTable.MPC_id == MPC_id
+                )
+            )
+
+            source_list = [s.to_model() for s in sources.scalars().all()]
+            if len(source_list) == 0:
+                raise ValueError(f"Source with MPC ID {MPC_id} not found.")
+
+            return source_list
+
+    def update_sso(
+        self, *, sso_id: int, name: str | None, MPC_id: int | None
+    ) -> SolarSystemObject | None:
+        with self._get_session() as session:
+            session.execute(
+                statements.update_sso(sso_id=sso_id, name=name, MPC_id=MPC_id)
+            )
+            source = session.get(SolarSystemObjectTable, sso_id)
+
+            if source is None:
+                raise ValueError(f"Source with SSO ID {sso_id} not found")
+
+            model = source.to_model()
+
+            session.commit()
+
+        return model
+
+    def delete_sso(self, *, sso_id: int) -> None:
+        with self._get_session() as session:
+            source = session.get(SolarSystemObjectTable, sso_id)
+            if source is None:
+                return
+
+            session.delete(source)
             session.commit()

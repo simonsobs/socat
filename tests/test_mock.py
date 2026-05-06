@@ -74,7 +74,7 @@ def test_box(mock_client):
 
     lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
     upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
-    sources = mock_client.get_box(lower_left=lower_left, upper_right=upper_right)
+    sources = mock_client.get_box_fixed(lower_left=lower_left, upper_right=upper_right)
 
     id_list = [source.source_id for source in sources]
 
@@ -83,7 +83,7 @@ def test_box(mock_client):
 
     lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
     upper_right = ICRS(1.5 * u.deg, 1.5 * u.deg)
-    sources = mock_client.get_box(lower_left=lower_left, upper_right=upper_right)
+    sources = mock_client.get_box_fixed(lower_left=lower_left, upper_right=upper_right)
 
     id_list = [source.source_id for source in sources]
 
