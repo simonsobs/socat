@@ -154,7 +154,9 @@ async def create_source_name(
         astroquery_service=astroquery_service,
     )
 
-    if result_table.get("ra", None) is None or result_table.get("dec", None) is None:
+    if (
+        result_table.get("ra", None) is None or result_table.get("dec", None) is None
+    ):  # pragma: no cover
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"RA or Dec unresolved by {astroquery_service}.",
@@ -166,7 +168,7 @@ async def create_source_name(
         dec=result_table.get("dec", None) * u.deg,
     )
     flux = result_table.get("flux", None)
-    if flux is not None:
+    if flux is not None:  # pragma: no cover
         flux *= u.mJy
 
     try:

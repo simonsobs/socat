@@ -12,6 +12,9 @@ def test_add_and_retrieve(client):
     sso_id = response.json()["sso_id"]
 
     assert response.status_code == 200
+
+    response = client.get(f"api/v1/sso/{sso_id}")
+    assert response.status_code == 200
     assert response.json()["MPC_id"] == 511
     assert response.json()["name"] == "Davida"
 
@@ -31,6 +34,9 @@ def test_add_and_retrieve(client):
     )
     ephem_id = response.json()["ephem_id"]
 
+    assert response.status_code == 200
+
+    response = client.get(f"api/v1/ephem/{ephem_id}")
     assert response.status_code == 200
 
     assert response.json()["sso_id"] == sso_id

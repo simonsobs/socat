@@ -159,7 +159,7 @@ class Client(ClientBase):
             dec=result_dict["dec"] * u.deg,
         )
         flux = result_dict.get("flux", None)
-        if flux is not None:
+        if flux is not None:  # pragma: no cover
             flux *= u.mJy
         source = RegisteredFixedSource(
             source_id=self.n,

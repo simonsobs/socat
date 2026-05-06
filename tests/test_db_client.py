@@ -60,7 +60,8 @@ def test_fixed_source_crud_and_queries(db_client):
 
 
 def test_service_crud_and_lookup(db_client):
-    client = db_client.astroquery
+    source_client = db_client
+    client = source_client.astroquery
 
     service = client.create_service(
         name="Simbad",
@@ -71,6 +72,18 @@ def test_service_crud_and_lookup(db_client):
     retrieved = client.get_service(service_id=service.service_id)
     assert retrieved is not None
     assert retrieved.service_id == service.service_id
+
+    source_1 = source_client.create_name(name="m1", astroquery_service=service.name)
+    assert source_1.name == "m1"
+    assert source_1.position.ra.value == 83.6324
+    assert source_1.position.dec.value == 22.0174
+
+    source_client.delete_source(source_id=source_1.source_id)
+
+    with pytest.raises(ValueError):
+        source_client.create_name(
+            name="NOT_A_REAL_SOURCE", astroquery_service=service.name
+        )
 
     updated = client.update_service(
         service_id=service.service_id,

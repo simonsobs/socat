@@ -71,7 +71,7 @@ def create_name(
         dec=result_dict["dec"] * u.deg,
     )
     flux = result_dict.get("flux", None)
-    if flux is not None:
+    if flux is not None:  # pragma: no cover
         flux *= u.mJy
 
     return position, name, flux

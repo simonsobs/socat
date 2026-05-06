@@ -91,8 +91,8 @@ async def get_source_info(
         )  # pragma: no cover
 
     result_dict = {param: None for param in requested_params}
-    if len(result_table) == 0:
-        return result_dict
+    if len(result_table) == 0:  # pragma: no cover
+        return result_dict  # This should never be reached, you should get 422 from the API instead, but just in case, we return None for all params if no source found.
     for param in requested_params:
         try:
             result_dict[param] = result_table[param].value.data[

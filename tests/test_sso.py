@@ -70,6 +70,23 @@ async def test_add_and_retrieve(database_async_sessionmaker):
     assert sso[0].name == "Davida"
     assert sso[0].MPC_id == 511
 
+    # Check individual ephem deletion works
+    async with database_async_sessionmaker() as session:
+        ephem_id = (
+            await core.create_ephem(
+                sso_id=sso_id,
+                MPC_id=511,
+                name="Davida",
+                time=time + 100 * u.s,
+                position=position,
+                flux=flux,
+                session=session,
+            )
+        ).ephem_id
+
+    async with database_async_sessionmaker() as session:
+        await core.delete_ephem(ephem_id, session=session)
+
     async with database_async_sessionmaker() as session:
         await core.delete_sso(sso_id, session=session)
 

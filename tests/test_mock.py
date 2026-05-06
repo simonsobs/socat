@@ -91,6 +91,24 @@ def test_box(mock_client):
     assert id2 not in id_list
 
 
+def test_photometry(mock_client):
+    position1 = ICRS(1.0 * u.deg, 1.0 * u.deg)
+    flux1 = 1.0 * u.mJy
+    source1 = mock_client.create_source(position=position1, name="mySrc", flux=flux1)
+    id1 = source1.source_id
+    position2 = ICRS(2.0 * u.deg, 2.0 * u.deg)
+    flux2 = 21.0 * u.mJy
+    source2 = mock_client.create_source(position=position2, name="mySrc2", flux=flux2)
+    id2 = source2.source_id
+
+    sources = mock_client.get_forced_photometry_sources(minimum_flux=10.0 * u.mJy)
+
+    id_list = [source.source_id for source in sources]
+
+    assert id1 not in id_list
+    assert id2 in id_list
+
+
 def test_add_and_remove_astroquery(mock_client):
     service = mock_client.astroquery.create_service(
         name="Simbad",
