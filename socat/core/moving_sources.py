@@ -123,8 +123,8 @@ async def get_ephem_points(
     """
     ephems = await session.execute(
         select(RegisteredMovingSourceTable).where(
-            t_min.unix <= RegisteredMovingSourceTable.time.unix,
-            RegisteredMovingSourceTable.time.unix <= t_max.unix,
+            t_min.datetime <= RegisteredMovingSourceTable.time,
+            RegisteredMovingSourceTable.time <= t_max.datetime,
             source.sso_id == RegisteredMovingSourceTable.sso_id,
         )
     )

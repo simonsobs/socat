@@ -2,14 +2,15 @@ import astropy.units as u
 import numpy as np
 import pytest
 from astropy.coordinates import ICRS
+from astropy.time import Time
 
 from socat import core, generator
 
 
 @pytest.mark.asyncio
 async def test_gen(database_async_sessionmaker):
-    t_min = 12345700
-    t_max = 12345900
+    t_min = Time("2025-02-01T00:00:00.00")
+    t_max = t_min + 1100 * u.s
     async with database_async_sessionmaker() as session:
         sso = await core.create_sso(name="Davida", MPC_id=511, session=session)
 
@@ -24,7 +25,7 @@ async def test_gen(database_async_sessionmaker):
         for i in range(10):
             position = ICRS(i * u.deg, 1.5 * i * u.deg)
             flux = (1.2 * i + 0.1) * u.mJy
-            time = 12345600 + 100 * i
+            time = t_min + (100 * i) * u.s
             await core.create_ephem(
                 sso_id=sso.sso_id,
                 MPC_id=511,
@@ -40,13 +41,15 @@ async def test_gen(database_async_sessionmaker):
     for ephem in ephem_list:
         assert t_min <= ephem.time
         assert ephem.time <= t_max
-    assert len(ephem_list) == 3
+    assert len(ephem_list) == 10
 
     async with database_async_sessionmaker() as session:
-        gen = generator.SourceGenerator(source, 123456789, 987654321)
+        gen = generator.SourceGenerator(
+            source, Time("2025-01-01T00:00:00.00"), Time("2026-01-01T00:00:00.00")
+        )
         await gen.init_interp(session=session)
 
-    position, flux = gen.at_time(t=234567891)
+    position, flux = gen.at_time(t=Time("2025-06-01T00:00:00.00"))
 
     assert position.ra.value == 1
     assert position.dec.value == 1
@@ -56,7 +59,7 @@ async def test_gen(database_async_sessionmaker):
         gen = generator.SourceGenerator(sso, t_min=t_min, t_max=t_max)
         await gen.init_interp(session=session)
 
-    position, flux = gen.at_time(12345850)
+    position, flux = gen.at_time(Time("2025-02-01 00:04:10.000000"))
 
     assert position.ra.value == 2.5
     assert position.dec.value == 3.75
@@ -64,13 +67,13 @@ async def test_gen(database_async_sessionmaker):
 
     # Check asking out of bounds doesn't work
     with pytest.raises(ValueError):
-        gen.at_time(t_max + 100)
+        gen.at_time(t_max + 100 * u.s)
 
     # Check not initializing interp raises error
     with pytest.raises(RuntimeError):
         async with database_async_sessionmaker() as session:
             gen = generator.SourceGenerator(sso, t_min=t_min, t_max=t_max)
-        gen.at_time(12345850)
+        gen.at_time(Time("2025-02-01 00:04:10.000000"))
 
     async with database_async_sessionmaker() as session:
         await core.delete_sso(sso.sso_id, session=session)

@@ -1,5 +1,6 @@
 import numpy as np
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from astropy.units import Quantity
 from scipy.interpolate import make_interp_spline
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,8 +13,8 @@ class SourceGenerator:
     def __init__(
         self,
         source: RegisteredFixedSource | SolarSystemObject,
-        t_min: int,
-        t_max: int,
+        t_min: Time,
+        t_max: Time,
     ):
         self.source = source
         self.t_min = t_min
@@ -56,7 +57,7 @@ class SourceGenerator:
             x = np.zeros(len(ephems))
             y = np.zeros((len(ephems), 3))
             for i, ephem in enumerate(ephems):
-                x[i] = ephem.time
+                x[i] = ephem.time.unix
                 y[i] = (
                     ephem.position.ra.value,
                     ephem.position.dec.value,
@@ -69,13 +70,13 @@ class SourceGenerator:
             self.interp = make_interp_spline(x, y, k=1)
 
     # @lru_cache(maxsize=128)  # This can cause memory leaks so we might not want it
-    def at_time(self, t: int) -> tuple[ICRS, Quantity]:
+    def at_time(self, t: Time) -> tuple[ICRS, Quantity]:
         """
         Get the ra/dec/flux of the source at the requested time.
 
         Parameters
         ----------
-        t : int
+        t : Time
             Time to get ra/dec/flux at
 
         Returns
@@ -99,7 +100,7 @@ class SourceGenerator:
                 f"Error, requested t={t} outside initialized bounds {self.t_min}-{self.t_max}"
             )
 
-        ra, dec, flux = self.interp(t)
+        ra, dec, flux = self.interp(t.unix)
         position = ICRS(ra=ra * self.ra_unit, dec=dec * self.dec_unit)
         flux = flux * self.flux_unit
 
