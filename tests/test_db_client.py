@@ -53,6 +53,15 @@ def test_fixed_source_crud_and_queries(db_client):
     assert updated.name == "db-src-1-updated"
     assert updated.flux.value == 3.0
 
+    with pytest.raises(ValueError):
+        # Check no update raises error
+        client.update_source(
+            source_id=source_1.source_id,
+            position=None,
+            flux=None,
+            name=None,
+        )
+
     client.delete_source(source_id=source_1.source_id)
     client.delete_source(source_id=source_2.source_id)
     with pytest.raises(ValueError):
