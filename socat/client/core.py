@@ -213,7 +213,7 @@ class SolarSystemClientBase(ABC):
         return  # pragma: no cover
 
     @abstractmethod
-    def get_sso(self, *, solar_id: int) -> SolarSystemObject | None:
+    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
         """
         Get information about a specific solar system source. If the service is not found, we return None.
         """
@@ -250,7 +250,7 @@ class SolarSystemClientBase(ABC):
 
     @abstractmethod
     def update_sso(
-        self, *, solar_id: int, name: str | None, MPC_id: int | None
+        self, *, sso_id: int, name: str | None, MPC_id: int | None
     ) -> SolarSystemObject | None:
         """
         Update information about a solar system source.
@@ -258,7 +258,7 @@ class SolarSystemClientBase(ABC):
         return []  #  pragma: no cover
 
     @abstractmethod
-    def delete_sso(self, *, solar_id: int) -> None:
+    def delete_sso(self, *, sso_id: int) -> None:
         """
         Delete solar system source.
         """

@@ -461,11 +461,11 @@ class EphemClient(EphemClientBase):
 
     Methods
     -------
-    create_ephem(self,*,sso_id: int,MPC_id: int | None,name: str,time: int,position: ICRS,flux: Quantity | None = None,)
+    create_ephem(self,*,sso_id: int,MPC_id: int | None,name: str,time: Time,position: ICRS,flux: Quantity | None = None,)
         Create a single ephemera point for solar system source.
     get_ephem(self, *, ephem_id: int)
         Get a single ephem point.
-    update_ephem(self,*,ephem_id: int,sso_id: int | None,MPC_id: int | None,name: str | None,time: int | None,position: ICRS | None,flux: Quantity | None,)
+    update_ephem(self,*,ephem_id: int,sso_id: int | None,MPC_id: int | None,name: str | None,time: Time | None,position: ICRS | None,flux: Quantity | None,)
         Update a single ephem point.
     delete_ephem(self, *, ephem_id: int)
         Delete a single ephem point.
@@ -487,7 +487,7 @@ class EphemClient(EphemClientBase):
         sso_id: int,
         MPC_id: int,
         name: str,
-        time: int,
+        time: Time,
         position: ICRS,
         flux: Quantity | None = None,
     ) -> RegisteredMovingSource:
@@ -502,7 +502,7 @@ class EphemClient(EphemClientBase):
             Minor Planet Center ID of SSO.
         name : str
             Name of SSO
-        time : int
+        time : Time
             Time of ephemeris
         position : ICRS
             Position of ephemeris.
@@ -553,7 +553,7 @@ class EphemClient(EphemClientBase):
         sso_id: int | None,
         MPC_id: int | None,
         name: str | None,
-        time: int | None,
+        time: Time | None,
         position: ICRS | None,
         flux: Quantity | None,
     ) -> RegisteredMovingSource | None:
@@ -571,7 +571,7 @@ class EphemClient(EphemClientBase):
             Minor Planet Center ID of associated SSO.
         name : str
             Name of associated SSO.
-        time : int
+        time : Time
             Time of ephem.
         flux : Quantity | None, default=None
             Flux at ephemeris.
