@@ -2,6 +2,7 @@
 Core functions for working with dbs
 """
 
+from .all_sources import get_box  # isort
 from .fixed_sources import (
     create_source,
     delete_source,
@@ -45,8 +46,8 @@ __all__ = [
     "delete_source",
     "delete_sso",
     "get_all_services",
+    "get_box",
     "get_box_fixed",
-    "get_box_sso",
     "get_box_sso",
     "get_ephem",
     "get_ephem_by_sso_id",

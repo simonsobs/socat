@@ -20,6 +20,9 @@ def test_fixed_source_crud_and_queries(db_client):
         flux=21.0 * u.mJy,
     )
 
+    retreived_source_1 = client.get_source(source_id=source_1.source_id)
+    assert retreived_source_1.source_id == source_1.source_id
+
     full_box = client.get_box_fixed(
         lower_left=ICRS(0.0 * u.deg, 0.0 * u.deg),
         upper_right=ICRS(3.0 * u.deg, 3.0 * u.deg),
@@ -102,6 +105,10 @@ def test_service_crud_and_lookup(db_client):
     assert updated is not None
     assert updated.name == "VizieR"
 
+    # Check null update doesn't work
+    with pytest.raises(ValueError):
+        client.update_service(service_id=999999, name=None, config=None)
+
     by_name = client.get_service_name(name="VizieR")
     assert by_name is not None
     assert len(by_name) >= 1
@@ -137,6 +144,14 @@ def test_sso_and_ephem_crud_and_cascade(db_client):
     assert updated_sso is not None
     assert updated_sso.name == "db-diotima"
 
+    # Check no update raises error
+    with pytest.raises(ValueError):
+        sso_client.update_sso(
+            sso_id=sso.sso_id,
+            name=None,
+            MPC_id=None,
+        )
+
     updated_ephem = ephem_client.update_ephem(
         ephem_id=ephem.ephem_id,
         sso_id=sso.sso_id,
@@ -151,6 +166,18 @@ def test_sso_and_ephem_crud_and_cascade(db_client):
     assert updated_ephem.time == Time("2025-01-02T00:00:00.00")
     assert updated_ephem.position.ra.value == 1.0
 
+    # Check no update raises error
+    with pytest.raises(ValueError):
+        ephem_client.update_ephem(
+            ephem_id=ephem.ephem_id,
+            sso_id=None,
+            MPC_id=None,
+            name=None,
+            time=None,
+            position=None,
+            flux=None,
+        )
+
     by_name = sso_client.get_sso_name(name="db-diotima")
     assert by_name is not None
     assert updated_sso.sso_id in {source.sso_id for source in by_name}
@@ -164,6 +191,75 @@ def test_sso_and_ephem_crud_and_cascade(db_client):
         sso_client.get_sso(sso_id=sso.sso_id)
     with pytest.raises(ValueError):
         ephem_client.get_ephem(ephem_id=ephem.ephem_id)
+
+    # Now test get_box_sso
+
+    t_min = Time("2025-02-01T00:00:00.00")
+    t_max = t_min + 3 * u.h
+    lower_left = ICRS(0 * u.deg, 0 * u.deg)
+    upper_right = ICRS(4 * u.deg, 4 * u.deg)
+
+    davida = sso_client.create_sso(name="db-davida", MPC_id=511)
+    for i in range(10):
+        position = ICRS(i * u.deg, i * u.deg)
+        flux = (1.2 * i + 0.1) * u.mJy
+        time = t_min + i * u.h
+        ephem_client.create_ephem(
+            sso_id=davida.sso_id,
+            MPC_id=davida.MPC_id,
+            name=davida.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    diotima = sso_client.create_sso(name="Diotima", MPC_id=423)
+
+    for i in range(10):
+        position = ICRS(i * u.deg, i * u.deg)
+        flux = (0.5 * i + 0.1) * u.mJy
+        time = (
+            t_min + -9 * u.h + i * u.h
+        )  # Don't come into the box until after the end time of the box
+        ephem_client.create_ephem(
+            sso_id=diotima.sso_id,
+            MPC_id=diotima.MPC_id,
+            name=diotima.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    ceres = sso_client.create_sso(name="Ceres", MPC_id=1)
+
+    for i in range(10):
+        position = ICRS((i + 5) * u.deg, (i + 5) * u.deg)  # Never come into the box
+        flux = (2.5 * i + 0.1) * u.mJy
+        time = t_min + i * u.h
+        ephem_client.create_ephem(
+            sso_id=ceres.sso_id,
+            MPC_id=ceres.MPC_id,
+            name=ceres.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    sources = sso_client.get_box_sso(
+        lower_left=lower_left,
+        upper_right=upper_right,
+        t_min=t_min,
+        t_max=t_max,
+        ephem_cat=ephem_client,
+    )
+
+    assert davida in sources
+    assert diotima not in sources
+    assert ceres not in sources
+
+    sso_client.delete_sso(sso_id=davida.sso_id)
+    sso_client.delete_sso(sso_id=diotima.sso_id)
+    sso_client.delete_sso(sso_id=ceres.sso_id)
 
 
 def test_not_found_behavior(db_client):
@@ -248,4 +344,5 @@ def test_direct_secondary_client_backcompat(database):
     assert sso.get_sso(sso_id=obj.sso_id) is not None
     assert ephem.get_ephem(ephem_id=point.ephem_id) is not None
 
+    ephem.delete_ephem(ephem_id=point.ephem_id)
     sso.delete_sso(sso_id=obj.sso_id)

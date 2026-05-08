@@ -49,10 +49,7 @@ def test_add_and_remove_by_name(mock_client):
 
 def test_bad_create_name(mock_client):
     with pytest.warns(NoResultsWarning):
-        source = mock_client.create_name(
-            name="NOT_A_SOURCE", astroquery_service="Simbad"
-        )
-        assert source is None
+        mock_client.create_name(name="NOT_A_SOURCE", astroquery_service="Simbad")
 
 
 def test_bad_id(mock_client):

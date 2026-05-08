@@ -3,9 +3,9 @@ Shared SQLAlchemy session factories for async API and sync client access.
 """
 
 from collections.abc import AsyncIterator, Callable, Iterator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from functools import lru_cache
-from typing import Annotated, ContextManager
+from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy import create_engine, event
@@ -86,7 +86,7 @@ def create_sync_session_interface(
     db_url: str | None = None,
     engine: Engine | None = None,
     session_factory: sessionmaker[Session] | None = None,
-) -> Callable[[], ContextManager[Session]]:
+) -> Callable[[], AbstractContextManager[Session]]:
     """
     Build a functional sync-session interface like get_async_session.
     """

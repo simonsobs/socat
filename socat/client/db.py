@@ -3,7 +3,8 @@ Uses a SQLAlchemy database connection to implement the client core.
 """
 
 from collections.abc import Callable
-from typing import Any, ContextManager
+from contextlib import AbstractContextManager
+from typing import Any
 
 from astropy.coordinates import ICRS
 from astropy.time import Time
@@ -41,7 +42,7 @@ class Client(ClientBase):
     DB-backed client implementation for fixed sources.
     """
 
-    _get_session: Callable[[], ContextManager]
+    _get_session: Callable[[], AbstractContextManager]
 
     def __init__(
         self,
@@ -178,7 +179,7 @@ class AstorqueryClient(AstroqueryClientBase):
     DB-backed client implementation for astroquery services.
     """
 
-    _get_session: Callable[[], ContextManager]
+    _get_session: Callable[[], AbstractContextManager]
 
     def __init__(
         self,
@@ -264,7 +265,7 @@ class EphemClient(EphemClientBase):
     DB-backed client implementation for moving-source ephemerides.
     """
 
-    _get_session: Callable[[], ContextManager]
+    _get_session: Callable[[], AbstractContextManager]
 
     def __init__(
         self,
@@ -367,7 +368,7 @@ class SolarSystemClient(SolarSystemClientBase):
     DB-backed client implementation for solar system objects.
     """
 
-    _get_session: Callable[[], ContextManager]
+    _get_session: Callable[[], AbstractContextManager]
 
     def __init__(
         self,
