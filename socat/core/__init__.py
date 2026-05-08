@@ -2,7 +2,6 @@
 Core functions for working with dbs
 """
 
-from .all_sources import get_box  # isort
 from .fixed_sources import (
     create_source,
     delete_source,
@@ -35,6 +34,8 @@ from .sso import (
     get_sso_name,
     update_sso,
 )
+
+from .all_sources import get_box  # isort: skip
 
 __all__ = [
     "create_ephem",
