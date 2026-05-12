@@ -154,7 +154,7 @@ async def test_get_box(database_async_sessionmaker):
             )
 
     async with database_async_sessionmaker() as session:
-        sources: list[generator.SourceGenerator] = await core.get_box(
+        sources: list[generator.SourceGenerator] = await core.all_sources.get_box(
             t_min=t_min,
             t_max=t_max,
             lower_left=lower_left,

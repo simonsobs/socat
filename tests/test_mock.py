@@ -87,6 +87,9 @@ def test_box(mock_client):
     assert id1 in id_list
     assert id2 not in id_list
 
+    mock_client.delete_source(source_id=id1)
+    mock_client.delete_source(source_id=id2)
+
 
 def test_photometry(mock_client):
     position1 = ICRS(1.0 * u.deg, 1.0 * u.deg)
@@ -104,6 +107,9 @@ def test_photometry(mock_client):
 
     assert id1 not in id_list
     assert id2 in id_list
+
+    mock_client.delete_source(source_id=id1)
+    mock_client.delete_source(source_id=id2)
 
 
 def test_add_and_remove_astroquery(mock_client):

@@ -6,9 +6,11 @@ from collections.abc import Callable
 from contextlib import AbstractContextManager
 from typing import Any
 
+import numpy as np
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
+from scipy.interpolate import make_interp_spline
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
@@ -34,6 +36,7 @@ from .core import (
     ClientBase,
     EphemClientBase,
     SolarSystemClientBase,
+    SourceGeneratorBase,
 )
 
 
@@ -318,6 +321,20 @@ class EphemClient(EphemClientBase):
 
             return ephem.to_model()
 
+    def get_ephem_points(
+        self,
+        *,
+        sso_id: int,
+        t_min: Time,
+        t_max: Time,
+    ) -> list[RegisteredMovingSource]:
+        with self._get_session() as session:
+            ephems = session.execute(
+                statements.get_ephem_points(sso_id=sso_id, t_min=t_min, t_max=t_max)
+            )
+
+        return [e.to_model() for e in ephems.scalars().all()]
+
     def update_ephem(
         self,
         *,
@@ -423,6 +440,33 @@ class SolarSystemClient(SolarSystemClientBase):
 
             return [s.to_model() for s in sources.scalars()]
 
+    def get_box(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+        source_cat: ClientBase,
+        ephem_cat: EphemClient,
+    ) -> list[SolarSystemObject | RegisteredFixedSource] | None:
+        fixed_sources: list[RegisteredFixedSource] = source_cat.get_box_fixed(
+            lower_left=lower_left,
+            upper_right=upper_right,
+        )
+        sso_sources: list[SolarSystemObject] = self.get_box_sso(
+            lower_left=lower_left,
+            upper_right=upper_right,
+            t_min=t_min,
+            t_max=t_max,
+            ephem_cat=ephem_cat,
+        )
+
+        return [
+            SourceGenerator(source=s, t_min=t_min, t_max=t_max, ephem_cat=ephem_cat)
+            for s in fixed_sources + sso_sources
+        ]
+
     def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
         with self._get_session() as session:
             sources = session.execute(
@@ -477,3 +521,109 @@ class SolarSystemClient(SolarSystemClientBase):
 
             session.delete(source)
             session.commit()
+
+
+class SourceGenerator(SourceGeneratorBase):
+    _get_session: Callable[[], AbstractContextManager]
+
+    def __init__(
+        self,
+        *,
+        db_url: str | None = None,
+        engine: Engine | None = None,
+        session_factory: sessionmaker | None = None,
+        source: RegisteredFixedSource | SolarSystemObject,
+        t_min: Time,
+        t_max: Time,
+        ephem_cat: EphemClient,
+    ):
+        self._get_session = create_sync_session_interface(
+            db_url=db_url,
+            engine=engine,
+            session_factory=session_factory,
+        )
+        self.source = source
+        self.t_min = t_min
+        self.t_max = t_max
+        self.ephem_cat = ephem_cat
+        self.interp = None
+
+    def init_interp(self, *, ephem_cat: EphemClient) -> None:
+        """
+        Initialize the interpolator for this source generator. Must be called before at_time().
+
+        Parameters
+        ----------
+        ephem_cat : EphemClient
+            Ephemeris client to use for getting ephemeris points if source is a SolarSystemObject.
+
+        Returns
+        -------
+        None
+        """
+        if type(self.source) is RegisteredFixedSource:
+            self.ra_unit = self.source.position.ra.unit
+            self.dec_unit = self.source.position.dec.unit
+            self.flux_unit = self.source.flux.unit
+            self.interp = lambda _: (
+                self.source.position.ra.value,
+                self.source.position.dec.value,
+                self.source.flux.value,
+            )
+
+        elif type(self.source) is SolarSystemObject:
+            ephem_points = ephem_cat.get_ephem_points(
+                sso_id=self.source.sso_id, t_min=self.t_min, t_max=self.t_max
+            )
+            x = np.zeros(len(ephem_points))
+            y = np.zeros((len(ephem_points), 3))
+            for i, ephem in enumerate(ephem_points):
+                x[i] = ephem.time.unix
+                y[i] = (
+                    ephem.position.ra.value,
+                    ephem.position.dec.value,
+                    ephem.flux.value,
+                )
+
+            self.ra_unit = ephem.position.ra.unit
+            self.dec_unit = ephem.position.dec.unit
+            self.flux_unit = ephem.flux.unit
+            self.interp = make_interp_spline(x, y, k=1)
+
+    def at_time(self, *, t: Time) -> tuple[ICRS, Quantity]:
+        """
+        Get the position and flux of the source at a given time. init_interp() must be called before this method.
+
+        Parameters
+        ----------
+        time : Time
+            Time to get position and flux at.
+
+        Returns
+        -------
+        position : ICRS
+             Position of source at given time
+        flux : Quantity
+             Flux of source at given time
+
+        Raises
+        ------
+        RuntimeError
+            If interp is not initialized. Call init_interp() first.
+        ValueError
+            If time is out of range for source generator
+        """
+        if self.interp is None:
+            raise RuntimeError(
+                "Interpolator not initialized. Call init_interp() first."
+            )
+
+        if t < self.t_min or t > self.t_max:
+            raise ValueError("Time out of range for source generator")
+
+        ra_deg, dec_deg, flux_mJy = self.interp(t.unix)
+
+        position = ICRS(ra_deg * self.ra_unit, dec_deg * self.dec_unit)
+        flux = flux_mJy * self.flux_unit
+
+        return (position, flux)

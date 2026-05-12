@@ -180,6 +180,19 @@ class EphemClientBase(ABC):
         return []  # pragma: no cover
 
     @abstractmethod
+    def get_ephem_points(
+        self,
+        *,
+        sso_id: int,
+        t_min: Time,
+        t_max: Time,
+    ) -> list[RegisteredMovingSource] | None:
+        """
+        Get all ephem points for a given solar system source within a given time range. Note this takes sso_id instead of passing a SolarSystemObject.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
     def update_ephem(
         self,
         *,
@@ -235,6 +248,21 @@ class SolarSystemClientBase(ABC):
         return []  # pragma: no cover
 
     @abstractmethod
+    def get_box(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+        ephem_cat: EphemClientBase,
+    ) -> list[SolarSystemObject | RegisteredFixedSource] | None:
+        """
+        Get all sources (both fixed and moving) inside a given box within a given time range.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
     def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
         """
         Get information about a specific solar system source by name.
@@ -261,5 +289,27 @@ class SolarSystemClientBase(ABC):
     def delete_sso(self, *, sso_id: int) -> None:
         """
         Delete solar system source.
+        """
+        return []  # pragma: no cover
+
+
+class SourceGeneratorBase(ABC):
+    """
+    Base class for source generators. Note that databases have to be passed explicitly as compared to the actual implementation
+    as this class doesn't know about the databases.
+    """
+
+    @abstractmethod
+    def init_interp(self, *, ephem_cat: EphemClientBase) -> None:
+        """
+        Initialize the interpolator object.
+        """
+
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def at_time(self, *, time: Time) -> tuple[ICRS, Quantity]:
+        """
+        Get the position and flux of the source at a given time.
         """
         return []  # pragma: no cover

@@ -122,11 +122,7 @@ async def get_ephem_points(
         List of requested ephemeris points
     """
     ephems = await session.execute(
-        select(RegisteredMovingSourceTable).where(
-            t_min.datetime <= RegisteredMovingSourceTable.time,
-            RegisteredMovingSourceTable.time <= t_max.datetime,
-            source.sso_id == RegisteredMovingSourceTable.sso_id,
-        )
+        statements.get_ephem_points(sso_id=source.sso_id, t_min=t_min, t_max=t_max)
     )
 
     return [e.to_model() for e in ephems.scalars()]

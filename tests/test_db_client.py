@@ -262,6 +262,108 @@ def test_sso_and_ephem_crud_and_cascade(db_client):
     sso_client.delete_sso(sso_id=ceres.sso_id)
 
 
+def test_box(db_client):
+    client = db_client
+    sso_client = client.sso
+    ephem_client = client.ephem
+
+    start_time = Time("2025-01-01T00:00:00.00")
+
+    source_1 = client.create_source(
+        position=ICRS(1.0 * u.deg, 1.0 * u.deg),
+        name="db-src-1",
+        flux=1.0 * u.mJy,
+    )
+    source_2 = client.create_source(
+        position=ICRS(4.0 * u.deg, 4.0 * u.deg),
+        name="db-src-2",
+        flux=21.0 * u.mJy,
+    )
+    davida = sso_client.create_sso(name="db-davida", MPC_id=511)
+    for i in range(10):
+        position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
+        flux = (1.2 * i + 0.1) * u.mJy
+        time = start_time + i * u.h
+        ephem_client.create_ephem(
+            sso_id=davida.sso_id,
+            MPC_id=davida.MPC_id,
+            name=davida.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    diotima = sso_client.create_sso(name="db-diotima", MPC_id=423)
+    for i in range(10):
+        position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
+        flux = (0.5 * i + 0.1) * u.mJy
+        time = start_time + (11 + i) * u.h
+        ephem_client.create_ephem(
+            sso_id=diotima.sso_id,
+            MPC_id=diotima.MPC_id,
+            name=diotima.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    ceres = sso_client.create_sso(name="db-ceres", MPC_id=1)
+    for i in range(10):
+        position = ICRS((4 + i) * u.deg, (4 + i) * u.deg)
+        flux = (2.5 * i + 0.1) * u.mJy
+        time = start_time + i * u.h
+        ephem_client.create_ephem(
+            sso_id=ceres.sso_id,
+            MPC_id=ceres.MPC_id,
+            name=ceres.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    t_min = Time("2025-01-01T00:00:00.00")
+    t_max = t_min + 5 * u.h
+    lower_left = ICRS(0 * u.deg, 0 * u.deg)
+    upper_right = ICRS(3 * u.deg, 3 * u.deg)
+
+    source_gens = sso_client.get_box(
+        lower_left=lower_left,
+        upper_right=upper_right,
+        t_min=t_min,
+        t_max=t_max,
+        source_cat=client,
+        ephem_cat=ephem_client,
+    )
+
+    assert len(source_gens) == 2
+    assert source_gens[0].source.name == "db-src-1"
+    assert source_gens[1].source.name == "db-davida"
+
+    with pytest.raises(RuntimeError):
+        source_gens[0].at_time(t=Time("2025-01-02T00:00:00"))
+
+    source_gens[0].init_interp(ephem_cat=ephem_client)
+    assert source_gens[0].at_time(t=Time("2025-01-01T01:30:00")) == (
+        ICRS(1.0 * u.deg, 1.0 * u.deg),
+        1.0 * u.mJy,
+    )
+
+    source_gens[1].init_interp(ephem_cat=ephem_client)
+    assert source_gens[1].at_time(t=Time("2025-01-01T00:30:00")) == (
+        ICRS(1.5 * u.deg, 1.5 * u.deg),
+        1.55 * u.mJy,
+    )
+
+    with pytest.raises(ValueError):
+        source_gens[1].at_time(t=Time("2025-01-02T00:00:00"))
+
+    sso_client.delete_sso(sso_id=davida.sso_id)
+    sso_client.delete_sso(sso_id=diotima.sso_id)
+    sso_client.delete_sso(sso_id=ceres.sso_id)
+    client.delete_source(source_id=source_1.source_id)
+    client.delete_source(source_id=source_2.source_id)
+
+
 def test_not_found_behavior(db_client):
     fixed = db_client
     services = fixed.astroquery

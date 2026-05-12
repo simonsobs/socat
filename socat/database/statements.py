@@ -371,3 +371,37 @@ def update_ephem(
         raise ValueError(
             "At least one field must be provided to update the ephemeris point"
         )
+
+
+def get_ephem_points(sso_id: int, t_min: Time, t_max: Time) -> select:
+    """
+    Generate a select statement to get ephemeris points for a solar system object between t_min and t_max.
+
+    Parameters
+    ----------
+    sso_id : int
+        The ID of the solar system object to get ephemeris points for.
+    t_min : Time
+        The minimum time for ephemeris points to return.
+    t_max : Time
+        The maximum time for ephemeris points to return.
+
+    Returns
+    -------
+    select:
+        Database statement to get ephemeris points for the specified solar system object between t_min and t_max.
+
+    Raises
+    ------
+    ValueError
+        If t_min is greater than t_max.
+    """
+
+    if t_min > t_max:
+        raise ValueError("t_min must be less than or equal to t_max")
+
+    return select(RegisteredMovingSourceTable).where(
+        t_min.datetime <= RegisteredMovingSourceTable.time,
+        RegisteredMovingSourceTable.time <= t_max.datetime,
+        sso_id == RegisteredMovingSourceTable.sso_id,
+    )
