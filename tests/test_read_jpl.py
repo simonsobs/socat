@@ -34,10 +34,11 @@ async def test_read_jpl(database_async_sessionmaker, tmp_path):
         ephems = await core.get_ephem_by_sso_id(sso[0].sso_id, session=session)
         assert len(ephems) == 3
         for i, ephem in enumerate(ephems):
-            assert ephem.time == (data["julian_day"][i] - 2440587.5) * 86400
+            assert ephem.time.jd == data["julian_day"][i]
             assert ephem.position.ra.value == data["ra_deg"][i]
             assert ephem.position.dec.value == data["dec_deg"][i]
             assert ephem.flux == data["flux_mJy"][i] * u.mJy
 
     async with database_async_sessionmaker() as session:
-        await core.delete_sso(sso[0].sso_id, session=session)
+        for i in range(len(sso)):
+            await core.delete_sso(sso[i].sso_id, session=session)

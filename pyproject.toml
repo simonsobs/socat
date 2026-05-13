@@ -60,6 +60,7 @@ convention = "numpy"
 asyncio_mode = "auto"
 
 [tool.coverage.run]
+dynamic_context = "test_function"
 source = [
     "socat"
 ]

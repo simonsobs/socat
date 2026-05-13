@@ -3,7 +3,7 @@ The web API to access the socat moving source database.
 """
 
 import astropy.units as u
-from astropydantic import AstroPydanticICRS, AstroPydanticQuantity
+from astropydantic import AstroPydanticICRS, AstroPydanticQuantity, AstroPydanticTime
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ValidationError
 
@@ -27,8 +27,8 @@ class EphemModificationRequest(BaseModel):
         MPC ID of source
     name : str | None
         Name of source
-    time : int | None
-        Time of source ephem, unix time
+    time : AstroPydanticTime | None
+        Time of source ephem
     position : AstroPydanticICRS | None
         Position of source at time in ICRS coordinates
     flux : Quantity  | None
@@ -38,7 +38,7 @@ class EphemModificationRequest(BaseModel):
     sso_id: int | None
     MPC_id: int | None
     name: str | None
-    time: int | None
+    time: AstroPydanticTime | None
     position: AstroPydanticICRS | None
     flux: AstroPydanticQuantity[u.mJy] | None
 

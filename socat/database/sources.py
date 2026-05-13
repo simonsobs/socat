@@ -1,6 +1,9 @@
+from datetime import datetime
+
 import astropy.units as u
 from astropy.coordinates import ICRS
-from astropydantic import AstroPydanticICRS, AstroPydanticQuantity
+from astropy.time import Time
+from astropydantic import AstroPydanticICRS, AstroPydanticQuantity, AstroPydanticTime
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
@@ -55,8 +58,8 @@ class RegisteredMovingSource(RegisteredSource):
         Internal SO ID of source
     MPC_id : int | None
         MPC ID of source
-    time : int
-        Time of source ephem, unix time
+    time : AstroPydanticTime
+        Time of source ephem
     name : str
         Name of source
     """
@@ -64,7 +67,7 @@ class RegisteredMovingSource(RegisteredSource):
     ephem_id: int
     sso_id: int
     MPC_id: int | None
-    time: int
+    time: AstroPydanticTime
     name: str | None  # Foreign key to MovingSourceTable
 
 
@@ -183,7 +186,7 @@ class RegisteredMovingSourceTable(SQLModel, table=True):
         nullable=False,
         ondelete="CASCADE",
     )
-    time: int
+    time: datetime
     ra_deg: float = Field(nullable=False)
     dec_deg: float = Field(nullable=False)
     flux_mJy: float | None = Field(nullable=True)
@@ -205,7 +208,7 @@ class RegisteredMovingSourceTable(SQLModel, table=True):
             sso_id=self.sso_id,
             MPC_id=self.MPC_id,
             name=self.name,
-            time=self.time,
+            time=Time(self.time),
             position=ICRS(ra=self.ra_deg * u.deg, dec=self.dec_deg * u.deg),
             flux=flux,
         )

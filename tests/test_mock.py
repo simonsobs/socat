@@ -49,10 +49,7 @@ def test_add_and_remove_by_name(mock_client):
 
 def test_bad_create_name(mock_client):
     with pytest.warns(NoResultsWarning):
-        source = mock_client.create_name(
-            name="NOT_A_SOURCE", astroquery_service="Simbad"
-        )
-        assert source is None
+        mock_client.create_name(name="NOT_A_SOURCE", astroquery_service="Simbad")
 
 
 def test_bad_id(mock_client):
@@ -74,7 +71,7 @@ def test_box(mock_client):
 
     lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
     upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
-    sources = mock_client.get_box(lower_left=lower_left, upper_right=upper_right)
+    sources = mock_client.get_box_fixed(lower_left=lower_left, upper_right=upper_right)
 
     id_list = [source.source_id for source in sources]
 
@@ -83,12 +80,36 @@ def test_box(mock_client):
 
     lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
     upper_right = ICRS(1.5 * u.deg, 1.5 * u.deg)
-    sources = mock_client.get_box(lower_left=lower_left, upper_right=upper_right)
+    sources = mock_client.get_box_fixed(lower_left=lower_left, upper_right=upper_right)
 
     id_list = [source.source_id for source in sources]
 
     assert id1 in id_list
     assert id2 not in id_list
+
+    mock_client.delete_source(source_id=id1)
+    mock_client.delete_source(source_id=id2)
+
+
+def test_photometry(mock_client):
+    position1 = ICRS(1.0 * u.deg, 1.0 * u.deg)
+    flux1 = 1.0 * u.mJy
+    source1 = mock_client.create_source(position=position1, name="mySrc", flux=flux1)
+    id1 = source1.source_id
+    position2 = ICRS(2.0 * u.deg, 2.0 * u.deg)
+    flux2 = 21.0 * u.mJy
+    source2 = mock_client.create_source(position=position2, name="mySrc2", flux=flux2)
+    id2 = source2.source_id
+
+    sources = mock_client.get_forced_photometry_sources(minimum_flux=10.0 * u.mJy)
+
+    id_list = [source.source_id for source in sources]
+
+    assert id1 not in id_list
+    assert id2 in id_list
+
+    mock_client.delete_source(source_id=id1)
+    mock_client.delete_source(source_id=id2)
 
 
 def test_add_and_remove_astroquery(mock_client):

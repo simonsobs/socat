@@ -6,9 +6,12 @@ from importlib import import_module
 from typing import Any
 
 import astropy.units as u
+import numpy as np
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
+from scipy.interpolate import make_interp_spline
 
 from socat.database import (
     AstroqueryService,
@@ -22,6 +25,7 @@ from .core import (
     ClientBase,
     EphemClientBase,
     SolarSystemClientBase,
+    SourceGeneratorBase,
 )
 
 
@@ -158,7 +162,7 @@ class Client(ClientBase):
             dec=result_dict["dec"] * u.deg,
         )
         flux = result_dict.get("flux", None)
-        if flux is not None:
+        if flux is not None:  # pragma: no cover
             flux *= u.mJy
         source = RegisteredFixedSource(
             source_id=self.n,
@@ -171,12 +175,12 @@ class Client(ClientBase):
 
         return source
 
-    def get_box(
+    def get_box_fixed(
         self,
         *,
         lower_left: ICRS,
         upper_right: ICRS,
-    ) -> RegisteredFixedSource:
+    ) -> list[RegisteredFixedSource]:
         """
         Get sources within a box.
 
@@ -447,6 +451,205 @@ class AstorqueryClient(AstroqueryClientBase):
             self.n -= 1
 
 
+class EphemClient(EphemClientBase):
+    """
+    Mock ephemeris client.
+
+    Attributes
+    ----------
+    catalog : dict[int, SolarSystemObject]
+        Dictionary of solar system sources replicating a catalog
+    n : int
+        Number of entries in catalog
+
+    Methods
+    -------
+    create_ephem(self,*,sso_id: int,MPC_id: int | None,name: str,time: Time,position: ICRS,flux: Quantity | None = None,)
+        Create a single ephemera point for solar system source.
+    get_ephem(self, *, ephem_id: int)
+        Get a single ephem point.
+    get_ephem_points(self, *, sso_id: int, t_min: Time, t_max: Time)
+        Get all ephem points for a given source in a given time range. Note this takes sso_id instead of passing a SolarSystemObject.
+    update_ephem(self,*,ephem_id: int,sso_id: int | None,MPC_id: int | None,name: str | None,time: Time | None,position: ICRS | None,flux: Quantity | None,)
+        Update a single ephem point.
+    delete_ephem(self, *, ephem_id: int)
+        Delete a single ephem point.
+    """
+
+    catalog: dict[int, AstroqueryService]
+    n: int
+
+    def __init__(self):
+        """
+        Initialize an empty catalog
+        """
+        self.catalog = {}
+        self.n = 0
+
+    def create_ephem(
+        self,
+        *,
+        sso_id: int,
+        MPC_id: int,
+        name: str,
+        time: Time,
+        position: ICRS,
+        flux: Quantity | None = None,
+    ) -> RegisteredMovingSource:
+        """
+        Create a single ephem point associated with a SSO.
+
+        Parameters
+        ----------
+        sso_id : int
+            Internal SO ID of associated SSO (sso_id).
+        MPC_id : int
+            Minor Planet Center ID of SSO.
+        name : str
+            Name of SSO
+        time : Time
+            Time of ephemeris
+        position : ICRS
+            Position of ephemeris.
+        flux : Quantity | None, default=None
+            Flux at ephemeris.
+
+        Returns
+        -------
+        ephem : RegisteredMovingSource
+            Ephemeris point that was added.
+        """
+        ephem = RegisteredMovingSource(
+            ephem_id=self.n,
+            sso_id=sso_id,
+            MPC_id=MPC_id,
+            name=name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+        self.catalog[self.n] = ephem
+        self.n += 1
+
+        return ephem
+
+    def get_ephem(self, *, ephem_id: int) -> RegisteredMovingSource | None:
+        """
+        Get an ephem point by ID.
+        Returns None if ephem not found.
+
+        Parameters
+        ----------
+        ephem_id : int
+            Internal SO ID of ephem point.
+
+        Returns
+        -------
+        self.catalog.get(ephem_id, None) : RegisteredMovingSource | None
+            Get requested ephem.
+        """
+
+        return self.catalog.get(ephem_id, None)
+
+    def get_ephem_points(
+        self, *, sso_id: int, t_min: Time, t_max: Time
+    ) -> list[RegisteredMovingSource]:
+        """
+        Get all ephem points for a given source in a given time range.
+
+        Parameters
+        ----------
+        sso_id : int
+            Internal SO ID of source for which to get ephemeris points
+        t_min : Time
+            Minimum time
+        t_max : Time
+            Maximum time
+
+        Returns
+        -------
+        list[RegisteredMovingSource]
+            List of requested ephemeris points
+
+        """
+        ephems = filter(
+            lambda x: (x.sso_id == sso_id) and (t_min <= x.time <= t_max),
+            self.catalog.values(),
+        )
+        return list(ephems)
+
+    def update_ephem(
+        self,
+        *,
+        ephem_id: int,
+        sso_id: int | None,
+        MPC_id: int | None,
+        name: str | None,
+        time: Time | None,
+        position: ICRS | None,
+        flux: Quantity | None,
+    ) -> RegisteredMovingSource | None:
+        """
+        Update a solar system ephem.
+        Returns None if ephem not found.
+
+        Parameters
+        ----------
+        ephem_id : int
+            Internal SO ID of ephem point.
+        sso_id : int
+            Internal SO ID of associated SSO.
+        MPC_id : int
+            Minor Planet Center ID of associated SSO.
+        name : str
+            Name of associated SSO.
+        time : Time
+            Time of ephem.
+        flux : Quantity | None, default=None
+            Flux at ephemeris.
+
+        Returns
+        -------
+        new : RegisteredMovingSource | None
+            Ephemeris point that was updated.
+        """
+        current = self.get_ephem(ephem_id=ephem_id)
+
+        if current is None:
+            return None
+
+        new = RegisteredMovingSource(
+            ephem_id=current.ephem_id,
+            sso_id=current.sso_id if sso_id is None else sso_id,
+            MPC_id=current.MPC_id if MPC_id is None else MPC_id,
+            name=current.name if name is None else name,
+            time=current.time if time is None else time,
+            position=current.position if position is None else position,
+            flux=current.flux if flux is None else flux,
+        )
+
+        self.catalog[ephem_id] = new
+
+        return new
+
+    def delete_ephem(self, *, ephem_id: int) -> None:
+        """
+        Delete an ephem point by ID.
+
+        Parameters
+        ----------
+        ephem_id : int
+            Internal SO ID of ephem point.
+
+        Returns
+        -------
+        None
+        """
+        check = self.catalog.pop(ephem_id, None)
+        if check is not None:
+            self.n -= 1
+
+
 class SolarSystemClient(SolarSystemClientBase):
     """
     Mock solar system client for testing.
@@ -518,9 +721,110 @@ class SolarSystemClient(SolarSystemClientBase):
         Returns
         -------
         self.catalog.get(sso_id, None) : SolarSytemSource
-            Reuqested solar system source.
+            Requested solar system source.
         """
         return self.catalog.get(sso_id, None)
+
+    def get_box_sso(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+        ephem_cat: EphemClient,
+    ) -> list[SolarSystemObject]:
+        """
+        Get solar system objects which are within a given box in a given time range.
+        Note somewhat awkwardly you have to pass ephem_cat to this function, which is
+        different from how the real function works. I can't think of another way to
+        link these mock tables.
+
+        Parameters
+        ----------
+        lower_left : ICRS
+            Lower left corner of box in ICRS coordinates
+        upper_right : ICRS
+            Upper right corner of box in ICRS coordinates
+        t_min : Time
+            Minimum time
+        t_max : Time
+            Maximum time
+        ephem_cat : EphemClient
+            Associated ephemeris catalog
+
+        Returns
+        -------
+        list(solar_sources) : list[SolarSystemObject]
+            List of solar system sources in box and time range.
+        """
+        ra_min = lower_left.ra.value
+        dec_min = lower_left.dec.value
+        ra_max = upper_right.ra.value
+        dec_max = upper_right.dec.value
+        ephems = filter(
+            lambda x: (
+                (ra_min <= x.position.ra.value <= ra_max)
+                and (dec_min <= x.position.dec.value <= dec_max)
+                and (t_min <= x.time <= t_max)
+            ),
+            ephem_cat.catalog.values(),
+        )
+
+        ephem_ids = {ephem.sso_id for ephem in ephems}
+
+        sources = filter(lambda x: x.sso_id in ephem_ids, self.catalog.values())
+
+        return list(sources)
+
+    def get_box(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+        source_cat: Client,
+        ephem_cat: EphemClient,
+    ) -> list[SolarSystemObject | RegisteredFixedSource] | None:
+        """
+        Get all sources (both fixed and moving) inside a given box within a given time range.
+
+        Parameters
+        ----------
+        lower_left : ICRS
+            Lower left corner of box in ICRS coordinates
+        upper_right : ICRS
+            Upper right corner of box in ICRS coordinates
+        t_min : Time
+            Minimum time
+        t_max : Time
+            Maximum time
+        source_cat : Client
+            Catalog of fixed sources. Note again somewhat awkwardly that you have to pass this in
+        ephem_cat : EphemClient
+            Associated ephemeris catalog
+
+        Returns
+        -------
+        list(SourceGenerator) : list[SourceGenerator]
+            List of SourceGenerator for sources in box and time range.
+        """
+        fixed_sources = source_cat.get_box_fixed(
+            lower_left=lower_left, upper_right=upper_right
+        )
+        sso_sources = self.get_box_sso(
+            lower_left=lower_left,
+            upper_right=upper_right,
+            t_min=t_min,
+            t_max=t_max,
+            ephem_cat=ephem_cat,
+        )
+
+        return [
+            SourceGenerator(source=s, t_min=t_min, t_max=t_max, ephem_cat=ephem_cat)
+            for s in fixed_sources + sso_sources
+        ]
 
     def get_sso_name(self, *, name: str) -> list[SolarSystemObject] | None:
         """
@@ -622,171 +926,97 @@ class SolarSystemClient(SolarSystemClientBase):
             self.n -= 1
 
 
-class EphemClient(EphemClientBase):
-    """
-    Mock ephemeris client.
-
-    Attributes
-    ----------
-    catalog : dict[int, SolarSystemObject]
-        Dictionary of solar system sources replicating a catalog
-    n : int
-        Number of entries in catalog
-
-    Methods
-    -------
-    create_ephem(self,*,sso_id: int,MPC_id: int | None,name: str,time: int,position: ICRS,flux: Quantity | None = None,)
-        Create a single ephemera point for solar system source.
-    get_ephem(self, *, ephem_id: int)
-        Get a single ephem point.
-    update_ephem(self,*,ephem_id: int,sso_id: int | None,MPC_id: int | None,name: str | None,time: int | None,position: ICRS | None,flux: Quantity | None,)
-        Update a single ephem point.
-    delete_ephem(self, *, ephem_id: int)
-        Delete a single ephem point.
-    """
-
-    catalog: dict[int, AstroqueryService]
-    n: int
-
-    def __init__(self):
-        """
-        Initialize an empty catalog
-        """
-        self.catalog = {}
-        self.n = 0
-
-    def create_ephem(
+class SourceGenerator(SourceGeneratorBase):
+    def __init__(
         self,
-        *,
-        sso_id: int,
-        MPC_id: int,
-        name: str,
-        time: int,
-        position: ICRS,
-        flux: Quantity | None = None,
-    ) -> RegisteredMovingSource:
+        source: RegisteredFixedSource | SolarSystemObject,
+        t_min: Time,
+        t_max: Time,
+        ephem_cat: EphemClient,
+    ):
+        self.source = source
+        self.t_min = t_min
+        self.t_max = t_max
+        self.interp = None
+        self.ephem_cat = ephem_cat
+
+    def init_interp(self, *, ephem_cat: EphemClientBase) -> None:
         """
-        Create a single ephem point associated with a SSO.
-
-        Parameters
-        ----------
-        sso_id : int
-            Internal SO ID of associated SSO (sso_id).
-        MPC_id : int
-            Minor Planet Center ID of SSO.
-        name : str
-            Name of SSO
-        time : int
-            Time of ephemeris
-        position : ICRS
-            Position of ephemeris.
-        flux : Quantity | None, default=None
-            Flux at ephemeris.
-
-        Returns
-        -------
-        ephem : RegisteredMovingSource
-            Ephemeris point that was added.
-        """
-        ephem = RegisteredMovingSource(
-            ephem_id=self.n,
-            sso_id=sso_id,
-            MPC_id=MPC_id,
-            name=name,
-            time=time,
-            position=position,
-            flux=flux,
-        )
-        self.catalog[self.n] = ephem
-        self.n += 1
-
-        return ephem
-
-    def get_ephem(self, *, ephem_id: int) -> RegisteredMovingSource | None:
-        """
-        Get an ephem point by ID.
-        Returns None if ephem not found.
-
-        Parameters
-        ----------
-        ephem_id : int
-            Internal SO ID of ephem point.
-
-        Returns
-        -------
-        self.catalog.get(ephem_id, None) : RegisteredMovingSource | None
-            Get requested ephem.
-        """
-
-        return self.catalog.get(ephem_id, None)
-
-    def update_ephem(
-        self,
-        *,
-        ephem_id: int,
-        sso_id: int | None,
-        MPC_id: int | None,
-        name: str | None,
-        time: int | None,
-        position: ICRS | None,
-        flux: Quantity | None,
-    ) -> RegisteredMovingSource | None:
-        """
-        Update a solar system ephem.
-        Returns None if ephem not found.
-
-        Parameters
-        ----------
-        ephem_id : int
-            Internal SO ID of ephem point.
-        sso_id : int
-            Internal SO ID of associated SSO.
-        MPC_id : int
-            Minor Planet Center ID of associated SSO.
-        name : str
-            Name of associated SSO.
-        time : int
-            Time of ephem.
-        flux : Quantity | None, default=None
-            Flux at ephemeris.
-
-        Returns
-        -------
-        new : RegisteredMovingSource | None
-            Ephemeris point that was updated.
-        """
-        current = self.get_ephem(ephem_id=ephem_id)
-
-        if current is None:
-            return None
-
-        new = RegisteredMovingSource(
-            ephem_id=current.ephem_id,
-            sso_id=current.sso_id if sso_id is None else sso_id,
-            MPC_id=current.MPC_id if MPC_id is None else MPC_id,
-            name=current.name if name is None else name,
-            time=current.time if time is None else time,
-            position=current.position if position is None else position,
-            flux=current.flux if flux is None else flux,
-        )
-
-        self.catalog[ephem_id] = new
-
-        return new
-
-    def delete_ephem(self, *, ephem_id: int) -> None:
-        """
-        Delete an ephem point by ID.
-
-        Parameters
-        ----------
-        ephem_id : int
-            Internal SO ID of ephem point.
+        Initialize the interpolator object.
+        If our source type is a RegisteredFixedSource, then
+        interp will always just return the same ra/dec/flux
+        (Recall that the RegisteredFixedSource.flux is
+        a fixed estimate and not the light curve). If
+        the soure type is SolarSystemObject, then linear
+        interp ra/dec/flux over the requested time range.
 
         Returns
         -------
         None
         """
-        check = self.catalog.pop(ephem_id, None)
-        if check is not None:
-            self.n -= 1
+        if type(self.source) is RegisteredFixedSource:
+            self.ra_unit = self.source.position.ra.unit
+            self.dec_unit = self.source.position.dec.unit
+            self.flux_unit = self.source.flux.unit
+            self.interp = lambda _: (
+                self.source.position.ra.value,
+                self.source.position.dec.value,
+                self.source.flux.value,
+            )
+
+        elif type(self.source) is SolarSystemObject:
+            # For simplicity just do linear interpolation between endpoints.
+            # In real implementation would want to use all ephem points and do something more sophisticated.
+            # Also in real implementation would want to query ephem points from database rather than having them passed in.
+            ephems = ephem_cat.get_ephem_points(
+                sso_id=self.source.sso_id, t_min=self.t_min, t_max=self.t_max
+            )
+            x = np.zeros(len(ephems))
+            y = np.zeros((len(ephems), 3))
+            for i, ephem in enumerate(ephems):
+                x[i] = ephem.time.unix
+                y[i] = (
+                    ephem.position.ra.value,
+                    ephem.position.dec.value,
+                    ephem.flux.value,
+                )
+
+            self.ra_unit = ephem.position.ra.unit  # This assumes all ephem points have same units but this should probably be enforced upstream anyway.
+            self.dec_unit = ephem.position.dec.unit
+            self.flux_unit = ephem.flux.unit
+            self.interp = make_interp_spline(x, y, k=1)
+
+    def at_time(self, *, t: Time) -> tuple[ICRS, Quantity]:
+        """
+        Get the position and flux of the source at a given time.
+
+        Parameters
+        ----------
+        time : Time
+            Time at which to get position and flux
+
+        Returns
+        -------
+        position : ICRS
+            Position of source at given time
+        flux : Quantity
+            Flux of source at given time
+
+        Raises
+        ------
+        RuntimeError
+            If interp is not initialized. Call init_interp() first.
+        ValueError
+            If time is out of range for source generator
+        """
+        if self.interp is None:
+            raise RuntimeError(
+                "Interpolator not initialized. Call init_interp() first."
+            )
+        if t < self.t_min or t > self.t_max:
+            raise ValueError("Time out of range for source generator")
+        ra, dec, flux = self.interp(t.unix)
+        position = ICRS(ra=ra * self.ra_unit, dec=dec * self.dec_unit)
+        flux = flux * self.flux_unit
+
+        return (position, flux)

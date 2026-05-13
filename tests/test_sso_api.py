@@ -1,4 +1,6 @@
+import astropy.units as u
 import pytest
+from astropy.time import Time
 from httpx import HTTPStatusError
 
 
@@ -10,6 +12,9 @@ def test_add_and_retrieve(client):
     sso_id = response.json()["sso_id"]
 
     assert response.status_code == 200
+
+    response = client.get(f"api/v1/sso/{sso_id}")
+    assert response.status_code == 200
     assert response.json()["MPC_id"] == 511
     assert response.json()["name"] == "Davida"
 
@@ -19,7 +24,7 @@ def test_add_and_retrieve(client):
             "sso_id": sso_id,
             "MPC_id": 511,
             "name": "Davida",
-            "time": 123456789,
+            "time": "2025-01-01T00:00:00.00",
             "position": {
                 "ra": {"value": 1.0, "unit": "deg"},
                 "dec": {"value": 1.0, "unit": "deg"},
@@ -29,6 +34,9 @@ def test_add_and_retrieve(client):
     )
     ephem_id = response.json()["ephem_id"]
 
+    assert response.status_code == 200
+
+    response = client.get(f"api/v1/ephem/{ephem_id}")
     assert response.status_code == 200
 
     assert response.json()["sso_id"] == sso_id
@@ -57,7 +65,7 @@ def test_add_and_retrieve(client):
             "sso_id": sso_id,
             "MPC_id": 423,
             "name": "Diotima",
-            "time": 987654321,
+            "time": "2025-01-02T00:00:00.00",
             "position": {
                 "ra": {"value": 0.0, "unit": "deg"},
                 "dec": {"value": 0.0, "unit": "deg"},
@@ -90,6 +98,104 @@ def test_add_and_retrieve(client):
     assert response.status_code == 404
 
 
+def test_get_box(client):
+    # Make three asteroids, on three trajectories, of which one will be in our box.
+    # Our box will run from 1 to 3 and from t = 0 to t = 100.
+    # Davida will be in the time-box
+    # Diotima will overlap in time but not space
+    # Ceres will overlap in space but not time
+    response = client.put(
+        "api/v1/sso/new",
+        json={"MPC_id": 511, "name": "Davida"},
+    )
+    sso_id_1 = response.json()["sso_id"]
+    start_time = Time("2025-01-01T00:00:00.00", format="isot", scale="utc")
+    for i in range(3):
+        response = client.put(
+            "api/v1/ephem/new",
+            json={
+                "sso_id": sso_id_1,
+                "MPC_id": 511,
+                "name": "Davida",
+                "time": (start_time + (i * 100) * u.s).isot,
+                "position": {
+                    "ra": {"value": (1 + i), "unit": "deg"},
+                    "dec": {"value": (1 + i), "unit": "deg"},
+                },
+                "flux": {"value": 1.5, "unit": "mJy"},
+            },
+        )
+
+    response = client.put(
+        "api/v1/sso/new",
+        json={"MPC_id": 423, "name": "Diotima"},
+    )
+    sso_id_2 = response.json()["sso_id"]
+    for i in range(3):
+        response = client.put(
+            "api/v1/ephem/new",
+            json={
+                "sso_id": sso_id_2,
+                "MPC_id": 423,
+                "name": "Diotima",
+                "time": (start_time + (200 + i * 100) * u.s).isot,
+                "position": {
+                    "ra": {"value": (1 + i), "unit": "deg"},
+                    "dec": {"value": (1 + i), "unit": "deg"},
+                },
+                "flux": {"value": 0.5, "unit": "mJy"},
+            },
+        )
+
+    response = client.put(
+        "api/v1/sso/new",
+        json={"MPC_id": 1, "name": "Ceres"},
+    )
+    sso_id_3 = response.json()["sso_id"]
+    for i in range(3):
+        response = client.put(
+            "api/v1/ephem/new",
+            json={
+                "sso_id": sso_id_3,
+                "MPC_id": 1,
+                "name": "Ceres",
+                "time": (start_time + (i * 100) * u.s).isot,
+                "position": {
+                    "ra": {"value": (4 + i), "unit": "deg"},
+                    "dec": {"value": (4 + i), "unit": "deg"},
+                },
+                "flux": {"value": 2.5, "unit": "mJy"},
+            },
+        )
+
+    response = client.post(
+        "api/v1/sso/box",
+        json={
+            "lower_left": {
+                "ra": {"value": 0.0, "unit": "deg"},
+                "dec": {"value": 0.0, "unit": "deg"},
+            },
+            "upper_right": {
+                "ra": {"value": 3.0, "unit": "deg"},
+                "dec": {"value": 3.0, "unit": "deg"},
+            },
+            "t_min": "2025-01-01T00:00:00.00",
+            "t_max": "2025-01-01T00:01:40.00",
+        },
+    )
+    assert response.status_code == 200
+
+    id_list = [resp["sso_id"] for resp in response.json()]
+
+    assert sso_id_1 in id_list
+    assert sso_id_2 not in id_list
+    assert sso_id_3 not in id_list
+
+    for id in [sso_id_1, sso_id_2, sso_id_3]:
+        response = client.delete(f"api/v1/sso/{id}")
+        assert response.status_code == 200
+
+
 def test_bad_id(client):
     with pytest.raises(HTTPStatusError):
         response = client.get(f"api/v1/sso/{999999}")
@@ -116,7 +222,7 @@ def test_bad_id(client):
                 "sso_id": 1,
                 "MPC_id": 423,
                 "name": "Diotima",
-                "time": 987654321,
+                "time": "2025-01-01T00:00:00.00",
                 "position": {
                     "ra": {"value": 0.0, "unit": "deg"},
                     "dec": {"value": 0.0, "unit": "deg"},

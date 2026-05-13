@@ -2,10 +2,16 @@
 Core functionality providing access to the sso database.
 """
 
+from astropy.coordinates import ICRS
+from astropy.time import Time
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socat.database import SolarSystemObject, SolarSystemObjectTable
+from socat.database import (
+    SolarSystemObject,
+    SolarSystemObjectTable,
+    statements,
+)
 
 
 async def create_sso(
@@ -41,7 +47,7 @@ async def get_sso(sso_id: int, session: AsyncSession) -> SolarSystemObject:
 
     Parameters
     ----------
-    source_id :  int
+    sso_id :  int
         ID of source
     session : AsyncSession
         Asynchronous session to use
@@ -63,6 +69,43 @@ async def get_sso(sso_id: int, session: AsyncSession) -> SolarSystemObject:
         raise ValueError(f"Solar system source with ID {sso_id} not found.")
 
     return source
+
+
+async def get_box_sso(
+    lower_left: ICRS,
+    upper_right: ICRS,
+    t_min: Time,
+    t_max: Time,
+    session: AsyncSession,
+) -> list[SolarSystemObject]:
+    """
+
+    Equivelent of get_box for SSO objects. Only gets objects which have at least one ephem point
+    inside the box between t_min and t_max
+
+    Parameters
+    ----------
+    lower_left : ICRS
+        Lower left corner of box
+    upper_right : ICRS
+        Upper right corner of box
+    t_min : Time
+        Start time of box
+    t_max : Time
+        End time of box
+
+    Returns
+    -------
+    [s.to_model() for s in ssos.scalars()] : list[SolarSystemObject]
+        List of solarsystem objects in boundint time-box
+    """
+    ssos: SolarSystemObjectTable = await session.execute(
+        statements.get_box_sso(
+            lower_left=lower_left, upper_right=upper_right, t_min=t_min, t_max=t_max
+        )
+    )
+
+    return [s.to_model() for s in ssos.scalars()]
 
 
 async def get_sso_name(sso_name: str, session: AsyncSession) -> list[SolarSystemObject]:

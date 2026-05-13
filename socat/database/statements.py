@@ -7,6 +7,7 @@ from importlib import import_module
 
 import astropy.units as u
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
 from sqlmodel import select, update
@@ -70,13 +71,13 @@ def create_name(
         dec=result_dict["dec"] * u.deg,
     )
     flux = result_dict.get("flux", None)
-    if flux is not None:
+    if flux is not None:  # pragma: no cover
         flux *= u.mJy
 
     return position, name, flux
 
 
-def get_box(lower_left: ICRS, upper_right: ICRS) -> select:
+def get_box_fixed(lower_left: ICRS, upper_right: ICRS) -> select:
     """
     Get the box coordinates for a given lower left and upper right corner.
 
@@ -98,6 +99,49 @@ def get_box(lower_left: ICRS, upper_right: ICRS) -> select:
         RegisteredFixedSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
         float(lower_left.dec.to_value("deg")) <= RegisteredFixedSourceTable.dec_deg,
         RegisteredFixedSourceTable.dec_deg <= float(upper_right.dec.to_value("deg")),
+    )
+
+
+def get_box_sso(
+    lower_left: ICRS, upper_right: ICRS, t_min: Time, t_max: Time
+) -> select:
+    """
+    Equivelent of get_box for SSO objects. Only gets objects which have at least one ephem point
+    inside the box between t_min and t_max
+
+    Parameters
+    ----------
+    lower_left : ICRS
+        Lower left corner of box
+    upper_right : ICRS
+        Upper right corner of box
+    t_min : AstroPydanticTime
+        Start time of box
+    t_max : AstroPydanticTime
+        End time of box
+
+    Returns
+    -------
+    select:
+        Database statement.
+    """
+    return (
+        select(SolarSystemObjectTable)
+        .outerjoin(
+            RegisteredMovingSourceTable,
+            RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
+        )
+        .where(
+            t_min.datetime <= RegisteredMovingSourceTable.time,
+            RegisteredMovingSourceTable.time <= t_max.datetime,
+            float(lower_left.ra.to_value("deg")) <= RegisteredMovingSourceTable.ra_deg,
+            RegisteredMovingSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
+            float(lower_left.dec.to_value("deg"))
+            <= RegisteredMovingSourceTable.dec_deg,
+            RegisteredMovingSourceTable.dec_deg
+            <= float(upper_right.dec.to_value("deg")),
+        )
+        .distinct()
     )
 
 
@@ -269,7 +313,7 @@ def update_ephem(
     sso_id: int | None,
     MPC_id: int | None,
     name: str | None,
-    time: int | None,
+    time: Time | None,
     position: ICRS | None,
     flux: Quantity | None,
 ) -> update:
@@ -286,7 +330,7 @@ def update_ephem(
         The new MPC ID for the ephemeris point.
     name : str | None
         The new name for the ephemeris point.
-    time : int | None
+    time : Time | None
         The new time for the ephemeris point.
     position : ICRS | None
         The new position for the ephemeris point.
@@ -313,7 +357,7 @@ def update_ephem(
             "sso_id": sso_id,
             "MPC_id": MPC_id,
             "name": name,
-            "time": time,
+            "time": time.datetime if time is not None else None,
             "ra_deg": position.ra.to_value("deg") if position is not None else None,
             "dec_deg": position.dec.to_value("deg") if position is not None else None,
             "flux_mJy": flux.to_value("mJy") if flux is not None else None,
@@ -327,3 +371,37 @@ def update_ephem(
         raise ValueError(
             "At least one field must be provided to update the ephemeris point"
         )
+
+
+def get_ephem_points(sso_id: int, t_min: Time, t_max: Time) -> select:
+    """
+    Generate a select statement to get ephemeris points for a solar system object between t_min and t_max.
+
+    Parameters
+    ----------
+    sso_id : int
+        The ID of the solar system object to get ephemeris points for.
+    t_min : Time
+        The minimum time for ephemeris points to return.
+    t_max : Time
+        The maximum time for ephemeris points to return.
+
+    Returns
+    -------
+    select:
+        Database statement to get ephemeris points for the specified solar system object between t_min and t_max.
+
+    Raises
+    ------
+    ValueError
+        If t_min is greater than t_max.
+    """
+
+    if t_min > t_max:
+        raise ValueError("t_min must be less than or equal to t_max")
+
+    return select(RegisteredMovingSourceTable).where(
+        t_min.datetime <= RegisteredMovingSourceTable.time,
+        RegisteredMovingSourceTable.time <= t_max.datetime,
+        sso_id == RegisteredMovingSourceTable.sso_id,
+    )

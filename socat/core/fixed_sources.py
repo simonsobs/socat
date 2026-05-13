@@ -80,7 +80,7 @@ async def get_source(source_id: int, session: AsyncSession) -> RegisteredFixedSo
     return source.to_model()
 
 
-async def get_box(
+async def get_box_fixed(
     lower_left: ICRS,
     upper_right: ICRS,
     session: AsyncSession,
@@ -106,7 +106,7 @@ async def get_box(
     # comparisons raise TypeError: Boolean value of this clause is not defined
     # without the cast.
     sources = await session.execute(
-        statements.get_box(lower_left=lower_left, upper_right=upper_right)
+        statements.get_box_fixed(lower_left=lower_left, upper_right=upper_right)
     )
 
     return [s.to_model() for s in sources.scalars()]

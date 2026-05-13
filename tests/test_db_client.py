@@ -1,6 +1,7 @@
 import astropy.units as u
 import pytest
 from astropy.coordinates import ICRS
+from astropy.time import Time
 
 from socat.client.db import AstorqueryClient, EphemClient, SolarSystemClient
 
@@ -19,7 +20,10 @@ def test_fixed_source_crud_and_queries(db_client):
         flux=21.0 * u.mJy,
     )
 
-    full_box = client.get_box(
+    retreived_source_1 = client.get_source(source_id=source_1.source_id)
+    assert retreived_source_1.source_id == source_1.source_id
+
+    full_box = client.get_box_fixed(
         lower_left=ICRS(0.0 * u.deg, 0.0 * u.deg),
         upper_right=ICRS(3.0 * u.deg, 3.0 * u.deg),
     )
@@ -27,7 +31,7 @@ def test_fixed_source_crud_and_queries(db_client):
     assert source_1.source_id in full_ids
     assert source_2.source_id in full_ids
 
-    partial_box = client.get_box(
+    partial_box = client.get_box_fixed(
         lower_left=ICRS(0.0 * u.deg, 0.0 * u.deg),
         upper_right=ICRS(1.5 * u.deg, 1.5 * u.deg),
     )
@@ -52,6 +56,15 @@ def test_fixed_source_crud_and_queries(db_client):
     assert updated.name == "db-src-1-updated"
     assert updated.flux.value == 3.0
 
+    with pytest.raises(ValueError):
+        # Check no update raises error
+        client.update_source(
+            source_id=source_1.source_id,
+            position=None,
+            flux=None,
+            name=None,
+        )
+
     client.delete_source(source_id=source_1.source_id)
     client.delete_source(source_id=source_2.source_id)
     with pytest.raises(ValueError):
@@ -59,7 +72,8 @@ def test_fixed_source_crud_and_queries(db_client):
 
 
 def test_service_crud_and_lookup(db_client):
-    client = db_client.astroquery
+    source_client = db_client
+    client = source_client.astroquery
 
     service = client.create_service(
         name="Simbad",
@@ -71,6 +85,18 @@ def test_service_crud_and_lookup(db_client):
     assert retrieved is not None
     assert retrieved.service_id == service.service_id
 
+    source_1 = source_client.create_name(name="m1", astroquery_service=service.name)
+    assert source_1.name == "m1"
+    assert source_1.position.ra.value == 83.6324
+    assert source_1.position.dec.value == 22.0174
+
+    source_client.delete_source(source_id=source_1.source_id)
+
+    with pytest.raises(ValueError):
+        source_client.create_name(
+            name="NOT_A_REAL_SOURCE", astroquery_service=service.name
+        )
+
     updated = client.update_service(
         service_id=service.service_id,
         name="VizieR",
@@ -78,6 +104,10 @@ def test_service_crud_and_lookup(db_client):
     )
     assert updated is not None
     assert updated.name == "VizieR"
+
+    # Check null update doesn't work
+    with pytest.raises(ValueError):
+        client.update_service(service_id=999999, name=None, config=None)
 
     by_name = client.get_service_name(name="VizieR")
     assert by_name is not None
@@ -101,7 +131,7 @@ def test_sso_and_ephem_crud_and_cascade(db_client):
         sso_id=sso.sso_id,
         MPC_id=sso.MPC_id,
         name=sso.name,
-        time=123456789,
+        time=Time("2025-01-01T00:00:00.00"),
         position=ICRS(0.0 * u.deg, 0.0 * u.deg),
         flux=1.0 * u.mJy,
     )
@@ -114,19 +144,39 @@ def test_sso_and_ephem_crud_and_cascade(db_client):
     assert updated_sso is not None
     assert updated_sso.name == "db-diotima"
 
+    # Check no update raises error
+    with pytest.raises(ValueError):
+        sso_client.update_sso(
+            sso_id=sso.sso_id,
+            name=None,
+            MPC_id=None,
+        )
+
     updated_ephem = ephem_client.update_ephem(
         ephem_id=ephem.ephem_id,
         sso_id=sso.sso_id,
         MPC_id=4423,
         name="db-diotima",
-        time=987654321,
+        time=Time("2025-01-02T00:00:00.00"),
         position=ICRS(1.0 * u.deg, 1.0 * u.deg),
         flux=1.5 * u.mJy,
     )
     assert updated_ephem is not None
     assert updated_ephem.name == "db-diotima"
-    assert updated_ephem.time == 987654321
+    assert updated_ephem.time == Time("2025-01-02T00:00:00.00")
     assert updated_ephem.position.ra.value == 1.0
+
+    # Check no update raises error
+    with pytest.raises(ValueError):
+        ephem_client.update_ephem(
+            ephem_id=ephem.ephem_id,
+            sso_id=None,
+            MPC_id=None,
+            name=None,
+            time=None,
+            position=None,
+            flux=None,
+        )
 
     by_name = sso_client.get_sso_name(name="db-diotima")
     assert by_name is not None
@@ -141,6 +191,185 @@ def test_sso_and_ephem_crud_and_cascade(db_client):
         sso_client.get_sso(sso_id=sso.sso_id)
     with pytest.raises(ValueError):
         ephem_client.get_ephem(ephem_id=ephem.ephem_id)
+
+    # Now test get_box_sso
+
+    t_min = Time("2025-02-01T00:00:00.00")
+    t_max = t_min + 3 * u.h
+    lower_left = ICRS(0 * u.deg, 0 * u.deg)
+    upper_right = ICRS(4 * u.deg, 4 * u.deg)
+
+    davida = sso_client.create_sso(name="db-davida", MPC_id=511)
+    for i in range(10):
+        position = ICRS(i * u.deg, i * u.deg)
+        flux = (1.2 * i + 0.1) * u.mJy
+        time = t_min + i * u.h
+        ephem_client.create_ephem(
+            sso_id=davida.sso_id,
+            MPC_id=davida.MPC_id,
+            name=davida.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    diotima = sso_client.create_sso(name="Diotima", MPC_id=423)
+
+    for i in range(10):
+        position = ICRS(i * u.deg, i * u.deg)
+        flux = (0.5 * i + 0.1) * u.mJy
+        time = (
+            t_min + -9 * u.h + i * u.h
+        )  # Don't come into the box until after the end time of the box
+        ephem_client.create_ephem(
+            sso_id=diotima.sso_id,
+            MPC_id=diotima.MPC_id,
+            name=diotima.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    ceres = sso_client.create_sso(name="Ceres", MPC_id=1)
+
+    for i in range(10):
+        position = ICRS((i + 5) * u.deg, (i + 5) * u.deg)  # Never come into the box
+        flux = (2.5 * i + 0.1) * u.mJy
+        time = t_min + i * u.h
+        ephem_client.create_ephem(
+            sso_id=ceres.sso_id,
+            MPC_id=ceres.MPC_id,
+            name=ceres.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    sources = sso_client.get_box_sso(
+        lower_left=lower_left,
+        upper_right=upper_right,
+        t_min=t_min,
+        t_max=t_max,
+        ephem_cat=ephem_client,
+    )
+
+    assert davida in sources
+    assert diotima not in sources
+    assert ceres not in sources
+
+    sso_client.delete_sso(sso_id=davida.sso_id)
+    sso_client.delete_sso(sso_id=diotima.sso_id)
+    sso_client.delete_sso(sso_id=ceres.sso_id)
+
+
+def test_box(db_client):
+    client = db_client
+    sso_client = client.sso
+    ephem_client = client.ephem
+
+    start_time = Time("2025-01-01T00:00:00.00")
+
+    source_1 = client.create_source(
+        position=ICRS(1.0 * u.deg, 1.0 * u.deg),
+        name="db-src-1",
+        flux=1.0 * u.mJy,
+    )
+    source_2 = client.create_source(
+        position=ICRS(4.0 * u.deg, 4.0 * u.deg),
+        name="db-src-2",
+        flux=21.0 * u.mJy,
+    )
+    davida = sso_client.create_sso(name="db-davida", MPC_id=511)
+    for i in range(10):
+        position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
+        flux = (1.0 + i * 0.1) * u.mJy
+        time = start_time + i * u.h
+        ephem_client.create_ephem(
+            sso_id=davida.sso_id,
+            MPC_id=davida.MPC_id,
+            name=davida.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    diotima = sso_client.create_sso(name="db-diotima", MPC_id=423)
+    for i in range(10):
+        position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
+        flux = (0.5 * i + 0.1) * u.mJy
+        time = start_time + (11 + i) * u.h
+        ephem_client.create_ephem(
+            sso_id=diotima.sso_id,
+            MPC_id=diotima.MPC_id,
+            name=diotima.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    ceres = sso_client.create_sso(name="db-ceres", MPC_id=1)
+    for i in range(10):
+        position = ICRS((4 + i) * u.deg, (4 + i) * u.deg)
+        flux = (2.5 * i + 0.1) * u.mJy
+        time = start_time + i * u.h
+        ephem_client.create_ephem(
+            sso_id=ceres.sso_id,
+            MPC_id=ceres.MPC_id,
+            name=ceres.name,
+            time=time,
+            position=position,
+            flux=flux,
+        )
+
+    t_min = Time("2025-01-01T00:00:00.00")
+    t_max = t_min + 5 * u.h
+    lower_left = ICRS(0 * u.deg, 0 * u.deg)
+    upper_right = ICRS(3 * u.deg, 3 * u.deg)
+
+    source_gens = sso_client.get_box(
+        lower_left=lower_left,
+        upper_right=upper_right,
+        t_min=t_min,
+        t_max=t_max,
+        source_cat=client,
+        ephem_cat=ephem_client,
+    )
+
+    assert len(source_gens) == 2
+    assert source_gens[0].source.name == "db-src-1"
+    assert source_gens[1].source.name == "db-davida"
+
+    with pytest.raises(RuntimeError):
+        source_gens[0].at_time(t=Time("2025-01-02T00:00:00"))
+
+    source_gens[0].init_interp(ephem_cat=ephem_client)
+    assert source_gens[0].at_time(t=Time("2025-01-01T01:30:00")) == (
+        ICRS(1.0 * u.deg, 1.0 * u.deg),
+        1.0 * u.mJy,
+    )
+
+    source_gens[1].init_interp(ephem_cat=ephem_client)
+    assert source_gens[1].at_time(t=Time("2025-01-01T00:30:00")) == (
+        ICRS(1.5 * u.deg, 1.5 * u.deg),
+        1.05 * u.mJy,
+    )
+
+    with pytest.raises(ValueError):
+        source_gens[1].at_time(t=Time("2025-01-02T00:00:00"))
+
+    # Check that get_ephem_points also checks time bounds
+    with pytest.raises(ValueError):
+        ephem_client.get_ephem_points(
+            sso_id=diotima.sso_id,
+            t_min=Time("2025-01-02T00:00:00"),
+            t_max=Time("2025-01-01T00:00:00"),
+        )
+
+    sso_client.delete_sso(sso_id=davida.sso_id)
+    sso_client.delete_sso(sso_id=diotima.sso_id)
+    sso_client.delete_sso(sso_id=ceres.sso_id)
+    client.delete_source(source_id=source_1.source_id)
+    client.delete_source(source_id=source_2.source_id)
 
 
 def test_not_found_behavior(db_client):
@@ -190,7 +419,7 @@ def test_not_found_behavior(db_client):
             sso_id=1,
             MPC_id=1,
             name="x",
-            time=1,
+            time=Time("2025-01-01T00:00:00.00"),
             position=ICRS(0.0 * u.deg, 0.0 * u.deg),
             flux=1.0 * u.mJy,
         )
@@ -218,9 +447,12 @@ def test_direct_secondary_client_backcompat(database):
         sso_id=obj.sso_id,
         MPC_id=obj.MPC_id,
         name=obj.name,
-        time=42,
+        time=Time("2025-01-01T00:00:00.00"),
         position=ICRS(0.0 * u.deg, 0.0 * u.deg),
     )
 
     assert sso.get_sso(sso_id=obj.sso_id) is not None
     assert ephem.get_ephem(ephem_id=point.ephem_id) is not None
+
+    ephem.delete_ephem(ephem_id=point.ephem_id)
+    sso.delete_sso(sso_id=obj.sso_id)

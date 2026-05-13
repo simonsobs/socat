@@ -2,6 +2,7 @@
 The web API to access the socat moving source database.
 """
 
+from astropydantic import AstroPydanticICRS, AstroPydanticTime
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ValidationError
 
@@ -27,6 +28,28 @@ class SolarSystemObjectRequest(BaseModel):
 
     name: str
     MPC_id: int | None = None
+
+
+class TimeBoxRequest(BaseModel):
+    """
+    Class which defines attributes of box requests
+
+    Attributes
+    ----------
+    bottom_left : AstroPydanticICRS
+        Bottom left corner of box
+    top_right : AstroPydanticICRS
+        Top right corner of box
+    t_min : AstroPydanticTime
+        Start time of box
+    t_max : AstroPydanticTime
+        End time of box
+    """
+
+    lower_left: AstroPydanticICRS
+    upper_right: AstroPydanticICRS
+    t_min: AstroPydanticTime
+    t_max: AstroPydanticTime
 
 
 @router.put("/sso/new")
@@ -98,6 +121,55 @@ async def get_sso(sso_id: int, session: SessionDependency) -> SolarSystemObject:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     return response
+
+
+@router.post("/sso/box")
+async def get_box_sso(
+    box: TimeBoxRequest,
+    session: SessionDependency,
+) -> list[SolarSystemObject]:
+    """
+    Equivelent of fixed_sources.get_box for SSO objects. Only gets objects which have at least one ephem point
+    inside the box between t_min and t_max.
+
+    Parameters
+    ----------
+    box : TimeBoxRequest
+        Box to search for SSOs
+    session : SessionDependency
+        Asynchronous session to use
+
+    Returns
+    -------
+    response : list[SolarSystemObject]
+
+    Raises
+    ------
+    HTTPException
+        If unphysical box bounds or time bounds
+    """
+    if (
+        box.lower_left.ra > box.upper_right.ra
+        or box.lower_left.dec > box.upper_right.dec
+    ):  # pragma: no cover
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="RA/Dec min must be <= max",
+        )
+
+    if box.t_max <= box.t_min:  # pragma: no cover
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="t_min must be strictly less than t_max.",
+        )
+
+    return await core.get_box_sso(
+        lower_left=box.lower_left,
+        upper_right=box.upper_right,
+        t_min=box.t_min,
+        t_max=box.t_max,
+        session=session,
+    )
 
 
 @router.post("/sso/{sso_id}")

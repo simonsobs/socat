@@ -111,7 +111,9 @@ def test_get_box(client):
     assert id1 in id_list
     assert id2 not in id_list
 
-    for id in id_list:
+    all_ids = [id1, id2]
+
+    for id in all_ids:
         response = client.delete(f"api/v1/source/{id}")
         assert response.status_code == 200
 
@@ -156,10 +158,6 @@ def test_update(client):
 
 
 def test_bad_id(client):
-    # with pytest.raises(HTTPStatusError):
-    #    response = client.put("api/v1/source/new", json={"ra": None})
-    #    response.raise_for_status()
-
     with pytest.raises(HTTPStatusError):
         response = client.get(f"api/v1/source/{999999}")
         response.raise_for_status()

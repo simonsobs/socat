@@ -3,6 +3,7 @@ from pathlib import Path
 import astropy.units as u
 import pyarrow.parquet as pq
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socat import core
@@ -25,7 +26,7 @@ async def read_jpl(file_path: Path, my_session: AsyncSession):
             ast_df = table[table["designation"] == ast]
 
             for _, row in ast_df.iterrows():
-                time = (row["julian_day"] - 2440587.5) * 86400
+                time = Time(row["julian_day"], format="jd")
                 position = ICRS(ra=row["ra_deg"] * u.deg, dec=row["dec_deg"] * u.deg)
                 flux = row["flux_mJy"] * u.mJy if "flux_mJy" in row else None
 

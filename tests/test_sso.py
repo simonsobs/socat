@@ -5,6 +5,7 @@ Test the solar system object functions
 import astropy.units as u
 import pytest
 from astropy.coordinates import ICRS
+from astropy.time import Time
 
 from socat import core
 
@@ -18,6 +19,7 @@ async def test_database_exists(database_async_sessionmaker):
 async def test_add_and_retrieve(database_async_sessionmaker):
     position = ICRS(1 * u.deg, 1 * u.deg)
     flux = 1.5 * u.mJy
+    time = Time("2025-01-01T00:00:00.00")
     async with database_async_sessionmaker() as session:
         sso_id = (
             await core.create_sso(name="Davida", MPC_id=511, session=session)
@@ -28,7 +30,7 @@ async def test_add_and_retrieve(database_async_sessionmaker):
                 sso_id=sso_id,
                 MPC_id=511,
                 name="Davida",
-                time=123456789,
+                time=time,
                 position=position,
                 flux=flux,
                 session=session,
@@ -47,7 +49,7 @@ async def test_add_and_retrieve(database_async_sessionmaker):
     assert ephem.sso_id == sso_id
     assert ephem.MPC_id == 511
     assert ephem.name == "Davida"
-    assert ephem.time == 123456789
+    assert ephem.time.unix == 1735689600.0
     assert ephem.position.ra.value == 1.0
     assert ephem.position.dec.value == 1.0
     assert ephem.flux == flux
@@ -68,6 +70,23 @@ async def test_add_and_retrieve(database_async_sessionmaker):
     assert sso[0].name == "Davida"
     assert sso[0].MPC_id == 511
 
+    # Check individual ephem deletion works
+    async with database_async_sessionmaker() as session:
+        ephem_id = (
+            await core.create_ephem(
+                sso_id=sso_id,
+                MPC_id=511,
+                name="Davida",
+                time=time + 100 * u.s,
+                position=position,
+                flux=flux,
+                session=session,
+            )
+        ).ephem_id
+
+    async with database_async_sessionmaker() as session:
+        await core.delete_ephem(ephem_id, session=session)
+
     async with database_async_sessionmaker() as session:
         await core.delete_sso(sso_id, session=session)
 
@@ -83,6 +102,7 @@ async def test_add_and_retrieve(database_async_sessionmaker):
 async def test_update(database_async_sessionmaker):
     position = ICRS(1 * u.deg, 1 * u.deg)
     flux = 1.5 * u.mJy
+    time = Time("2025-01-01T00:00:00.00")
     async with database_async_sessionmaker() as session:
         sso_id = (
             await core.create_sso(name="Davida", MPC_id=511, session=session)
@@ -93,7 +113,7 @@ async def test_update(database_async_sessionmaker):
                 sso_id=sso_id,
                 MPC_id=511,
                 name="Davida",
-                time=123456789,
+                time=time,
                 position=position,
                 flux=flux,
                 session=session,
@@ -102,6 +122,7 @@ async def test_update(database_async_sessionmaker):
 
     position = ICRS(0 * u.deg, 0 * u.deg)
     flux = 2.5 * u.mJy
+    time = Time("2025-01-02T00:00:00.00")
     async with database_async_sessionmaker() as session:
         sso = await core.update_sso(
             sso_id=sso_id, name="Diotima", MPC_id=423, session=session
@@ -111,7 +132,7 @@ async def test_update(database_async_sessionmaker):
             sso_id=sso.sso_id,
             MPC_id=423,
             name="Diotima",
-            time=987654321,
+            time=time,
             position=position,
             flux=flux,
             session=session,
@@ -125,13 +146,101 @@ async def test_update(database_async_sessionmaker):
     assert ephem.sso_id == sso.sso_id
     assert ephem.MPC_id == 423
     assert ephem.name == "Diotima"
-    assert ephem.time == 987654321
+    assert ephem.time.unix == 1735776000.0
     assert ephem.position.ra.value == 0.0
     assert ephem.position.dec.value == 0.0
     assert ephem.flux == flux
 
     async with database_async_sessionmaker() as session:
         await core.delete_sso(sso_id, session=session)
+
+
+@pytest.mark.asyncio
+async def test_time_box(database_async_sessionmaker):
+    # Make three asteroids, on three trajectories, of which one will be in our box.
+    # Our box will run from 0 to 2  and from t = 0 to t = 100.
+    # Davida will be in the time-box
+    # Diotima will overlap in time but not space
+    # Ceres will overlap in space but not time
+    async with database_async_sessionmaker() as session:
+        sso_id_1 = (
+            await core.create_sso(name="Davida", MPC_id=511, session=session)
+        ).sso_id
+        flux = 1.5 * u.mJy
+        start_time = Time("2025-02-01T00:00:00.00")
+        for i in range(3):
+            position = ICRS(
+                (1 + i) * u.deg, (1 + i) * u.deg
+            )  # this is totally unphysical but who cares
+            time = start_time + (i * 100) * u.s
+            await core.create_ephem(
+                sso_id=sso_id_1,
+                MPC_id=511,
+                name="Davida",
+                time=time,
+                position=position,
+                flux=flux,
+                session=session,
+            )
+
+        sso_id_2 = (
+            await core.create_sso(name="Diotima", MPC_id=423, session=session)
+        ).sso_id
+        flux = 0.5 * u.mJy
+        for i in range(3):
+            position = ICRS(
+                (1 + i) * u.deg, (1 + i) * u.deg
+            )  # this is totally unphysical but who cares
+            time = start_time + (200 + i * 100) * u.s
+            await core.create_ephem(
+                sso_id=sso_id_2,
+                MPC_id=423,
+                name="Diotima",
+                time=time,
+                position=position,
+                flux=flux,
+                session=session,
+            )
+
+        sso_id_3 = (
+            await core.create_sso(name="Ceres", MPC_id=1, session=session)
+        ).sso_id
+        flux = 2.5 * u.mJy
+        for i in range(3):
+            position = ICRS(
+                (4 + i) * u.deg, (4 + i) * u.deg
+            )  # this is totally unphysical but who cares
+            time = start_time + (i * 100) * u.s
+            await core.create_ephem(
+                sso_id=sso_id_3,
+                MPC_id=1,
+                name="Ceres",
+                time=time,
+                position=position,
+                flux=flux,
+                session=session,
+            )
+
+    async with database_async_sessionmaker() as session:
+        lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
+        upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
+        t_min = start_time
+        t_max = start_time + 100 * u.s
+        ssos = await core.get_box_sso(
+            lower_left=lower_left,
+            upper_right=upper_right,
+            t_min=t_min,
+            t_max=t_max,
+            session=session,
+        )
+    assert len(ssos) == 1
+    assert ssos[0].name == "Davida"
+    assert ssos[0].MPC_id == 511
+
+    async with database_async_sessionmaker() as session:
+        await core.delete_sso(sso_id_1, session=session)
+        await core.delete_sso(sso_id_2, session=session)
+        await core.delete_sso(sso_id_3, session=session)
 
 
 @pytest.mark.asyncio
@@ -171,7 +280,7 @@ async def test_bad_id(database_async_sessionmaker):
                 sso_id=1,
                 name="Davida",
                 MPC_id=511,
-                time=123456789,
+                time=Time("2025-01-01T00:00:00.00"),
                 position=position,
                 flux=flux,
             )

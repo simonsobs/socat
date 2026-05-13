@@ -69,7 +69,7 @@ def upgrade() -> None:
             ),
             nullable=False,
         ),
-        sa.Column("time", sa.Integer, index=True, nullable=False),
+        sa.Column("time", sa.DateTime, index=True, nullable=False),
         sa.Column("ra_deg", sa.Float, nullable=False),
         sa.Column("dec_deg", sa.Float, nullable=False),
         sa.Column("flux_mJy", sa.Float, nullable=True),
