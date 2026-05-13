@@ -333,7 +333,7 @@ class EphemClient(EphemClientBase):
                 statements.get_ephem_points(sso_id=sso_id, t_min=t_min, t_max=t_max)
             )
 
-        return [e.to_model() for e in ephems.scalars().all()]
+            return [e.to_model() for e in ephems.scalars().all()]
 
     def update_ephem(
         self,
