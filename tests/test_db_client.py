@@ -357,6 +357,14 @@ def test_box(db_client):
     with pytest.raises(ValueError):
         source_gens[1].at_time(t=Time("2025-01-02T00:00:00"))
 
+    # Check that get_ephem_points also checks time bounds
+    with pytest.raises(ValueError):
+        ephem_client.get_ephem_points(
+            sso_id=diotima.sso_id,
+            t_min=Time("2025-01-02T00:00:00"),
+            t_max=Time("2025-01-01T00:00:00"),
+        )
+
     sso_client.delete_sso(sso_id=davida.sso_id)
     sso_client.delete_sso(sso_id=diotima.sso_id)
     sso_client.delete_sso(sso_id=ceres.sso_id)
