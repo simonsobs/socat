@@ -282,7 +282,7 @@ def test_box(db_client):
     davida = sso_client.create_sso(name="db-davida", MPC_id=511)
     for i in range(10):
         position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
-        flux = (1.2 * i + 0.1) * u.mJy
+        flux = (1.0 + i * 0.1) * u.mJy
         time = start_time + i * u.h
         ephem_client.create_ephem(
             sso_id=davida.sso_id,
@@ -351,7 +351,7 @@ def test_box(db_client):
     source_gens[1].init_interp(ephem_cat=ephem_client)
     assert source_gens[1].at_time(t=Time("2025-01-01T00:30:00")) == (
         ICRS(1.5 * u.deg, 1.5 * u.deg),
-        1.55 * u.mJy,
+        1.05 * u.mJy,
     )
 
     with pytest.raises(ValueError):
