@@ -75,7 +75,7 @@ def ingest_jpl_parquet_file(
         sso = client.sso.get_sso_MPC_id(MPC_id=mpc_id)[0]
 
         for _, row in tqdm(
-            rows[::10].iterrows(), desc=f"Ingesting {designation}", total=len(rows[:10])
+            rows.iterrows(), desc=f"Ingesting {designation}", total=len(rows)
         ):
             flux = 200 * u.mJy  # Default flux if not provided
             if "flux_mJy" in row.index and pd.notna(row["flux_mJy"]):
