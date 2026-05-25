@@ -77,17 +77,17 @@ def ingest_jpl_parquet_file(
         for _, row in tqdm(
             rows[::10].iterrows(), desc=f"Ingesting {designation}", total=len(rows[:10])
         ):
-            flux = None
+            flux = 200 * u.mJy  # Default flux if not provided
             if "flux_mJy" in row.index and pd.notna(row["flux_mJy"]):
                 flux = row["flux_mJy"] * u.mJy
 
-            unix_time = Time(row["julian_day"], format="jd").unix
+            unix_time = Time(row["julian_day"], format="jd")
 
             client.ephem.create_ephem(
                 sso_id=sso.sso_id,
                 MPC_id=mpc_id,
                 name=name,
-                time=int(unix_time),
+                time=unix_time,
                 position=ICRS(
                     ra=float(row["ra_deg"]) * u.deg,
                     dec=float(row["dec_deg"]) * u.deg,

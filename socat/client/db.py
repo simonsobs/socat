@@ -394,9 +394,13 @@ class SolarSystemClient(SolarSystemClientBase):
         engine: Engine | None = None,
         session_factory: sessionmaker | None = None,
     ):
+        if session_factory is None:
+            session_factory = create_sync_session_factory(
+                db_url=db_url,
+                engine=engine,
+            )
+        self._session_factory = session_factory
         self._get_session = create_sync_session_interface(
-            db_url=db_url,
-            engine=engine,
             session_factory=session_factory,
         )
 
@@ -463,7 +467,13 @@ class SolarSystemClient(SolarSystemClientBase):
         )
 
         return [
-            SourceGenerator(source=s, t_min=t_min, t_max=t_max, ephem_cat=ephem_cat)
+            SourceGenerator(
+                source=s,
+                t_min=t_min,
+                t_max=t_max,
+                ephem_cat=ephem_cat,
+                session_factory=self._session_factory,
+            )
             for s in fixed_sources + sso_sources
         ]
 
