@@ -1,7 +1,10 @@
 SOCAT
 =====
 
-The Simons Observatory source CATalog. Contains information about sources that the Simons Observatory is monitoring.
+The Source CATalog. 
+
+Contains information about sources that are being monitored by an obseratory, 
+or that are being used to crossmatch detected sources with.
 
 
 BUILDING YOUR VERY OWN SOCAT
