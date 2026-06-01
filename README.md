@@ -35,7 +35,7 @@ USING SOCAT
 
 Once sources are ingested into your db, you can use the socat to query sources within a box on the sky within some time range.
 
-Make sure you environment variables point to the correct db, as above.
+Make sure your environment variables point to the correct db, as above.
 
 ```
 from socat.client.settings import SOCatClientSettings
