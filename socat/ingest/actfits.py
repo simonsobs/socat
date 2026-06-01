@@ -30,6 +30,8 @@ def ingest_fits_file(
         Path to the ACT-compatible FITS point source file to load.
     hdu: int = 1
         The HDU in the file that corresponds to the sources table.
+    flux_threshold: u.Quantity = 100.0 * u.mJy
+        The flux threshold above which sources are considered for monitoring.
 
     Returns
     -------
