@@ -78,7 +78,7 @@ def ingest_jpl_parquet_file(
         sso = client.sso.get_sso_MPC_id(MPC_id=mpc_id)[0]
 
         for _, row in tqdm(
-            rows.iterrows()[::downsample],
+            rows[::downsample].iterrows(),
             desc=f"Ingesting {designation}",
             total=len(rows[::downsample]),
         ):
