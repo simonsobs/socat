@@ -34,10 +34,13 @@ class RegisteredFixedSource(RegisteredSource):
         Unique source identifier. Internal to SO
     name : str | None
         Name of source. Optional
+    monitored : bool
+        Whether this source is monitored by forced_photometry
     """
 
     source_id: int | None = None
     name: str | None  # Not a foreign key
+    monitored: bool = False
 
 
 class RegisteredMovingSource(RegisteredSource):
@@ -84,11 +87,14 @@ class SolarSystemObject(BaseModel):
         Minor Planet Center ID of ephem.
     name : str
         Name of source
+    monitored : bool
+        Whether this source is monitored by forced_photometry
     """
 
     sso_id: int
     MPC_id: int | None
     name: str
+    monitored: bool = False
 
 
 class RegisteredFixedSourceTable(SQLModel, table=True):
@@ -110,6 +116,7 @@ class RegisteredFixedSourceTable(SQLModel, table=True):
     dec_deg: float = Field(nullable=False)
     flux_mJy: float | None = Field(nullable=True)
     name: str = Field(index=True, nullable=True)
+    monitored: bool = Field(default=False, nullable=True)
 
     def to_model(self) -> RegisteredFixedSource:
         """
@@ -129,6 +136,7 @@ class RegisteredFixedSourceTable(SQLModel, table=True):
             position=ICRS(ra=self.ra_deg * u.deg, dec=self.dec_deg * u.deg),
             flux=flux,
             name=self.name,
+            monitored=self.monitored,
         )
 
 
@@ -144,6 +152,7 @@ class SolarSystemObjectTable(SolarSystemObject, SQLModel, table=True):
     sso_id: int = Field(primary_key=True)
     MPC_id: int | None = Field(index=True, nullable=True, unique=True)
     name: str = Field(index=True, nullable=False, unique=True)
+    monitored: bool = Field(default=False, nullable=True)
 
     def to_model(self) -> SolarSystemObject:
         """
@@ -158,6 +167,7 @@ class SolarSystemObjectTable(SolarSystemObject, SQLModel, table=True):
             sso_id=self.sso_id,
             MPC_id=self.MPC_id,
             name=self.name,
+            monitored=self.monitored,
         )
 
 

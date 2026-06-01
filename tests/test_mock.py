@@ -92,30 +92,53 @@ def test_box(mock_client):
 
 
 def test_photometry(mock_client):
-    position1 = ICRS(1.0 * u.deg, 1.0 * u.deg)
-    flux1 = 1.0 * u.mJy
-    source1 = mock_client.create_source(position=position1, name="mySrc", flux=flux1)
-    id1 = source1.source_id
-    position2 = ICRS(2.0 * u.deg, 2.0 * u.deg)
-    flux2 = 21.0 * u.mJy
-    source2 = mock_client.create_source(position=position2, name="mySrc2", flux=flux2)
-    id2 = source2.source_id
-    position3 = ICRS(3.0 * u.deg, 3.0 * u.deg)
-    flux3 = None
-    source3 = mock_client.create_source(position=position3, name="mySrc3", flux=flux3)
-    id3 = source3.source_id
+    # monitored, flux above threshold
+    s_mon_hi = mock_client.create_source(
+        position=ICRS(1.0 * u.deg, 1.0 * u.deg),
+        name="mon-hi",
+        flux=21.0 * u.mJy,
+        monitored=True,
+    )
+    # monitored, flux below threshold
+    s_mon_lo = mock_client.create_source(
+        position=ICRS(2.0 * u.deg, 2.0 * u.deg),
+        name="mon-lo",
+        flux=1.0 * u.mJy,
+        monitored=True,
+    )
+    # not monitored, flux above threshold
+    s_unmon_hi = mock_client.create_source(
+        position=ICRS(3.0 * u.deg, 3.0 * u.deg),
+        name="unmon-hi",
+        flux=21.0 * u.mJy,
+        monitored=False,
+    )
+    # not monitored, no flux
+    s_unmon_none = mock_client.create_source(
+        position=ICRS(4.0 * u.deg, 4.0 * u.deg),
+        name="unmon-none",
+        flux=None,
+        monitored=False,
+    )
 
-    sources = mock_client.get_forced_photometry_sources(minimum_flux=10.0 * u.mJy)
+    # Without minimum_flux: all monitored sources returned
+    all_monitored = mock_client.get_forced_photometry_sources()
+    all_ids = [s.source_id for s in all_monitored]
+    assert s_mon_hi.source_id in all_ids
+    assert s_mon_lo.source_id in all_ids
+    assert s_unmon_hi.source_id not in all_ids
+    assert s_unmon_none.source_id not in all_ids
 
-    id_list = [source.source_id for source in sources]
+    # With minimum_flux: only monitored sources above threshold
+    flux_filtered = mock_client.get_forced_photometry_sources(minimum_flux=10.0 * u.mJy)
+    filtered_ids = [s.source_id for s in flux_filtered]
+    assert s_mon_hi.source_id in filtered_ids
+    assert s_mon_lo.source_id not in filtered_ids
+    assert s_unmon_hi.source_id not in filtered_ids
+    assert s_unmon_none.source_id not in filtered_ids
 
-    assert id1 not in id_list
-    assert id2 in id_list
-    assert id3 not in id_list
-
-    mock_client.delete_source(source_id=id1)
-    mock_client.delete_source(source_id=id2)
-    mock_client.delete_source(source_id=id3)
+    for s in [s_mon_hi, s_mon_lo, s_unmon_hi, s_unmon_none]:
+        mock_client.delete_source(source_id=s.source_id)
 
 
 def test_add_and_remove_astroquery(mock_client):

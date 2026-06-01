@@ -82,7 +82,12 @@ class Client(ClientBase):
         return self._ephem
 
     def create_source(
-        self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
+        self,
+        *,
+        position: ICRS,
+        name: str | None = None,
+        flux: Quantity | None = None,
+        monitored: bool = False,
     ) -> RegisteredFixedSource:
         """
         Create a new source and add it to the catalog.
@@ -95,6 +100,8 @@ class Client(ClientBase):
             Flux of source.
         name : str | None, Default: None
             Name of source
+        monitored : bool, Default: False
+            Whether this source is monitored by forced_photometry
 
         Returns
         -------
@@ -108,6 +115,7 @@ class Client(ClientBase):
             position=position,
             flux=flux,
             name=name,
+            monitored=monitored,
         )
         self.catalog[self.n] = source
         self.n += 1
@@ -228,25 +236,28 @@ class Client(ClientBase):
         return self.catalog.get(source_id, None)
 
     def get_forced_photometry_sources(
-        self, *, minimum_flux: Quantity
+        self, *, minimum_flux: Quantity | None = None
     ) -> list[RegisteredFixedSource]:
         """
-        Get all sources that are used for forced photometry based on a minimum flux.
+        Get all monitored sources, optionally filtered to those above a minimum flux.
 
         Parameters
         ----------
-        minimum_flux : Quantity
-            Minimum flux for source to be included
+        minimum_flux : Quantity | None
+            If provided, additionally filter to sources with flux >= minimum_flux.
 
         Returns
         -------
-        filter : iterable[RegisteredFixedSource]
-            List of sources with flux greater than minimum_flux
+        list[RegisteredFixedSource]
+            List of monitored sources, filtered by flux if minimum_flux is given.
         """
-        return filter(
-            lambda x: x.flux is not None and x.flux >= minimum_flux,
-            self.catalog.values(),
-        )
+        sources = filter(lambda x: x.monitored, self.catalog.values())
+        if minimum_flux is not None:
+            sources = filter(
+                lambda x: x.flux is not None and x.flux >= minimum_flux,
+                sources,
+            )
+        return list(sources)
 
     def update_source(
         self,

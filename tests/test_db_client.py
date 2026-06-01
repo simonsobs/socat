@@ -39,10 +39,37 @@ def test_fixed_source_crud_and_queries(db_client):
     assert source_1.source_id in partial_ids
     assert source_2.source_id not in partial_ids
 
+    # monitored, flux above threshold
+    source_mon_hi = client.create_source(
+        position=ICRS(5.0 * u.deg, 5.0 * u.deg),
+        name="db-mon-hi",
+        flux=21.0 * u.mJy,
+        monitored=True,
+    )
+    # monitored, flux below threshold
+    source_mon_lo = client.create_source(
+        position=ICRS(6.0 * u.deg, 6.0 * u.deg),
+        name="db-mon-lo",
+        flux=1.0 * u.mJy,
+        monitored=True,
+    )
+    # not monitored, flux above threshold (source_2 already covers this)
+
+    # Without minimum_flux: all monitored sources returned
+    all_monitored = client.get_forced_photometry_sources()
+    all_monitored_ids = {src.source_id for src in all_monitored}
+    assert source_mon_hi.source_id in all_monitored_ids
+    assert source_mon_lo.source_id in all_monitored_ids
+    assert source_1.source_id not in all_monitored_ids
+    assert source_2.source_id not in all_monitored_ids
+
+    # With minimum_flux: only monitored sources above threshold
     forced = client.get_forced_photometry_sources(minimum_flux=10.0 * u.mJy)
     forced_ids = {src.source_id for src in forced}
+    assert source_mon_hi.source_id in forced_ids
+    assert source_mon_lo.source_id not in forced_ids
     assert source_1.source_id not in forced_ids
-    assert source_2.source_id in forced_ids
+    assert source_2.source_id not in forced_ids
 
     updated = client.update_source(
         source_id=source_1.source_id,

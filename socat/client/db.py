@@ -83,7 +83,12 @@ class Client(ClientBase):
         return self._ephem
 
     def create_source(
-        self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
+        self,
+        *,
+        position: ICRS,
+        name: str | None = None,
+        flux: Quantity | None = None,
+        monitored: bool = False,
     ) -> RegisteredFixedSource:
         if flux is not None:
             flux = flux.to_value("mJy")
@@ -93,6 +98,7 @@ class Client(ClientBase):
             dec_deg=position.dec.to_value("deg"),
             name=name,
             flux_mJy=flux,
+            monitored=monitored,
         )
         with self._get_session() as session:
             session.add(source)
@@ -129,7 +135,7 @@ class Client(ClientBase):
             return source.to_model()
 
     def get_forced_photometry_sources(
-        self, *, minimum_flux: Quantity
+        self, *, minimum_flux: Quantity | None = None
     ) -> list[RegisteredFixedSource]:
         with self._get_session() as session:
             sources = session.execute(

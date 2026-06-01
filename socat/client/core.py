@@ -22,7 +22,12 @@ from socat.database import (
 class ClientBase(ABC):
     @abstractmethod
     def create_source(
-        self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
+        self,
+        *,
+        position: ICRS,
+        name: str | None = None,
+        flux: Quantity | None = None,
+        monitored: bool = False,
     ) -> RegisteredFixedSource:
         """
         Create a new source in the catlaog.
@@ -59,10 +64,11 @@ class ClientBase(ABC):
 
     @abstractmethod
     def get_forced_photometry_sources(
-        self, *, minimum_flux: Quantity
+        self, *, minimum_flux: Quantity | None = None
     ) -> list[RegisteredFixedSource]:
         """
-        Get all sources that are used for forced photometry based on a minimum flux.
+        Get all sources that are monitored for forced photometry, optionally
+        filtered to those above a minimum flux.
         """
         return []  # pragma: no cover
 

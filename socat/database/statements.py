@@ -145,24 +145,29 @@ def get_box_sso(
     )
 
 
-def get_forced_photometry_sources(minimum_flux: Quantity) -> select:
+def get_forced_photometry_sources(minimum_flux: Quantity | None = None) -> select:
     """
-    Get sources for which to perform forced photometry, i.e. sources with flux
-    above a certain threshold.
+    Get sources for which to perform forced photometry, i.e. sources with
+    monitored=True, optionally filtered to those above a minimum flux.
 
     Parameters
     ----------
-    minimum_flux : Quantity
-        Minimum flux of sources to return
+    minimum_flux : Quantity | None
+        If provided, additionally filter to sources with flux >= minimum_flux.
 
     Returns
     -------
     select:
         Database statement.
     """
-    return select(RegisteredFixedSourceTable).where(
-        RegisteredFixedSourceTable.flux_mJy >= minimum_flux.to_value("mJy")
+    stmt = select(RegisteredFixedSourceTable).where(
+        RegisteredFixedSourceTable.monitored == True  # noqa: E712
     )
+    if minimum_flux is not None:
+        stmt = stmt.where(
+            RegisteredFixedSourceTable.flux_mJy >= minimum_flux.to_value("mJy")
+        )
+    return stmt
 
 
 def update_source(
