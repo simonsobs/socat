@@ -77,7 +77,7 @@ def ingest_jpl_parquet_file(
         for _, row in tqdm(
             rows.iterrows(), desc=f"Ingesting {designation}", total=len(rows)
         ):
-            flux = 200 * u.mJy  # Default flux if not provided
+            flux = None  # Default flux if not provided
             if "flux_mJy" in row.index and pd.notna(row["flux_mJy"]):
                 flux = row["flux_mJy"] * u.mJy
 
