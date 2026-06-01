@@ -150,6 +150,7 @@ class Client(ClientBase):
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
+        monitored: bool | None = None,
     ) -> RegisteredFixedSource | None:
         with self._get_session() as session:
             session.execute(
@@ -158,6 +159,7 @@ class Client(ClientBase):
                     position=position,
                     name=name,
                     flux=flux,
+                    monitored=monitored,
                 )
             )
             source = session.get(RegisteredFixedSourceTable, source_id)

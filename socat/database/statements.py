@@ -175,6 +175,7 @@ def update_source(
     position: ICRS | None = None,
     flux: Quantity | None = None,
     name: str | None = None,
+    monitored: bool | None = None,
 ) -> update:
     """
     Generate an update statement for a source.
@@ -189,6 +190,8 @@ def update_source(
         Flux of source. Optional.
     name : str | None
         Name of source. Optional.
+    monitored : bool | None
+        Whether this source is monitored by forced_photometry. Optional.
 
     Returns
     -------
@@ -211,6 +214,7 @@ def update_source(
             "dec_deg": position.dec.to_value("deg") if position is not None else None,
             "flux_mJy": flux.to_value("mJy") if flux is not None else None,
             "name": name,
+            "monitored": monitored,
         }.items()
         if v is not None
     }

@@ -14,6 +14,7 @@ async def create_source(
     session: AsyncSession,
     name: str | None = None,
     flux: Quantity | None = None,
+    monitored: bool = False,
 ) -> RegisteredFixedSource:
     """
     Create a new source in the database.
@@ -26,6 +27,8 @@ async def create_source(
         Flux of source. Optional.
     name : str | None
         Name of source. Optional.
+    monitored : bool
+        Whether this source is monitored by forced_photometry. Default False.
     session : AsyncSession
         Asynchronous session to use
 
@@ -42,6 +45,7 @@ async def create_source(
         dec_deg=position.dec.to_value("deg"),
         name=name,
         flux_mJy=flux,
+        monitored=monitored,
     )
 
     async with session.begin():
@@ -118,6 +122,7 @@ async def update_source(
     session: AsyncSession,
     flux: Quantity | None = None,
     name: str | None = None,
+    monitored: bool | None = None,
 ) -> RegisteredFixedSource:
     """
     Update a source in the database.
@@ -132,6 +137,8 @@ async def update_source(
         Asynchronous session to use
     name : str | None
         Name of source
+    monitored : bool | None
+        Whether this source is monitored by forced_photometry. Optional.
 
     Returns
     -------
@@ -151,6 +158,7 @@ async def update_source(
                 position=position,
                 flux=flux,
                 name=name,
+                monitored=monitored,
             )
         )
 

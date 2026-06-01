@@ -266,6 +266,7 @@ class Client(ClientBase):
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
+        monitored: bool | None = None,
     ) -> RegisteredFixedSource | None:
         """
         Update a source by id
@@ -278,6 +279,8 @@ class Client(ClientBase):
             Name of source
         flux : Quantity | None, Default: None
             Flux of source
+        monitored : bool | None, Default: None
+            Whether this source is monitored by forced_photometry
 
         Returns
         -------
@@ -294,6 +297,7 @@ class Client(ClientBase):
             position=current.position if position is None else position,
             name=current.name if name is None else name,
             flux=current.flux if flux is None else flux,
+            monitored=current.monitored if monitored is None else monitored,
         )
 
         self.catalog[source_id] = new

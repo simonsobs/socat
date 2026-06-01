@@ -80,6 +80,7 @@ class ClientBase(ABC):
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
+        monitored: bool | None = None,
     ) -> RegisteredFixedSource | None:
         """
         Update a source. If the source is updated, return its new value. Else, return None.
