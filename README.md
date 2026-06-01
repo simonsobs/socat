@@ -27,7 +27,7 @@ Once created, you can add sources via the following example ingest scripts:
 
  `socat-jpl-parquet` was written to read in a parquet file containing JPL Horizons ephemerides for solar system objects.
 
- These scripts store either FixedRegisteredSources, or SolarSystemObjects. 
+ These scripts store either RegisteredFixedSources, or SolarSystemObjects. 
 
 
 USING SOCAT
