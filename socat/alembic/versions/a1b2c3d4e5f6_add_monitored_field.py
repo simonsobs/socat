@@ -22,11 +22,15 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.add_column(
         "fixed_sources",
-        sa.Column("monitored", sa.Boolean, nullable=True),
+        sa.Column("monitored", sa.Boolean, nullable=False, server_default=sa.false()),
     )
+    op.execute("UPDATE fixed_sources SET monitored = false WHERE monitored IS NULL")
     op.add_column(
         "solarsystem_objects",
-        sa.Column("monitored", sa.Boolean, nullable=True),
+        sa.Column("monitored", sa.Boolean, nullable=False, server_default=sa.false()),
+    )
+    op.execute(
+        "UPDATE solarsystem_objects SET monitored = false WHERE monitored IS NULL"
     )
 
 
