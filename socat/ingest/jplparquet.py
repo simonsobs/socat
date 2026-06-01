@@ -98,6 +98,7 @@ def ingest_jpl_parquet_file(
                     dec=float(row["dec_deg"]) * u.deg,
                 ),
                 flux=flux,
+                monitored=True,  ## all ssos monitored
             )
             number_of_ephems += 1
 

@@ -17,6 +17,7 @@ def ingest_fits_file(
     client: ClientBase,
     filename: Path,
     hdu: int = 1,
+    flux_threshold: u.Quantity = 100.0 * u.mJy,
 ) -> int:
     """
     Ingest a FITS file into the provided SOCat client.
@@ -48,6 +49,7 @@ def ingest_fits_file(
             ),
             flux=row["fluxJy"] * u.Jy,
             name=row["name"],
+            monitored=row["fluxJy"] * u.Jy >= flux_threshold,
         )
 
         number_of_sources += 1
@@ -68,6 +70,13 @@ def main():  # pragma: no cover
         type=Path,
         help="Input FITS file conforming to the ACT point source standard",
         required=True,
+    )
+
+    parser.add_argument(
+        "--monitored-flux-threshold-mJy",
+        type=float,
+        help="Flux threshold above which sources are considered monitored",
+        default=100.0,
     )
 
     parser.add_argument(
@@ -95,7 +104,11 @@ def main():  # pragma: no cover
         else:
             output_path = None
 
-    number_of_sources = ingest_fits_file(client=client, filename=args.file)
+    number_of_sources = ingest_fits_file(
+        client=client,
+        filename=args.file,
+        flux_threshold=args.monitored_flux_threshold_mJy * u.mJy,
+    )
 
     print(f"Ingested {number_of_sources} sources")
 
