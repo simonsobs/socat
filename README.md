@@ -3,7 +3,7 @@ SOCAT
 
 The Source CATalog. 
 
-Contains information about sources that are being monitored by an obseratory, 
+Contains information about sources that are being monitored by an observatory, 
 or that are being used to crossmatch detected sources with.
 
 
