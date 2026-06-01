@@ -116,7 +116,7 @@ class RegisteredFixedSourceTable(SQLModel, table=True):
     dec_deg: float = Field(nullable=False)
     flux_mJy: float | None = Field(nullable=True)
     name: str = Field(index=True, nullable=True)
-    monitored: bool = Field(default=False, nullable=True)
+    monitored: bool = Field(default=False, nullable=False)
 
     def to_model(self) -> RegisteredFixedSource:
         """
@@ -152,7 +152,7 @@ class SolarSystemObjectTable(SolarSystemObject, SQLModel, table=True):
     sso_id: int = Field(primary_key=True)
     MPC_id: int | None = Field(index=True, nullable=True, unique=True)
     name: str = Field(index=True, nullable=False, unique=True)
-    monitored: bool = Field(default=False, nullable=True)
+    monitored: bool = Field(default=False, nullable=False)
 
     def to_model(self) -> SolarSystemObject:
         """
