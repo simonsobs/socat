@@ -73,7 +73,9 @@ def ingest_jpl_parquet_file(
 
     for designation, rows in data.groupby("designation", sort=False):
         mpc_id, name = _parse_designation(designation)
-        client.sso.create_sso(name=name, MPC_id=mpc_id)
+        client.sso.create_sso(
+            name=name, MPC_id=mpc_id, monitored=True
+        )  ## ASSUME ALL JPL OBJECTS ARE MONITORED FOR NOW
         number_of_ssos += 1
         sso = client.sso.get_sso_MPC_id(MPC_id=mpc_id)[0]
 
@@ -98,7 +100,6 @@ def ingest_jpl_parquet_file(
                     dec=float(row["dec_deg"]) * u.deg,
                 ),
                 flux=flux,
-                monitored=True,  ## all ssos monitored
             )
             number_of_ephems += 1
 
