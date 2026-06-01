@@ -584,11 +584,19 @@ class SourceGenerator(SourceGeneratorBase):
         if type(self.source) is RegisteredFixedSource:
             self.ra_unit = self.source.position.ra.unit
             self.dec_unit = self.source.position.dec.unit
-            self.flux_unit = self.source.flux.unit
+            self.do_flux = self.source.flux is not None
+            self.flux_unit = self.source.flux.unit if self.do_flux else None
             self.interp = lambda _: (
-                self.source.position.ra.value,
-                self.source.position.dec.value,
-                self.source.flux.value,
+                (
+                    self.source.position.ra.value,
+                    self.source.position.dec.value,
+                    self.source.flux.value,
+                )
+                if self.do_flux
+                else (
+                    self.source.position.ra.value,
+                    self.source.position.dec.value,
+                )
             )
 
         elif type(self.source) is SolarSystemObject:
@@ -596,18 +604,33 @@ class SourceGenerator(SourceGeneratorBase):
                 sso_id=self.source.sso_id, t_min=self.t_min, t_max=self.t_max
             )
             x = np.zeros(len(ephem_points))
-            y = np.zeros((len(ephem_points), 3))
+
+            self.do_flux = True
+            for ephem in ephem_points:
+                if ephem.flux is None:
+                    self.do_flux = False
+                    break
+
+            if self.do_flux:
+                y = np.zeros((len(ephem_points), 3))
+            else:
+                y = np.zeros((len(ephem_points), 2))
+
             for i, ephem in enumerate(ephem_points):
                 x[i] = ephem.time.unix
                 y[i] = (
-                    ephem.position.ra.value,
-                    ephem.position.dec.value,
-                    ephem.flux.value,
+                    (
+                        ephem.position.ra.value,
+                        ephem.position.dec.value,
+                        ephem.flux.value,
+                    )
+                    if self.do_flux
+                    else (ephem.position.ra.value, ephem.position.dec.value)
                 )
 
             self.ra_unit = ephem.position.ra.unit
             self.dec_unit = ephem.position.dec.unit
-            self.flux_unit = ephem.flux.unit
+            self.flux_unit = ephem.flux.unit if self.do_flux else None
             self.interp = make_interp_spline(x, y, k=1)
 
     def at_time(self, *, t: Time) -> tuple[ICRS, Quantity]:
@@ -641,9 +664,13 @@ class SourceGenerator(SourceGeneratorBase):
         if t < self.t_min or t > self.t_max:
             raise ValueError("Time out of range for source generator")
 
-        ra_deg, dec_deg, flux_mJy = self.interp(t.unix)
+        if self.do_flux:
+            ra_deg, dec_deg, flux_mJy = self.interp(t.unix)
+            flux = flux_mJy * self.flux_unit
+        else:
+            ra_deg, dec_deg = self.interp(t.unix)
+            flux = None
 
         position = ICRS(ra_deg * self.ra_unit, dec_deg * self.dec_unit)
-        flux = flux_mJy * self.flux_unit
 
         return (position, flux)
