@@ -43,11 +43,19 @@ class SourceGenerator:
         if type(self.source) is RegisteredFixedSource:
             self.ra_unit = self.source.position.ra.unit
             self.dec_unit = self.source.position.dec.unit
-            self.flux_unit = self.source.flux.unit
+            self.do_flux = self.source.flux is not None
+            self.flux_unit = self.source.flux.unit if self.do_flux else None
             self.interp = lambda _: (
-                self.source.position.ra.value,
-                self.source.position.dec.value,
-                self.source.flux.value,
+                (
+                    self.source.position.ra.value,
+                    self.source.position.dec.value,
+                    self.source.flux.value,
+                )
+                if self.do_flux
+                else (
+                    self.source.position.ra.value,
+                    self.source.position.dec.value,
+                )
             )
 
         elif type(self.source) is SolarSystemObject:
@@ -55,18 +63,36 @@ class SourceGenerator:
                 self.source, t_min=self.t_min, t_max=self.t_max, session=session
             )
             x = np.zeros(len(ephems))
-            y = np.zeros((len(ephems), 3))
+
+            self.do_flux = True
+            for ephem in ephems:  # TODO: please someone have a better way to do this than looping through the ephems twice
+                if ephem.flux is None:
+                    self.do_flux = False
+                    break
+
+            if self.do_flux:
+                y = np.zeros((len(ephems), 3))
+            else:
+                y = np.zeros((len(ephems), 2))
+
             for i, ephem in enumerate(ephems):
                 x[i] = ephem.time.unix
                 y[i] = (
-                    ephem.position.ra.value,
-                    ephem.position.dec.value,
-                    ephem.flux.value,
+                    (
+                        ephem.position.ra.value,
+                        ephem.position.dec.value,
+                        ephem.flux.value,
+                    )
+                    if self.do_flux
+                    else (
+                        ephem.position.ra.value,
+                        ephem.position.dec.value,
+                    )
                 )
 
             self.ra_unit = ephem.position.ra.unit  # This assumes all ephem points have same units but this should probably be enforced upstream anyway.
             self.dec_unit = ephem.position.dec.unit
-            self.flux_unit = ephem.flux.unit
+            self.flux_unit = ephem.flux.unit if self.do_flux else None
             self.interp = make_interp_spline(x, y, k=1)
 
     # @lru_cache(maxsize=128)  # This can cause memory leaks so we might not want it
@@ -100,8 +126,12 @@ class SourceGenerator:
                 f"Error, requested t={t} outside initialized bounds {self.t_min}-{self.t_max}"
             )
 
-        ra, dec, flux = self.interp(t.unix)
+        if self.do_flux:
+            ra, dec, flux = self.interp(t.unix)
+            flux = flux * self.flux_unit if flux != 0 else None
+        else:
+            ra, dec = self.interp(t.unix)
+            flux = None
         position = ICRS(ra=ra * self.ra_unit, dec=dec * self.dec_unit)
-        flux = flux * self.flux_unit
 
         return (position, flux)
