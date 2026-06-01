@@ -410,8 +410,10 @@ class SolarSystemClient(SolarSystemClientBase):
             session_factory=session_factory,
         )
 
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
-        source = SolarSystemObjectTable(name=name, MPC_id=MPC_id)
+    def create_sso(
+        self, *, name: str, MPC_id: int | None, monitored: bool = False
+    ) -> SolarSystemObject:
+        source = SolarSystemObjectTable(name=name, MPC_id=MPC_id, monitored=monitored)
 
         with self._get_session() as session:
             session.add(source)

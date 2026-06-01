@@ -225,7 +225,9 @@ class EphemClientBase(ABC):
 
 class SolarSystemClientBase(ABC):
     @abstractmethod
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
+    def create_sso(
+        self, *, name: str, MPC_id: int | None, monitored: bool = False
+    ) -> SolarSystemObject:
         """
         Create a new solar system source in the catalog.
         """

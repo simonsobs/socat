@@ -698,7 +698,9 @@ class SolarSystemClient(SolarSystemClientBase):
         self.catalog = {}
         self.n = 0
 
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
+    def create_sso(
+        self, *, name: str, MPC_id: int | None, monitored: bool = False
+    ) -> SolarSystemObject:
         """
         Create a new solar system source.
 
@@ -708,13 +710,17 @@ class SolarSystemClient(SolarSystemClientBase):
             Name of source
         MPC_id : int
             Minor Planet Center ID of source
+        monitored : bool, Default: False
+            Whether this source is monitored by forced_photometry
 
         Returns
         -------
         solar_source : SolarSystemObject
             Solar system source that was added.
         """
-        solar_source = SolarSystemObject(sso_id=self.n, name=name, MPC_id=MPC_id)
+        solar_source = SolarSystemObject(
+            sso_id=self.n, name=name, MPC_id=MPC_id, monitored=monitored
+        )
         self.catalog[self.n] = solar_source
         self.n += 1
 
