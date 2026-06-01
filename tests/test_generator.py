@@ -251,3 +251,59 @@ async def test_get_box(database_async_sessionmaker):
             await core.delete_sso(source.sso_id, session=session)
         for source in fixed_sources:
             await core.delete_source(source.source_id, session=session)
+
+
+@pytest.mark.asyncio
+async def test_none_behavior(database_async_sessionmaker):
+    # Check that if we have a source with no flux, then the interp returns just ra/dec and not ra/dec/flux
+    async with database_async_sessionmaker() as session:
+        position = ICRS(1 * u.deg, 1 * u.deg)
+        source = await core.create_source(
+            position,
+            session=session,
+            name="mySrc",
+            flux=None,
+        )
+        gen = generator.SourceGenerator(
+            source, Time("2025-01-01T00:00:00.00"), Time("2026-01-01T00:00:00.00")
+        )
+        await gen.init_interp(session=session)
+
+    position, flux = gen.at_time(t=Time("2025-06-01T00:00:00.000000"))
+
+    assert position.ra.value == 1
+    assert position.dec.value == 1
+    assert flux is None
+    assert gen.flux_unit is None
+    assert gen.do_flux is False
+
+    async with database_async_sessionmaker() as session:
+        await core.delete_source(source.source_id, session=session)
+
+    async with database_async_sessionmaker() as session:
+        sso = await core.create_sso(name="Davida", MPC_id=511, session=session)
+        for i in range(10):
+            position = ICRS(i * u.deg, 1.5 * i * u.deg)
+            time = Time("2025-02-01T00:00:00.00") + (100 * i) * u.s
+            await core.create_ephem(
+                sso_id=sso.sso_id,
+                MPC_id=511,
+                name="Davida",
+                time=time,
+                position=position,
+                flux=None,
+                session=session,
+            )
+        gen = generator.SourceGenerator(
+            sso, Time("2025-01-01T00:00:00.00"), Time("2026-01-01T00:00:00.00")
+        )
+        await gen.init_interp(session=session)
+
+    position, flux = gen.at_time(Time("2025-02-01 00:04:10.000000"))
+
+    assert flux is None
+    assert gen.flux_unit is None
+    assert gen.do_flux is False
+
+    async with database_async_sessionmaker() as session:
+        await core.delete_sso(sso.sso_id, session=session)
