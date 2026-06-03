@@ -170,6 +170,21 @@ def get_forced_photometry_sources(minimum_flux: Quantity | None = None) -> selec
     return stmt
 
 
+def get_forced_photometry_ssos() -> select:
+    """
+    Get solar system objects for which to perform forced photometry, i.e. SSOs
+    with monitored=True.
+
+    Returns
+    -------
+    select:
+        Database statement.
+    """
+    return select(SolarSystemObjectTable).where(
+        SolarSystemObjectTable.monitored == True  # noqa: E712
+    )
+
+
 def update_source(
     source_id: int,
     position: ICRS | None = None,

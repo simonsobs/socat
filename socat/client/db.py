@@ -60,6 +60,7 @@ class Client(ClientBase):
                 engine=engine,
             )
 
+        self._session_factory = session_factory
         self._get_session = create_sync_session_interface(
             db_url=db_url,
             engine=engine,
@@ -127,6 +128,23 @@ class Client(ClientBase):
 
             return [s.to_model() for s in sources.scalars().all()]
 
+    def get_box(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+    ) -> list["SourceGenerator"]:
+        return self._sso.get_box(
+            lower_left=lower_left,
+            upper_right=upper_right,
+            t_min=t_min,
+            t_max=t_max,
+            source_cat=self,
+            ephem_cat=self._ephem,
+        )
+
     def get_source(self, *, source_id: int) -> RegisteredFixedSource | None:
         with self._get_session() as session:
             source = session.get(RegisteredFixedSourceTable, source_id)
@@ -135,13 +153,30 @@ class Client(ClientBase):
             return source.to_model()
 
     def get_forced_photometry_sources(
-        self, *, minimum_flux: Quantity | None = None
-    ) -> list[RegisteredFixedSource]:
+        self,
+        *,
+        t_min: Time,
+        t_max: Time,
+        minimum_flux: Quantity | None = None,
+    ) -> list["SourceGenerator"]:
         with self._get_session() as session:
-            sources = session.execute(
+            fixed = session.execute(
                 statements.get_forced_photometry_sources(minimum_flux=minimum_flux)
             )
-            return [s.to_model() for s in sources.scalars().all()]
+            ssos = session.execute(statements.get_forced_photometry_ssos())
+            all_sources = [s.to_model() for s in fixed.scalars().all()] + [
+                s.to_model() for s in ssos.scalars().all()
+            ]
+        return [
+            SourceGenerator(
+                source=s,
+                t_min=t_min,
+                t_max=t_max,
+                ephem_cat=self._ephem,
+                session_factory=self._session_factory,
+            )
+            for s in all_sources
+        ]
 
     def update_source(
         self,

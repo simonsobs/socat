@@ -1,6 +1,7 @@
 import astropy.units as u
 import pytest
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from astroquery.exceptions import NoResultsWarning
 
 
@@ -121,17 +122,22 @@ def test_photometry(mock_client):
         monitored=False,
     )
 
+    t_min = Time("2020-01-01")
+    t_max = Time("2020-12-31")
+
     # Without minimum_flux: all monitored sources returned
-    all_monitored = mock_client.get_forced_photometry_sources()
-    all_ids = [s.source_id for s in all_monitored]
+    all_monitored = mock_client.get_forced_photometry_sources(t_min=t_min, t_max=t_max)
+    all_ids = [s.source.source_id for s in all_monitored]
     assert s_mon_hi.source_id in all_ids
     assert s_mon_lo.source_id in all_ids
     assert s_unmon_hi.source_id not in all_ids
     assert s_unmon_none.source_id not in all_ids
 
     # With minimum_flux: only monitored sources above threshold
-    flux_filtered = mock_client.get_forced_photometry_sources(minimum_flux=10.0 * u.mJy)
-    filtered_ids = [s.source_id for s in flux_filtered]
+    flux_filtered = mock_client.get_forced_photometry_sources(
+        t_min=t_min, t_max=t_max, minimum_flux=10.0 * u.mJy
+    )
+    filtered_ids = [s.source.source_id for s in flux_filtered]
     assert s_mon_hi.source_id in filtered_ids
     assert s_mon_lo.source_id not in filtered_ids
     assert s_unmon_hi.source_id not in filtered_ids

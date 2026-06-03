@@ -11,9 +11,10 @@ from pydantic import BaseModel, ValidationError
 import socat.astroquery as soaq
 from socat import core
 from socat.astroquery import AstroqueryReturn
+from socat.database import statements
 from socat.database.session import SessionDependency
 
-from ...database.sources import RegisteredFixedSource
+from ...database.sources import RegisteredFixedSource, SolarSystemObject
 from .services import get_service_name
 
 router = APIRouter(prefix="/api/v1")
@@ -31,11 +32,14 @@ class SourceModificationRequest(BaseModel):
         Flux of source.
     name : str | None
         Name of source
+    monitored : bool | None
+        Whether this source is monitored for forced photometry
     """
 
     position: AstroPydanticICRS | None
     flux: AstroPydanticQuantity[u.mJy] | None
     name: str | None = None
+    monitored: bool | None = None
 
 
 class BoxRequest(BaseModel):
@@ -105,6 +109,7 @@ async def create_source(
             flux=model.flux,
             session=session,
             name=model.name,
+            monitored=model.monitored or False,
         )
     except ValidationError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
@@ -315,12 +320,50 @@ async def update_source(
     """
     try:
         response = await core.update_source(
-            source_id, model.position, session=session, flux=model.flux, name=model.name
+            source_id,
+            model.position,
+            session=session,
+            flux=model.flux,
+            name=model.name,
+            monitored=model.monitored,
         )
     except ValueError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     return response
+
+
+@router.get("/source/forced_photometry")
+async def get_forced_photometry(
+    session: SessionDependency,
+    minimum_flux_mJy: float | None = None,
+) -> list[RegisteredFixedSource | SolarSystemObject]:
+    """
+    Get all monitored sources for forced photometry.
+
+    Returns both fixed sources and solar system objects with monitored=True.
+    Fixed sources can optionally be filtered to those above minimum_flux_mJy.
+
+    Parameters
+    ----------
+    session : SessionDependency
+        Asynchronous session to use
+    minimum_flux_mJy : float | None
+        If provided, additionally filter fixed sources to those with flux >= this value (mJy).
+
+    Returns
+    -------
+    list[RegisteredFixedSource | SolarSystemObject]
+        All monitored sources.
+    """
+    minimum_flux = minimum_flux_mJy * u.mJy if minimum_flux_mJy is not None else None
+    fixed_result = await session.execute(
+        statements.get_forced_photometry_sources(minimum_flux=minimum_flux)
+    )
+    sso_result = await session.execute(statements.get_forced_photometry_ssos())
+    return [s.to_model() for s in fixed_result.scalars()] + [
+        s.to_model() for s in sso_result.scalars()
+    ]
 
 
 @router.delete("/source/{source_id}")

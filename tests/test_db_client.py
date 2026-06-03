@@ -55,17 +55,22 @@ def test_fixed_source_crud_and_queries(db_client):
     )
     # not monitored, flux above threshold (source_2 already covers this)
 
+    t_min = Time("2020-01-01")
+    t_max = Time("2020-12-31")
+
     # Without minimum_flux: all monitored sources returned
-    all_monitored = client.get_forced_photometry_sources()
-    all_monitored_ids = {src.source_id for src in all_monitored}
+    all_monitored = client.get_forced_photometry_sources(t_min=t_min, t_max=t_max)
+    all_monitored_ids = {src.source.source_id for src in all_monitored}
     assert source_mon_hi.source_id in all_monitored_ids
     assert source_mon_lo.source_id in all_monitored_ids
     assert source_1.source_id not in all_monitored_ids
     assert source_2.source_id not in all_monitored_ids
 
     # With minimum_flux: only monitored sources above threshold
-    forced = client.get_forced_photometry_sources(minimum_flux=10.0 * u.mJy)
-    forced_ids = {src.source_id for src in forced}
+    forced = client.get_forced_photometry_sources(
+        t_min=t_min, t_max=t_max, minimum_flux=10.0 * u.mJy
+    )
+    forced_ids = {src.source.source_id for src in forced}
     assert source_mon_hi.source_id in forced_ids
     assert source_mon_lo.source_id not in forced_ids
     assert source_1.source_id not in forced_ids

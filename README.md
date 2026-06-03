@@ -46,21 +46,17 @@ from astropy import units as u
 settings = SOCatClientSettings()
 catalog = settings.client
 
-sso_client = catalog.sso
-ephem_client = catalog.ephem
 
 sky_box = [
     SkyCoord(ra=0*u.deg,dec=-20*u.deg),
     SkyCoord(ra=120*u.deg,dec=20*u.deg)
 ]
 
-results = sso_client.get_box(
+results = catalog.get_box(
     lower_left=sky_box[0],
     upper_right=sky_box[1],
     t_min=Time("2019-06-08T00:00:00Z"),
     t_max=Time("2019-06-11T12:00:00Z"),
-    source_cat=catalog,
-    ephem_cat=ephem_client,
 )
 
 ```
@@ -81,6 +77,18 @@ sources = [r.at_time(t=t) for r in results]
 
 So that each element of sources is a tuple of (position, flux) with position given as a SkyCoord object.
 In this way, you can query fixed astrophysical sources and moving objects in the same unified calls.
+
+You can also query forced photometry sources that include solar system objects via
+
+```
+results = catalog.get_forced_photometry_sources( 
+    t_min=Time("2019-06-08T00:00:00Z"),
+    t_max=Time("2019-06-11T12:00:00Z"),
+)
+```
+
+You may also specify `minimum_flux` as an argument and limit the fixed sources to only sources above a certain flux.
+This does not (yet) apply for solarsystem objects because we don't have fluxes for them.
 
 The sotrplib library (github.com/simonsobs/sotrplib) has functional examples of loading in sources within
 map boundaries, and can be found in `sotrplib/source_catalog/socat.py`.

@@ -218,6 +218,23 @@ class Client(ClientBase):
 
         return list(sources)
 
+    def get_box(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+    ) -> list["SourceGenerator"]:
+        return self._sso.get_box(
+            lower_left=lower_left,
+            upper_right=upper_right,
+            t_min=t_min,
+            t_max=t_max,
+            source_cat=self,
+            ephem_cat=self._ephem,
+        )
+
     def get_source(self, *, source_id: int) -> RegisteredFixedSource | None:
         """
         Get source by id
@@ -236,28 +253,28 @@ class Client(ClientBase):
         return self.catalog.get(source_id, None)
 
     def get_forced_photometry_sources(
-        self, *, minimum_flux: Quantity | None = None
-    ) -> list[RegisteredFixedSource]:
+        self,
+        *,
+        t_min: Time,
+        t_max: Time,
+        minimum_flux: Quantity | None = None,
+    ) -> list["SourceGenerator"]:
         """
-        Get all monitored sources, optionally filtered to those above a minimum flux.
-
-        Parameters
-        ----------
-        minimum_flux : Quantity | None
-            If provided, additionally filter to sources with flux >= minimum_flux.
-
-        Returns
-        -------
-        list[RegisteredFixedSource]
-            List of monitored sources, filtered by flux if minimum_flux is given.
+        Get all monitored sources (fixed and SSOs) as SourceGenerators.
+        t_min/t_max bound the ephemeris range for SSO interpolators.
+        minimum_flux optionally filters fixed sources; it does not apply to SSOs.
         """
-        sources = filter(lambda x: x.monitored, self.catalog.values())
+        fixed = filter(lambda x: x.monitored, self.catalog.values())
         if minimum_flux is not None:
-            sources = filter(
+            fixed = filter(
                 lambda x: x.flux is not None and x.flux >= minimum_flux,
-                sources,
+                fixed,
             )
-        return list(sources)
+        ssos = filter(lambda x: x.monitored, self._sso.catalog.values())
+        return [
+            SourceGenerator(source=s, t_min=t_min, t_max=t_max, ephem_cat=self._ephem)
+            for s in list(fixed) + list(ssos)
+        ]
 
     def update_source(
         self,

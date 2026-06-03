@@ -35,7 +35,7 @@ from .sso import (
     update_sso,
 )
 
-from .all_sources import get_box  # isort: skip
+from .all_sources import get_box, get_forced_photometry  # isort: skip
 
 __all__ = [
     "create_ephem",
@@ -53,6 +53,7 @@ __all__ = [
     "get_ephem",
     "get_ephem_by_sso_id",
     "get_ephem_points",
+    "get_forced_photometry",
     "get_service",
     "get_service_name",
     "get_source",

@@ -63,12 +63,31 @@ class ClientBase(ABC):
         return None  # pragma: no cover
 
     @abstractmethod
-    def get_forced_photometry_sources(
-        self, *, minimum_flux: Quantity | None = None
-    ) -> list[RegisteredFixedSource]:
+    def get_box(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+    ) -> list["SourceGeneratorBase"]:
         """
-        Get all sources that are monitored for forced photometry, optionally
-        filtered to those above a minimum flux.
+        Get all sources (fixed and moving) within a sky box between time bounds.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def get_forced_photometry_sources(
+        self,
+        *,
+        t_min: Time,
+        t_max: Time,
+        minimum_flux: Quantity | None = None,
+    ) -> list["SourceGeneratorBase"]:
+        """
+        Get all monitored sources (fixed and SSOs) as SourceGenerators.
+        t_min/t_max bound the ephemeris range for SSO interpolators.
+        minimum_flux optionally filters fixed sources; it does not apply to SSOs.
         """
         return []  # pragma: no cover
 
