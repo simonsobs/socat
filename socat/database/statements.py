@@ -10,7 +10,7 @@ from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
-from sqlmodel import select, update
+from sqlmodel import select, union_all, update
 
 from socat.database.services import AstroqueryServiceTable
 from socat.database.sources import (
@@ -94,12 +94,31 @@ def get_box_fixed(lower_left: ICRS, upper_right: ICRS) -> select:
         Database statement.
 
     """
-    return select(RegisteredFixedSourceTable).where(
-        float(lower_left.ra.to_value("deg")) <= RegisteredFixedSourceTable.ra_deg,
-        RegisteredFixedSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
-        float(lower_left.dec.to_value("deg")) <= RegisteredFixedSourceTable.dec_deg,
-        RegisteredFixedSourceTable.dec_deg <= float(upper_right.dec.to_value("deg")),
-    )
+    if lower_left.ra > upper_right.ra:
+        box1 = select(RegisteredFixedSourceTable).where(
+            float(lower_left.ra.to_value("deg")) <= RegisteredFixedSourceTable.ra_deg,
+            RegisteredFixedSourceTable.ra_deg <= 360.0,
+            float(lower_left.dec.to_value("deg")) <= RegisteredFixedSourceTable.dec_deg,
+            RegisteredFixedSourceTable.dec_deg
+            <= float(upper_right.dec.to_value("deg")),
+        )
+        box2 = select(RegisteredFixedSourceTable).where(
+            0.0 <= RegisteredFixedSourceTable.ra_deg,
+            RegisteredFixedSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
+            float(lower_left.dec.to_value("deg")) <= RegisteredFixedSourceTable.dec_deg,
+            RegisteredFixedSourceTable.dec_deg
+            <= float(upper_right.dec.to_value("deg")),
+        )
+        union_stmt = union_all(box1, box2)
+        return select(RegisteredFixedSourceTable).from_statement(union_stmt)
+    else:
+        return select(RegisteredFixedSourceTable).where(
+            float(lower_left.ra.to_value("deg")) <= RegisteredFixedSourceTable.ra_deg,
+            RegisteredFixedSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
+            float(lower_left.dec.to_value("deg")) <= RegisteredFixedSourceTable.dec_deg,
+            RegisteredFixedSourceTable.dec_deg
+            <= float(upper_right.dec.to_value("deg")),
+        )
 
 
 def get_box_sso(
@@ -125,24 +144,66 @@ def get_box_sso(
     select:
         Database statement.
     """
-    return (
-        select(SolarSystemObjectTable)
-        .outerjoin(
-            RegisteredMovingSourceTable,
-            RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
+    if lower_left.ra > upper_right.ra:
+        box1 = (
+            select(SolarSystemObjectTable)
+            .outerjoin(
+                RegisteredMovingSourceTable,
+                RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
+            )
+            .where(
+                t_min.datetime <= RegisteredMovingSourceTable.time,
+                RegisteredMovingSourceTable.time <= t_max.datetime,
+                float(lower_left.ra.to_value("deg"))
+                <= RegisteredMovingSourceTable.ra_deg,
+                RegisteredMovingSourceTable.ra_deg <= 360.0,
+                float(lower_left.dec.to_value("deg"))
+                <= RegisteredMovingSourceTable.dec_deg,
+                RegisteredMovingSourceTable.dec_deg
+                <= float(upper_right.dec.to_value("deg")),
+            )
         )
-        .where(
-            t_min.datetime <= RegisteredMovingSourceTable.time,
-            RegisteredMovingSourceTable.time <= t_max.datetime,
-            float(lower_left.ra.to_value("deg")) <= RegisteredMovingSourceTable.ra_deg,
-            RegisteredMovingSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
-            float(lower_left.dec.to_value("deg"))
-            <= RegisteredMovingSourceTable.dec_deg,
-            RegisteredMovingSourceTable.dec_deg
-            <= float(upper_right.dec.to_value("deg")),
+        box2 = (
+            select(SolarSystemObjectTable)
+            .outerjoin(
+                RegisteredMovingSourceTable,
+                RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
+            )
+            .where(
+                t_min.datetime <= RegisteredMovingSourceTable.time,
+                RegisteredMovingSourceTable.time <= t_max.datetime,
+                0.0 <= RegisteredMovingSourceTable.ra_deg,
+                RegisteredMovingSourceTable.ra_deg
+                <= float(upper_right.ra.to_value("deg")),
+                float(lower_left.dec.to_value("deg"))
+                <= RegisteredMovingSourceTable.dec_deg,
+                RegisteredMovingSourceTable.dec_deg
+                <= float(upper_right.dec.to_value("deg")),
+            )
         )
-        .distinct()
-    )
+        union_stmt = union_all(box1, box2)
+        return select(SolarSystemObjectTable).from_statement(union_stmt).distinct()
+    else:
+        return (
+            select(SolarSystemObjectTable)
+            .outerjoin(
+                RegisteredMovingSourceTable,
+                RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
+            )
+            .where(
+                t_min.datetime <= RegisteredMovingSourceTable.time,
+                RegisteredMovingSourceTable.time <= t_max.datetime,
+                float(lower_left.ra.to_value("deg"))
+                <= RegisteredMovingSourceTable.ra_deg,
+                RegisteredMovingSourceTable.ra_deg
+                <= float(upper_right.ra.to_value("deg")),
+                float(lower_left.dec.to_value("deg"))
+                <= RegisteredMovingSourceTable.dec_deg,
+                RegisteredMovingSourceTable.dec_deg
+                <= float(upper_right.dec.to_value("deg")),
+            )
+            .distinct()
+        )
 
 
 def get_forced_photometry_sources(minimum_flux: Quantity) -> select:
