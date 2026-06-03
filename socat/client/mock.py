@@ -270,7 +270,13 @@ class Client(ClientBase):
                 lambda x: x.flux is not None and x.flux >= minimum_flux,
                 fixed,
             )
-        ssos = filter(lambda x: x.monitored, self._sso.catalog.values())
+        sso_ids_with_ephems = {
+            e.sso_id for e in self._ephem.catalog.values() if t_min <= e.time <= t_max
+        }
+        ssos = filter(
+            lambda x: x.monitored and x.sso_id in sso_ids_with_ephems,
+            self._sso.catalog.values(),
+        )
         return [
             SourceGenerator(source=s, t_min=t_min, t_max=t_max, client=self)
             for s in list(fixed) + list(ssos)
@@ -1327,6 +1333,11 @@ class SourceGenerator(SourceGeneratorBase):
         Returns
         -------
         None
+
+        Raises
+        ------
+        ValueError
+            If the source is a SolarSystemObject and no ephemeris points exist in the time range.
         """
         if type(self.source) is RegisteredFixedSource:
             self.ra_unit = self.source.position.ra.unit
@@ -1345,6 +1356,11 @@ class SourceGenerator(SourceGeneratorBase):
             ephems = self.client.get_ephem_points(
                 sso_id=self.source.sso_id, t_min=self.t_min, t_max=self.t_max
             )
+            if len(ephems) == 0:
+                raise ValueError(
+                    f"No ephemeris points found for SSO '{self.source.name}' "
+                    f"in time range {self.t_min} to {self.t_max}."
+                )
             x = np.zeros(len(ephems))
             y = np.zeros((len(ephems), 3))
             for i, ephem in enumerate(ephems):
@@ -1355,9 +1371,9 @@ class SourceGenerator(SourceGeneratorBase):
                     ephem.flux.value,
                 )
 
-            self.ra_unit = ephem.position.ra.unit  # This assumes all ephem points have same units but this should probably be enforced upstream anyway.
-            self.dec_unit = ephem.position.dec.unit
-            self.flux_unit = ephem.flux.unit
+            self.ra_unit = ephems[0].position.ra.unit
+            self.dec_unit = ephems[0].position.dec.unit
+            self.flux_unit = ephems[0].flux.unit
             self.interp = make_interp_spline(x, y, k=1)
 
     def at_time(self, *, t: Time) -> tuple[ICRS, Quantity]:

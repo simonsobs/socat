@@ -231,18 +231,35 @@ def get_forced_photometry_sources(minimum_flux: Quantity | None = None) -> selec
     return stmt
 
 
-def get_forced_photometry_ssos() -> select:
+def get_forced_photometry_ssos(t_min: Time, t_max: Time) -> select:
     """
     Get solar system objects for which to perform forced photometry, i.e. SSOs
-    with monitored=True.
+    with monitored=True that have at least one ephemeris point in [t_min, t_max].
+
+    Parameters
+    ----------
+    t_min : Time
+        Start of the time range.
+    t_max : Time
+        End of the time range.
 
     Returns
     -------
     select:
         Database statement.
     """
-    return select(SolarSystemObjectTable).where(
-        SolarSystemObjectTable.monitored == True  # noqa: E712
+    return (
+        select(SolarSystemObjectTable)
+        .join(
+            RegisteredMovingSourceTable,
+            RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
+        )
+        .where(
+            SolarSystemObjectTable.monitored == True,  # noqa: E712
+            t_min.datetime <= RegisteredMovingSourceTable.time,
+            RegisteredMovingSourceTable.time <= t_max.datetime,
+        )
+        .distinct()
     )
 
 

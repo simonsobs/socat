@@ -172,7 +172,9 @@ class Client(ClientBase):
             fixed = session.execute(
                 statements.get_forced_photometry_sources(minimum_flux=minimum_flux)
             )
-            ssos = session.execute(statements.get_forced_photometry_ssos())
+            ssos = session.execute(
+                statements.get_forced_photometry_ssos(t_min=t_min, t_max=t_max)
+            )
             all_sources = [s.to_model() for s in fixed.scalars().all()] + [
                 s.to_model() for s in ssos.scalars().all()
             ]
@@ -687,6 +689,11 @@ class SourceGenerator(SourceGeneratorBase):
         Returns
         -------
         None
+
+        Raises
+        ------
+        ValueError
+            If the source is a SolarSystemObject and no ephemeris points exist in the time range.
         """
         if type(self.source) is RegisteredFixedSource:
             self.ra_unit = self.source.position.ra.unit
@@ -710,6 +717,11 @@ class SourceGenerator(SourceGeneratorBase):
             ephem_points = self.client.get_ephem_points(
                 sso_id=self.source.sso_id, t_min=self.t_min, t_max=self.t_max
             )
+            if len(ephem_points) == 0:
+                raise ValueError(
+                    f"No ephemeris points found for SSO '{self.source.name}' "
+                    f"in time range {self.t_min} to {self.t_max}."
+                )
             x = np.zeros(len(ephem_points))
 
             self.do_flux = True
@@ -735,9 +747,9 @@ class SourceGenerator(SourceGeneratorBase):
                     else (ephem.position.ra.value, ephem.position.dec.value)
                 )
 
-            self.ra_unit = ephem.position.ra.unit
-            self.dec_unit = ephem.position.dec.unit
-            self.flux_unit = ephem.flux.unit if self.do_flux else None
+            self.ra_unit = ephem_points[0].position.ra.unit
+            self.dec_unit = ephem_points[0].position.dec.unit
+            self.flux_unit = ephem_points[0].flux.unit if self.do_flux else None
             self.interp = make_interp_spline(x, y, k=1)
 
     def at_time(self, *, t: Time) -> tuple[ICRS, Quantity]:
