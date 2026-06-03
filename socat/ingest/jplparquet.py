@@ -36,6 +36,7 @@ def _parse_designation(designation: str) -> tuple[int | None, str | None]:
 def ingest_jpl_parquet_file(
     client: ClientBase,
     filename: Path,
+    downsample: int = 1,
 ) -> tuple[int, int]:
     """
     Ingest a JPL Horizons parquet file into mock SOCat moving-source clients.
@@ -46,6 +47,8 @@ def ingest_jpl_parquet_file(
         SOCat client that will hold both the SSO entries and the time-dependent ephemeris positions.
     filename : Path
         Path to the JPL parquet file.
+    downsample : int
+        Downsample factor for the input ephem (e.g., 10 means keep every 10th row).
 
     Returns
     -------
@@ -75,19 +78,21 @@ def ingest_jpl_parquet_file(
         sso = client.sso.get_sso_MPC_id(MPC_id=mpc_id)[0]
 
         for _, row in tqdm(
-            rows[::10].iterrows(), desc=f"Ingesting {designation}", total=len(rows[:10])
+            rows.iterrows()[::downsample],
+            desc=f"Ingesting {designation}",
+            total=len(rows[::downsample]),
         ):
-            flux = None
+            flux = None  # Default flux if not provided
             if "flux_mJy" in row.index and pd.notna(row["flux_mJy"]):
                 flux = row["flux_mJy"] * u.mJy
 
-            unix_time = Time(row["julian_day"], format="jd").unix
+            unix_time = Time(row["julian_day"], format="jd")
 
             client.ephem.create_ephem(
                 sso_id=sso.sso_id,
                 MPC_id=mpc_id,
                 name=name,
-                time=int(unix_time),
+                time=unix_time,
                 position=ICRS(
                     ra=float(row["ra_deg"]) * u.deg,
                     dec=float(row["dec_deg"]) * u.deg,
@@ -99,7 +104,7 @@ def ingest_jpl_parquet_file(
     return number_of_ssos, number_of_ephems
 
 
-def build_mock_database(filename: Path) -> dict:
+def build_mock_database(filename: Path, downsample: int = 1) -> dict:
     """Build a serializable mock database from a JPL parquet file."""
     from socat.client.settings import SOCatClientSettings
 
@@ -109,6 +114,7 @@ def build_mock_database(filename: Path) -> dict:
     number_of_ssos, number_of_ephems = ingest_jpl_parquet_file(
         client,
         filename=filename,
+        downsample=int(downsample),
     )
 
     return {
@@ -139,6 +145,14 @@ def main():  # pragma: no cover
     )
 
     parser.add_argument(
+        "-d",
+        "--downsample",
+        type=int,
+        help="Downsample factor for the input parquet file (e.g., 10 means keep every 10th row)",
+        default=1,
+    )
+
+    parser.add_argument(
         "-o",
         "--output",
         type=Path,
@@ -149,7 +163,7 @@ def main():  # pragma: no cover
 
     args = parser.parse_args()
 
-    database = build_mock_database(args.file)
+    database = build_mock_database(args.file, downsample=args.downsample)
     meta = database["meta"]
 
     print(

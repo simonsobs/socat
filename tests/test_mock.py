@@ -100,6 +100,10 @@ def test_photometry(mock_client):
     flux2 = 21.0 * u.mJy
     source2 = mock_client.create_source(position=position2, name="mySrc2", flux=flux2)
     id2 = source2.source_id
+    position3 = ICRS(3.0 * u.deg, 3.0 * u.deg)
+    flux3 = None
+    source3 = mock_client.create_source(position=position3, name="mySrc3", flux=flux3)
+    id3 = source3.source_id
 
     sources = mock_client.get_forced_photometry_sources(minimum_flux=10.0 * u.mJy)
 
@@ -107,9 +111,11 @@ def test_photometry(mock_client):
 
     assert id1 not in id_list
     assert id2 in id_list
+    assert id3 not in id_list
 
     mock_client.delete_source(source_id=id1)
     mock_client.delete_source(source_id=id2)
+    mock_client.delete_source(source_id=id3)
 
 
 def test_add_and_remove_astroquery(mock_client):

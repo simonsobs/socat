@@ -120,6 +120,7 @@ def test_get_ephem_points(mock_client):
 
 
 def test_get_box(mock_client):
+    ## make Diotima have None flux
     sso1 = mock_client.sso.create_sso(name="Davida", MPC_id=511)
     sso2 = mock_client.sso.create_sso(name="Diotima", MPC_id=423)
     sso3 = mock_client.sso.create_sso(name="Ceres", MPC_id=1)
@@ -136,7 +137,7 @@ def test_get_box(mock_client):
     )
 
     flux1 = 1.5 * u.mJy
-    flux2 = 0.5 * u.mJy
+    flux2 = None
     flux3 = 2.5 * u.mJy
 
     # Make ephem for Davida
@@ -226,11 +227,12 @@ def test_get_box(mock_client):
 
 
 def test_get_box_sso(mock_client):
+    ## make Davida have none flux
     sso1 = mock_client.sso.create_sso(name="Davida", MPC_id=511)
     sso2 = mock_client.sso.create_sso(name="Diotima", MPC_id=423)
     sso3 = mock_client.sso.create_sso(name="Ceres", MPC_id=1)
 
-    flux1 = 1.5 * u.mJy
+    flux1 = None
     flux2 = 0.5 * u.mJy
     flux3 = 2.5 * u.mJy
 
