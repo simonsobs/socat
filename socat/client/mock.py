@@ -272,7 +272,7 @@ class Client(ClientBase):
             )
         ssos = filter(lambda x: x.monitored, self._sso.catalog.values())
         return [
-            SourceGenerator(source=s, t_min=t_min, t_max=t_max, ephem_cat=self._ephem)
+            SourceGenerator(source=s, t_min=t_min, t_max=t_max, client=self)
             for s in list(fixed) + list(ssos)
         ]
 
@@ -1246,6 +1246,55 @@ class SolarSystemClient(SolarSystemClientBase):
         if check is not None:
             self.n -= 1
 
+    def get_box_sso(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+        ephem_cat,
+    ) -> list[SolarSystemObject]:
+        ra_min = lower_left.ra.value
+        dec_min = lower_left.dec.value
+        ra_max = upper_right.ra.value
+        dec_max = upper_right.dec.value
+        ephems_in_box = filter(
+            lambda x: (
+                (ra_min <= x.position.ra.value <= ra_max)
+                and (dec_min <= x.position.dec.value <= dec_max)
+                and (t_min <= x.time <= t_max)
+            ),
+            ephem_cat.catalog.values(),
+        )
+        sso_ids = {ephem.sso_id for ephem in ephems_in_box}
+        return [s for s in self.catalog.values() if s.sso_id in sso_ids]
+
+    def get_box(
+        self,
+        *,
+        lower_left: ICRS,
+        upper_right: ICRS,
+        t_min: Time,
+        t_max: Time,
+        source_cat,
+        ephem_cat,
+    ) -> list:
+        fixed_sources = source_cat.get_box_fixed(
+            lower_left=lower_left, upper_right=upper_right
+        )
+        ssos = self.get_box_sso(
+            lower_left=lower_left,
+            upper_right=upper_right,
+            t_min=t_min,
+            t_max=t_max,
+            ephem_cat=ephem_cat,
+        )
+        return [
+            SourceGenerator(source=s, t_min=t_min, t_max=t_max, client=source_cat)
+            for s in fixed_sources + ssos
+        ]
+
 
 class SourceGenerator(SourceGeneratorBase):
     def __init__(
@@ -1259,9 +1308,13 @@ class SourceGenerator(SourceGeneratorBase):
         self.t_min = t_min
         self.t_max = t_max
         self.interp = None
-        self.client = client
+        self._client = client
 
-    def init_interp(self) -> None:
+    @property
+    def client(self) -> ClientBase:
+        return self._client
+
+    def init_interp(self, *, ephem_cat=None) -> None:
         """
         Initialize the interpolator object.
         If our source type is a RegisteredFixedSource, then

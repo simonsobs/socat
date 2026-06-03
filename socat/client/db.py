@@ -137,14 +137,22 @@ class Client(ClientBase):
         t_min: Time,
         t_max: Time,
     ) -> list["SourceGenerator"]:
-        return self._sso.get_box(
-            lower_left=lower_left,
-            upper_right=upper_right,
-            t_min=t_min,
-            t_max=t_max,
-            source_cat=self,
-            ephem_cat=self._ephem,
+        fixed_sources = self.get_box_fixed(
+            lower_left=lower_left, upper_right=upper_right
         )
+        ssos = self.get_box_sso(
+            lower_left=lower_left, upper_right=upper_right, t_min=t_min, t_max=t_max
+        )
+        return [
+            SourceGenerator(
+                source=s,
+                t_min=t_min,
+                t_max=t_max,
+                client=self,
+                session_factory=self._session_factory,
+            )
+            for s in fixed_sources + ssos
+        ]
 
     def get_source(self, *, source_id: int) -> RegisteredFixedSource | None:
         with self._get_session() as session:
@@ -173,7 +181,7 @@ class Client(ClientBase):
                 source=s,
                 t_min=t_min,
                 t_max=t_max,
-                ephem_cat=self._ephem,
+                client=self,
                 session_factory=self._session_factory,
             )
             for s in all_sources
@@ -665,8 +673,12 @@ class SourceGenerator(SourceGeneratorBase):
         self.source = source
         self.t_min = t_min
         self.t_max = t_max
-        self.client = client
+        self._client = client
         self.interp = None
+
+    @property
+    def client(self) -> "Client":
+        return self._client
 
     def init_interp(self) -> None:
         """
