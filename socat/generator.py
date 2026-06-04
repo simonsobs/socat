@@ -5,7 +5,7 @@ from astropy.units import Quantity
 from scipy.interpolate import make_interp_spline
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .core import get_ephem_points
+from .core.moving_sources import get_ephem_points
 from .database import RegisteredFixedSource, SolarSystemObject
 
 
