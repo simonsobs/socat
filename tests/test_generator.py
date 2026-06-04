@@ -4,7 +4,7 @@ import pytest
 from astropy.coordinates import ICRS
 from astropy.time import Time
 
-from socat import core, generator
+from socat import core
 
 
 @pytest.mark.asyncio
@@ -43,11 +43,10 @@ async def test_gen(database_async_sessionmaker):
         assert ephem.time <= t_max
     assert len(ephem_list) == 10
 
-    async with database_async_sessionmaker() as session:
-        gen = generator.SourceGenerator(
-            source, Time("2025-01-01T00:00:00.00"), Time("2026-01-01T00:00:00.00")
-        )
-        await gen.init_interp(session=session)
+    # Test fixed source generator
+    gen = core.SourceGenerator(
+        source=source,
+    )
 
     position, flux = gen.at_time(t=Time("2025-06-01T00:00:00.00"))
 
@@ -56,8 +55,11 @@ async def test_gen(database_async_sessionmaker):
     assert flux.value == 1.5
 
     async with database_async_sessionmaker() as session:
-        gen = generator.SourceGenerator(sso, t_min=t_min, t_max=t_max)
-        await gen.init_interp(session=session)
+        ephems = await core.get_ephem_points(sso, t_min, t_max, session=session)
+    gen = core.SourceGenerator(
+        sso,
+        ephems=ephems,
+    )
 
     position, flux = gen.at_time(Time("2025-02-01 00:04:10.000000"))
 
@@ -69,11 +71,11 @@ async def test_gen(database_async_sessionmaker):
     with pytest.raises(ValueError):
         gen.at_time(t_max + 100 * u.s)
 
-    # Check not initializing interp raises error
-    with pytest.raises(RuntimeError):
-        async with database_async_sessionmaker() as session:
-            gen = generator.SourceGenerator(sso, t_min=t_min, t_max=t_max)
-        gen.at_time(Time("2025-02-01 00:04:10.000000"))
+    with pytest.raises(ValueError):
+        gen = core.SourceGenerator(
+            sso,
+            ephems=None,
+        )
 
     async with database_async_sessionmaker() as session:
         await core.delete_sso(sso.sso_id, session=session)
@@ -154,7 +156,7 @@ async def test_get_box(database_async_sessionmaker):
             )
 
     async with database_async_sessionmaker() as session:
-        sources: list[generator.SourceGenerator] = await core.all_sources.get_box(
+        sources: list[core.SourceGenerator] = await core.all_sources.get_box(
             t_min=t_min,
             t_max=t_max,
             lower_left=lower_left,
@@ -191,10 +193,9 @@ async def test_none_behavior(database_async_sessionmaker):
             name="mySrc",
             flux=None,
         )
-        gen = generator.SourceGenerator(
-            source, Time("2025-01-01T00:00:00.00"), Time("2026-01-01T00:00:00.00")
-        )
-        await gen.init_interp(session=session)
+    gen = core.SourceGenerator(
+        source=source,
+    )
 
     position, flux = gen.at_time(t=Time("2025-06-01T00:00:00.000000"))
 
@@ -221,10 +222,15 @@ async def test_none_behavior(database_async_sessionmaker):
                 flux=None,
                 session=session,
             )
-        gen = generator.SourceGenerator(
-            sso, Time("2025-01-01T00:00:00.00"), Time("2026-01-01T00:00:00.00")
+
+    async with database_async_sessionmaker() as session:
+        ephems = await core.get_ephem_points(
+            sso,
+            Time("2025-01-01T00:00:00.00"),
+            Time("2026-01-01T00:00:00.00"),
+            session=session,
         )
-        await gen.init_interp(session=session)
+    gen = core.SourceGenerator(source=sso, ephems=ephems)
 
     position, flux = gen.at_time(Time("2025-02-01 00:04:10.000000"))
 

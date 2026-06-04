@@ -11,6 +11,7 @@ from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
 
+from socat.core import SourceGenerator
 from socat.database import (
     AstroqueryService,
     RegisteredFixedSource,
@@ -95,7 +96,7 @@ class ClientBase(ABC):
         upper_right: ICRS,
         t_min: Time,
         t_max: Time,
-    ) -> list["SourceGeneratorBase"]:
+    ) -> list[SourceGenerator]:
         """
         Get all sources (fixed and moving) within a sky box between time bounds.
         """
@@ -107,7 +108,7 @@ class ClientBase(ABC):
         *,
         t_min: Time,
         t_max: Time,
-    ) -> list["SourceGeneratorBase"]:
+    ) -> list[SourceGenerator]:
         """
         Get all monitored sources (fixed and SSOs) as SourceGenerators.
         t_min/t_max bound the ephemeris range for SSO interpolators.
@@ -120,7 +121,7 @@ class ClientBase(ABC):
         *,
         t_min: Time,
         t_max: Time,
-    ) -> list["SourceGeneratorBase"]:
+    ) -> list[SourceGenerator]:
         """
         Get all pointing sources (fixed and SSOs) as SourceGenerators.
         t_min/t_max bound the ephemeris range for SSO interpolators.
@@ -135,7 +136,7 @@ class ClientBase(ABC):
         t_min: Time,
         t_max: Time,
         combine: str = "or",
-    ) -> list["SourceGeneratorBase"]:
+    ) -> list[SourceGenerator]:
         """
         Get sources matched against the extra list using combine mode.
         combine: 'or' any, 'and' all, 'xor' exactly one, 'xand' none.
@@ -328,6 +329,19 @@ class ClientBase(ABC):
         """
         return []  # pragma: no cover
 
+    @abstractmethod
+    def get_source_generator(
+        self,
+        *,
+        source: RegisteredFixedSource | SolarSystemObject,
+        t_min: Time,
+        t_max: Time,
+    ) -> SourceGenerator:
+        """
+        Get a source generator for a given source and time range.
+        """
+        return []  # pragma: no cover
+
 
 class AstroqueryClientBase(ABC):
     @abstractmethod
@@ -479,35 +493,5 @@ class SolarSystemClientBase(ABC):
     def delete_sso(self, *, sso_id: int) -> None:
         """
         Delete solar system source.
-        """
-        return []  # pragma: no cover
-
-
-class SourceGeneratorBase(ABC):
-    """
-    Base class for source generators. Note that databases have to be passed explicitly as compared to the actual implementation
-    as this class doesn't know about the databases.
-    """
-
-    @property
-    @abstractmethod
-    def client(self) -> ClientBase:
-        """
-        Get the client associated with this source generator.
-        """
-        return  # pragma: no cover
-
-    @abstractmethod
-    def init_interp(self) -> None:
-        """
-        Initialize the interpolator object.
-        """
-
-        return []  # pragma: no cover
-
-    @abstractmethod
-    def at_time(self, *, time: Time) -> tuple[ICRS, Quantity]:
-        """
-        Get the position and flux of the source at a given time.
         """
         return []  # pragma: no cover

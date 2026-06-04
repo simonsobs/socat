@@ -186,7 +186,7 @@ def get_box_sso(
             )
         )
         union_stmt = union_all(box1, box2)
-        return select(SolarSystemObjectTable).from_statement(union_stmt).distinct()
+        return select(SolarSystemObjectTable).distinct().from_statement(union_stmt)
     else:
         return (
             select(SolarSystemObjectTable)

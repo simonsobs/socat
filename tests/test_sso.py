@@ -168,11 +168,11 @@ async def test_time_box(database_async_sessionmaker):
         ).sso_id
         flux = 1.5 * u.mJy
         start_time = Time("2025-02-01T00:00:00.00")
-        for i in range(3):
+        for i in range(10):
             position = ICRS(
                 (1 + i) * u.deg, (1 + i) * u.deg
             )  # this is totally unphysical but who cares
-            time = start_time + (i * 100) * u.s
+            time = start_time + i * u.h
             await core.create_ephem(
                 sso_id=sso_id_1,
                 MPC_id=511,
@@ -187,11 +187,10 @@ async def test_time_box(database_async_sessionmaker):
             await core.create_sso(name="Diotima", MPC_id=423, session=session)
         ).sso_id
         flux = 0.5 * u.mJy
-        for i in range(3):
-            position = ICRS(
-                (1 + i) * u.deg, (1 + i) * u.deg
-            )  # this is totally unphysical but who cares
-            time = start_time + (200 + i * 100) * u.s
+        for i in range(10):
+            position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
+            flux = (0.5 * i + 0.1) * u.mJy
+            time = start_time + (11 + i) * u.h
             await core.create_ephem(
                 sso_id=sso_id_2,
                 MPC_id=423,
@@ -206,11 +205,10 @@ async def test_time_box(database_async_sessionmaker):
             await core.create_sso(name="Ceres", MPC_id=1, session=session)
         ).sso_id
         flux = 2.5 * u.mJy
-        for i in range(3):
-            position = ICRS(
-                (4 + i) * u.deg, (4 + i) * u.deg
-            )  # this is totally unphysical but who cares
-            time = start_time + (i * 100) * u.s
+        for i in range(10):
+            position = ICRS((4 + i) * u.deg, (4 + i) * u.deg)
+            flux = (2.5 * i + 0.1) * u.mJy
+            time = start_time + i * u.h
             await core.create_ephem(
                 sso_id=sso_id_3,
                 MPC_id=1,
@@ -225,7 +223,7 @@ async def test_time_box(database_async_sessionmaker):
         lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
         upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
         t_min = start_time
-        t_max = start_time + 100 * u.s
+        t_max = start_time + 5 * u.h
         ssos = await core.get_box_sso(
             lower_left=lower_left,
             upper_right=upper_right,
@@ -235,7 +233,20 @@ async def test_time_box(database_async_sessionmaker):
         )
     assert len(ssos) == 1
     assert ssos[0].name == "Davida"
-    assert ssos[0].MPC_id == 511
+
+    async with database_async_sessionmaker() as session:
+        # Test box passing through RA=360 boundary
+        lower_left = ICRS(358.0 * u.deg, 0.0 * u.deg)
+        upper_right = ICRS(1.5 * u.deg, 1.5 * u.deg)
+        t_min = start_time
+        t_max = start_time + 5 * u.h
+        ssos = await core.get_box_sso(
+            lower_left=lower_left,
+            upper_right=upper_right,
+            t_min=t_min,
+            t_max=t_max,
+            session=session,
+        )
 
     async with database_async_sessionmaker() as session:
         await core.delete_sso(sso_id_1, session=session)

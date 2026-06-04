@@ -292,6 +292,14 @@ def test_sso_and_ephem_crud_and_cascade(db_client):
             flux=flux,
         )
 
+    # explicitly test get_ephem_points
+    ephems = client.get_ephem_points(
+        sso_id=davida.sso_id,
+        t_min=t_min,
+        t_max=t_max,
+    )
+    assert len(ephems) == 4
+
     sources = client.get_box_sso(
         lower_left=lower_left,
         upper_right=upper_right,
@@ -381,21 +389,17 @@ def test_box(db_client):
     assert source_gens[0].source.name == "db-src-1"
     assert source_gens[1].source.name == "db-davida"
 
-    with pytest.raises(RuntimeError):
-        source_gens[0].at_time(t=Time("2025-01-02T00:00:00"))
-
-    source_gens[0].init_interp()
     assert source_gens[0].at_time(t=Time("2025-01-01T01:30:00")) == (
         ICRS(1.0 * u.deg, 1.0 * u.deg),
         1.0 * u.mJy,
     )
 
-    source_gens[1].init_interp()
     assert source_gens[1].at_time(t=Time("2025-01-01T00:30:00")) == (
         ICRS(1.5 * u.deg, 1.5 * u.deg),
         1.05 * u.mJy,
     )
 
+    # Check that out of bounds times raise errors
     with pytest.raises(ValueError):
         source_gens[1].at_time(t=Time("2025-01-02T00:00:00"))
 
