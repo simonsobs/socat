@@ -17,7 +17,8 @@ def ingest_fits_file(
     client: ClientBase,
     filename: Path,
     hdu: int = 1,
-    flux_threshold: u.Quantity = 100.0 * u.mJy,
+    monitored_flux_threshold: u.Quantity = 20.0 * u.mJy,
+    pointing_flux_threshold: u.Quantity = 300.0 * u.mJy,
 ) -> int:
     """
     Ingest a FITS file into the provided SOCat client.
@@ -30,8 +31,10 @@ def ingest_fits_file(
         Path to the ACT-compatible FITS point source file to load.
     hdu: int = 1
         The HDU in the file that corresponds to the sources table.
-    flux_threshold: u.Quantity = 100.0 * u.mJy
+    monitored_flux_threshold: u.Quantity = 20.0 * u.mJy
         The flux threshold above which sources are considered for monitoring.
+    pointing_flux_threshold: u.Quantity = 300.0 * u.mJy
+        The flux threshold above which sources are considered for pointing.
 
     Returns
     -------
@@ -51,7 +54,10 @@ def ingest_fits_file(
             ),
             flux=row["fluxJy"] * u.Jy,
             name=row["name"],
-            flags={"monitored": row["fluxJy"] * u.Jy >= flux_threshold},
+            flags={
+                "monitored": row["fluxJy"] * u.Jy >= monitored_flux_threshold,
+                "pointing": row["fluxJy"] * u.Jy >= pointing_flux_threshold,
+            },
         )
 
         number_of_sources += 1
@@ -78,7 +84,14 @@ def main():  # pragma: no cover
         "--monitored-flux-threshold-mJy",
         type=float,
         help="Flux threshold above which sources are considered monitored",
-        default=100.0,
+        default=20.0,
+    )
+
+    parser.add_argument(
+        "--pointing-flux-threshold-mJy",
+        type=float,
+        help="Flux threshold above which sources are considered for pointing",
+        default=300.0,
     )
 
     parser.add_argument(
@@ -109,7 +122,8 @@ def main():  # pragma: no cover
     number_of_sources = ingest_fits_file(
         client=client,
         filename=args.file,
-        flux_threshold=args.monitored_flux_threshold_mJy * u.mJy,
+        monitored_flux_threshold=args.monitored_flux_threshold_mJy * u.mJy,
+        pointing_flux_threshold=args.pointing_flux_threshold_mJy * u.mJy,
     )
 
     print(f"Ingested {number_of_sources} sources")
