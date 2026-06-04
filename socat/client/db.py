@@ -345,7 +345,7 @@ class Client(ClientBase):
             A SourceGenerator for the given source and time range.
         """
         ephems = None
-        if type(source) is SolarSystemObject:
+        if isinstance(source, SolarSystemObject):
             with self._get_session() as session:
                 ephems = session.execute(
                     statements.get_ephem_points(

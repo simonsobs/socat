@@ -95,21 +95,21 @@ def get_box_fixed(lower_left: ICRS, upper_right: ICRS) -> select:
 
     """
     if lower_left.ra > upper_right.ra:
-        box1 = select(RegisteredFixedSourceTable).where(
+        right_box = select(RegisteredFixedSourceTable).where(
             float(lower_left.ra.to_value("deg")) <= RegisteredFixedSourceTable.ra_deg,
             RegisteredFixedSourceTable.ra_deg <= 360.0,
             float(lower_left.dec.to_value("deg")) <= RegisteredFixedSourceTable.dec_deg,
             RegisteredFixedSourceTable.dec_deg
             <= float(upper_right.dec.to_value("deg")),
         )
-        box2 = select(RegisteredFixedSourceTable).where(
+        left_box = select(RegisteredFixedSourceTable).where(
             0.0 <= RegisteredFixedSourceTable.ra_deg,
             RegisteredFixedSourceTable.ra_deg <= float(upper_right.ra.to_value("deg")),
             float(lower_left.dec.to_value("deg")) <= RegisteredFixedSourceTable.dec_deg,
             RegisteredFixedSourceTable.dec_deg
             <= float(upper_right.dec.to_value("deg")),
         )
-        union_stmt = union_all(box1, box2)
+        union_stmt = union_all(right_box, left_box)
         return select(RegisteredFixedSourceTable).from_statement(union_stmt)
     else:
         return select(RegisteredFixedSourceTable).where(
@@ -145,7 +145,7 @@ def get_box_sso(
         Database statement.
     """
     if lower_left.ra > upper_right.ra:
-        box1 = (
+        right_box = (
             select(SolarSystemObjectTable)
             .outerjoin(
                 RegisteredMovingSourceTable,
@@ -163,7 +163,7 @@ def get_box_sso(
                 <= float(upper_right.dec.to_value("deg")),
             )
         )
-        box2 = (
+        left_box = (
             select(SolarSystemObjectTable)
             .outerjoin(
                 RegisteredMovingSourceTable,
@@ -181,7 +181,7 @@ def get_box_sso(
                 <= float(upper_right.dec.to_value("deg")),
             )
         )
-        union_stmt = union_all(box1, box2)
+        union_stmt = union_all(right_box, left_box)
         return select(SolarSystemObjectTable).distinct().from_statement(union_stmt)
     else:
         return (

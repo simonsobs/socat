@@ -7,13 +7,55 @@ from scipy.interpolate import make_interp_spline
 from ..database import RegisteredFixedSource, RegisteredMovingSource, SolarSystemObject
 
 
-# TODO: I think all the implementations of SourceGenerator are the same now?
 class SourceGenerator:
+    """
+    Class which provides a consistent interface to both fixed sources and SSOs.
+    It also provides a consistent initialization interface for both types of sources.
+    This means an end user can do source_gen = SourceGenerator(source, ephems) and then source_gen.at_time(t) to get the position and flux of the source at time t regardless of whether the source is fixed or an SSO.
+
+    Attributes
+    ----------
+    source : RegisteredFixedSource | SolarSystemObject
+        The source for which this is a generator.
+    t_min : Time
+        Minimum time for which this generator can be used. For fixed sources this is set to a very wide range, but for SSOs this is set to the min and max of the ephemris points provided.
+    t_max : Time
+        Maximum time for which this generator can be used.
+    do_flux : bool
+        Whether to interpolate flux or not. This is set to False at_time will return None for flux.
+        Internally set based on whether flux is provided for the source (for fixed sources) or for all ephemris points (for SSOs).
+    ra_unit : Unit
+        Unit of right ascension for this source. Set based on the units of the source provided.
+    dec_unit : Unit
+        Unit of declination for this source. Set based on the units of the source provided.
+    flux_unit : Unit | None
+        Unit of flux for this source. Set based on the units of the source provided if do_flux is True, otherwise set to None.
+    interp : function
+        Interpolation function for this source.
+    """
+
     def __init__(
         self,
         source: RegisteredFixedSource | SolarSystemObject,
         ephems: list[RegisteredMovingSource] | None = None,
     ):
+        """
+        Initialize a SourceGenerator for a given source and ephemeris points.
+        Importantly functionality changes based on whether the sources is a fixed source or SSO.
+
+        Parameters
+        ----------
+        source : RegisteredFixedSource | SolarSystemObject
+            The source for which to initialize the generator.
+        ephems : list[RegisteredMovingSource] | None
+            The ephemeris points for the source. Required if source is a SolarSystemObject, ignored if source is a RegisteredFixedSource.
+
+        Raises
+        ------
+        ValueError
+            If source is a SolarSystemObject and ephems is not provided.
+        """
+
         self.source = source
         if ephems is None:
             if isinstance(source, SolarSystemObject):
@@ -93,7 +135,6 @@ class SourceGenerator:
         self.flux_unit = ephem.flux.unit if self.do_flux else None
         self.interp = make_interp_spline(x, y, k=1)
 
-    # @lru_cache(maxsize=128)  # This can cause memory leaks so we might not want it
     def at_time(self, t: Time) -> tuple[ICRS, Quantity]:
         """
         Get the ra/dec/flux of the source at the requested time.
