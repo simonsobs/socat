@@ -333,34 +333,27 @@ async def update_source(
     return response
 
 
-@router.get("/source/forced_photometry")
-async def get_forced_photometry(
+@router.get("/source/monitored")
+async def get_monitored_sources(
     session: SessionDependency,
-    minimum_flux_mJy: float | None = None,
 ) -> list[RegisteredFixedSource | SolarSystemObject]:
     """
-    Get all monitored sources for forced photometry.
+    Get all monitored sources.
 
     Returns both fixed sources and solar system objects with monitored=True.
-    Fixed sources can optionally be filtered to those above minimum_flux_mJy.
 
     Parameters
     ----------
     session : SessionDependency
         Asynchronous session to use
-    minimum_flux_mJy : float | None
-        If provided, additionally filter fixed sources to those with flux >= this value (mJy).
 
     Returns
     -------
     list[RegisteredFixedSource | SolarSystemObject]
         All monitored sources.
     """
-    minimum_flux = minimum_flux_mJy * u.mJy if minimum_flux_mJy is not None else None
-    fixed_result = await session.execute(
-        statements.get_forced_photometry_sources(minimum_flux=minimum_flux)
-    )
-    sso_result = await session.execute(statements.get_forced_photometry_ssos())
+    fixed_result = await session.execute(statements.get_monitored_fixed_sources())
+    sso_result = await session.execute(statements.get_all_monitored_ssos())
     return [s.to_model() for s in fixed_result.scalars()] + [
         s.to_model() for s in sso_result.scalars()
     ]

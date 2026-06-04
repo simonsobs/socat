@@ -35,7 +35,7 @@ class RegisteredFixedSource(RegisteredSource):
     name : str | None
         Name of source. Optional
     monitored : bool
-        Whether this source is monitored by forced_photometry
+        Whether this source is monitored
     """
 
     source_id: int | None = None
@@ -88,7 +88,7 @@ class SolarSystemObject(BaseModel):
     name : str
         Name of source
     monitored : bool
-        Whether this source is monitored by forced_photometry
+        Whether this source is monitored
     """
 
     sso_id: int

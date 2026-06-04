@@ -206,35 +206,38 @@ def get_box_sso(
         )
 
 
-def get_forced_photometry_sources(minimum_flux: Quantity | None = None) -> select:
+def get_monitored_fixed_sources() -> select:
     """
-    Get sources for which to perform forced photometry, i.e. sources with
-    monitored=True, optionally filtered to those above a minimum flux.
-
-    Parameters
-    ----------
-    minimum_flux : Quantity | None
-        If provided, additionally filter to sources with flux >= minimum_flux.
+    Get all fixed sources with monitored=True.
 
     Returns
     -------
     select:
         Database statement.
     """
-    stmt = select(RegisteredFixedSourceTable).where(
+    return select(RegisteredFixedSourceTable).where(
         RegisteredFixedSourceTable.monitored == True  # noqa: E712
     )
-    if minimum_flux is not None:
-        stmt = stmt.where(
-            RegisteredFixedSourceTable.flux_mJy >= minimum_flux.to_value("mJy")
-        )
-    return stmt
 
 
-def get_forced_photometry_ssos(t_min: Time, t_max: Time) -> select:
+def get_all_monitored_ssos() -> select:
     """
-    Get solar system objects for which to perform forced photometry, i.e. SSOs
-    with monitored=True that have at least one ephemeris point in [t_min, t_max].
+    Get all solar system objects with monitored=True.
+
+    Returns
+    -------
+    select:
+        Database statement.
+    """
+    return select(SolarSystemObjectTable).where(
+        SolarSystemObjectTable.monitored == True  # noqa: E712
+    )
+
+
+def get_monitored_ssos(t_min: Time, t_max: Time) -> select:
+    """
+    Get solar system objects with monitored=True that have at least one
+    ephemeris point in [t_min, t_max].
 
     Parameters
     ----------
@@ -284,7 +287,7 @@ def update_source(
     name : str | None
         Name of source. Optional.
     monitored : bool | None
-        Whether this source is monitored by forced_photometry. Optional.
+        Whether this source is monitored. Optional.
 
     Returns
     -------

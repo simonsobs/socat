@@ -28,7 +28,7 @@ async def create_source(
     name : str | None
         Name of source. Optional.
     monitored : bool
-        Whether this source is monitored by forced_photometry. Default False.
+        Whether this source is monitored. Default False.
     session : AsyncSession
         Asynchronous session to use
 
@@ -138,7 +138,7 @@ async def update_source(
     name : str | None
         Name of source
     monitored : bool | None
-        Whether this source is monitored by forced_photometry. Optional.
+        Whether this source is monitored. Optional.
 
     Returns
     -------

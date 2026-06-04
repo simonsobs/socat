@@ -101,7 +101,7 @@ class Client(ClientBase):
         name : str | None, Default: None
             Name of source
         monitored : bool, Default: False
-            Whether this source is monitored by forced_photometry
+            Whether this source is monitored
 
         Returns
         -------
@@ -252,24 +252,17 @@ class Client(ClientBase):
         """
         return self.catalog.get(source_id, None)
 
-    def get_forced_photometry_sources(
+    def get_monitored_sources(
         self,
         *,
         t_min: Time,
         t_max: Time,
-        minimum_flux: Quantity | None = None,
     ) -> list["SourceGenerator"]:
         """
         Get all monitored sources (fixed and SSOs) as SourceGenerators.
         t_min/t_max bound the ephemeris range for SSO interpolators.
-        minimum_flux optionally filters fixed sources; it does not apply to SSOs.
         """
         fixed = filter(lambda x: x.monitored, self.catalog.values())
-        if minimum_flux is not None:
-            fixed = filter(
-                lambda x: x.flux is not None and x.flux >= minimum_flux,
-                fixed,
-            )
         sso_ids_with_ephems = {
             e.sso_id for e in self._ephem.catalog.values() if t_min <= e.time <= t_max
         }
@@ -303,7 +296,7 @@ class Client(ClientBase):
         flux : Quantity | None, Default: None
             Flux of source
         monitored : bool | None, Default: None
-            Whether this source is monitored by forced_photometry
+            Whether this source is monitored
 
         Returns
         -------
@@ -1122,7 +1115,7 @@ class SolarSystemClient(SolarSystemClientBase):
         MPC_id : int
             Minor Planet Center ID of source
         monitored : bool, Default: False
-            Whether this source is monitored by forced_photometry
+            Whether this source is monitored
 
         Returns
         -------

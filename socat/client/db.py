@@ -161,19 +161,16 @@ class Client(ClientBase):
                 raise ValueError(f"Source with ID {source_id} not found")
             return source.to_model()
 
-    def get_forced_photometry_sources(
+    def get_monitored_sources(
         self,
         *,
         t_min: Time,
         t_max: Time,
-        minimum_flux: Quantity | None = None,
     ) -> list["SourceGenerator"]:
         with self._get_session() as session:
-            fixed = session.execute(
-                statements.get_forced_photometry_sources(minimum_flux=minimum_flux)
-            )
+            fixed = session.execute(statements.get_monitored_fixed_sources())
             ssos = session.execute(
-                statements.get_forced_photometry_ssos(t_min=t_min, t_max=t_max)
+                statements.get_monitored_ssos(t_min=t_min, t_max=t_max)
             )
             all_sources = [s.to_model() for s in fixed.scalars().all()] + [
                 s.to_model() for s in ssos.scalars().all()

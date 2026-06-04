@@ -93,57 +93,32 @@ def test_box(mock_client):
 
 
 def test_photometry(mock_client):
-    # monitored, flux above threshold
-    s_mon_hi = mock_client.create_source(
+    s_mon_1 = mock_client.create_source(
         position=ICRS(1.0 * u.deg, 1.0 * u.deg),
-        name="mon-hi",
-        flux=21.0 * u.mJy,
+        name="mon-1",
         monitored=True,
     )
-    # monitored, flux below threshold
-    s_mon_lo = mock_client.create_source(
+    s_mon_2 = mock_client.create_source(
         position=ICRS(2.0 * u.deg, 2.0 * u.deg),
-        name="mon-lo",
-        flux=1.0 * u.mJy,
+        name="mon-2",
         monitored=True,
     )
-    # not monitored, flux above threshold
-    s_unmon_hi = mock_client.create_source(
+    s_unmon = mock_client.create_source(
         position=ICRS(3.0 * u.deg, 3.0 * u.deg),
-        name="unmon-hi",
-        flux=21.0 * u.mJy,
-        monitored=False,
-    )
-    # not monitored, no flux
-    s_unmon_none = mock_client.create_source(
-        position=ICRS(4.0 * u.deg, 4.0 * u.deg),
-        name="unmon-none",
-        flux=None,
+        name="unmon",
         monitored=False,
     )
 
     t_min = Time("2020-01-01")
     t_max = Time("2020-12-31")
 
-    # Without minimum_flux: all monitored sources returned
-    all_monitored = mock_client.get_forced_photometry_sources(t_min=t_min, t_max=t_max)
+    all_monitored = mock_client.get_monitored_sources(t_min=t_min, t_max=t_max)
     all_ids = [s.source.source_id for s in all_monitored]
-    assert s_mon_hi.source_id in all_ids
-    assert s_mon_lo.source_id in all_ids
-    assert s_unmon_hi.source_id not in all_ids
-    assert s_unmon_none.source_id not in all_ids
+    assert s_mon_1.source_id in all_ids
+    assert s_mon_2.source_id in all_ids
+    assert s_unmon.source_id not in all_ids
 
-    # With minimum_flux: only monitored sources above threshold
-    flux_filtered = mock_client.get_forced_photometry_sources(
-        t_min=t_min, t_max=t_max, minimum_flux=10.0 * u.mJy
-    )
-    filtered_ids = [s.source.source_id for s in flux_filtered]
-    assert s_mon_hi.source_id in filtered_ids
-    assert s_mon_lo.source_id not in filtered_ids
-    assert s_unmon_hi.source_id not in filtered_ids
-    assert s_unmon_none.source_id not in filtered_ids
-
-    for s in [s_mon_hi, s_mon_lo, s_unmon_hi, s_unmon_none]:
+    for s in [s_mon_1, s_mon_2, s_unmon]:
         mock_client.delete_source(source_id=s.source_id)
 
 
