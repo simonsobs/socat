@@ -14,7 +14,7 @@ async def create_source(
     session: AsyncSession,
     name: str | None = None,
     flux: Quantity | None = None,
-    monitored: bool = False,
+    flags: dict | None = None,
 ) -> RegisteredFixedSource:
     """
     Create a new source in the database.
@@ -27,8 +27,8 @@ async def create_source(
         Flux of source. Optional.
     name : str | None
         Name of source. Optional.
-    monitored : bool
-        Whether this source is monitored. Default False.
+    flags : dict | None
+        Dict of flags. Keys: 'monitored' (bool), 'pointing' (bool), 'extra' (list[str]).
     session : AsyncSession
         Asynchronous session to use
 
@@ -37,6 +37,7 @@ async def create_source(
     source.to_model() : RegisteredFixedSource
         Source that has been created
     """
+    flags = flags or {}
     if flux is not None:
         flux = flux.to_value("mJy")
 
@@ -45,7 +46,9 @@ async def create_source(
         dec_deg=position.dec.to_value("deg"),
         name=name,
         flux_mJy=flux,
-        monitored=monitored,
+        monitored=flags.get("monitored", False),
+        pointing=flags.get("pointing", False),
+        extra=flags.get("extra", []),
     )
 
     async with session.begin():
@@ -122,7 +125,7 @@ async def update_source(
     session: AsyncSession,
     flux: Quantity | None = None,
     name: str | None = None,
-    monitored: bool | None = None,
+    flags: dict | None = None,
 ) -> RegisteredFixedSource:
     """
     Update a source in the database.
@@ -137,8 +140,8 @@ async def update_source(
         Asynchronous session to use
     name : str | None
         Name of source
-    monitored : bool | None
-        Whether this source is monitored. Optional.
+    flags : dict | None
+        Flags to update. Keys present are updated; absent keys are unchanged.
 
     Returns
     -------
@@ -158,7 +161,7 @@ async def update_source(
                 position=position,
                 flux=flux,
                 name=name,
-                monitored=monitored,
+                flags=flags,
             )
         )
 

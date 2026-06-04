@@ -33,13 +33,19 @@ class SourceModificationRequest(BaseModel):
     name : str | None
         Name of source
     monitored : bool | None
-        Whether this source is monitored for forced photometry
+        Whether this source is monitored
+    pointing : bool | None
+        Whether this source is used for pointing
+    extra : list[str] | None
+        Extra string tags attached to this source
     """
 
-    position: AstroPydanticICRS | None
-    flux: AstroPydanticQuantity[u.mJy] | None
+    position: AstroPydanticICRS | None = None
+    flux: AstroPydanticQuantity[u.mJy] | None = None
     name: str | None = None
     monitored: bool | None = None
+    pointing: bool | None = None
+    extra: list[str] | None = None
 
 
 class BoxRequest(BaseModel):
@@ -103,13 +109,20 @@ async def create_source(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Source position must be provided",
         )
+    flags = {}
+    if model.monitored is not None:
+        flags["monitored"] = model.monitored
+    if model.pointing is not None:
+        flags["pointing"] = model.pointing
+    if model.extra is not None:
+        flags["extra"] = model.extra
     try:
         response = await core.create_source(
             position=model.position,
             flux=model.flux,
             session=session,
             name=model.name,
-            monitored=model.monitored or False,
+            flags=flags or None,
         )
     except ValidationError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.errors())
@@ -318,6 +331,13 @@ async def update_source(
     HTTPException
         If id does not correspond to any source
     """
+    flags = {}
+    if model.monitored is not None:
+        flags["monitored"] = model.monitored
+    if model.pointing is not None:
+        flags["pointing"] = model.pointing
+    if model.extra is not None:
+        flags["extra"] = model.extra
     try:
         response = await core.update_source(
             source_id,
@@ -325,7 +345,7 @@ async def update_source(
             session=session,
             flux=model.flux,
             name=model.name,
-            monitored=model.monitored,
+            flags=flags or None,
         )
     except ValueError as e:  # pragma: no cover
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -354,6 +374,49 @@ async def get_monitored_sources(
     """
     fixed_result = await session.execute(statements.get_monitored_fixed_sources())
     sso_result = await session.execute(statements.get_all_monitored_ssos())
+    return [s.to_model() for s in fixed_result.scalars()] + [
+        s.to_model() for s in sso_result.scalars()
+    ]
+
+
+@router.get("/source/pointing")
+async def get_pointing_sources(
+    session: SessionDependency,
+) -> list[RegisteredFixedSource | SolarSystemObject]:
+    """
+    Get all pointing sources.
+
+    Returns both fixed sources and solar system objects with pointing=True.
+    """
+    fixed_result = await session.execute(statements.get_pointing_fixed_sources())
+    sso_result = await session.execute(statements.get_all_pointing_ssos())
+    return [s.to_model() for s in fixed_result.scalars()] + [
+        s.to_model() for s in sso_result.scalars()
+    ]
+
+
+@router.get("/source/flagged")
+async def get_flagged_sources(
+    session: SessionDependency,
+    flags: list[str],
+    combine: str = "or",
+) -> list[RegisteredFixedSource | SolarSystemObject]:
+    """
+    Get all sources matched against the extra list using the given combine mode.
+
+    Parameters
+    ----------
+    flags : list[str]
+        Tags to search for.
+    combine : str
+        How to combine flags: 'or' any, 'and' all, 'xor' exactly one, 'xand' none.
+    """
+    fixed_result = await session.execute(
+        statements.get_flagged_fixed_sources(flags=flags, combine=combine)
+    )
+    sso_result = await session.execute(
+        statements.get_all_flagged_ssos(flags=flags, combine=combine)
+    )
     return [s.to_model() for s in fixed_result.scalars()] + [
         s.to_model() for s in sso_result.scalars()
     ]

@@ -96,29 +96,76 @@ def test_photometry(mock_client):
     s_mon_1 = mock_client.create_source(
         position=ICRS(1.0 * u.deg, 1.0 * u.deg),
         name="mon-1",
-        monitored=True,
+        flags={"monitored": True},
     )
     s_mon_2 = mock_client.create_source(
         position=ICRS(2.0 * u.deg, 2.0 * u.deg),
         name="mon-2",
-        monitored=True,
+        flags={"monitored": True},
     )
-    s_unmon = mock_client.create_source(
+    s_pointing = mock_client.create_source(
         position=ICRS(3.0 * u.deg, 3.0 * u.deg),
-        name="unmon",
-        monitored=False,
+        name="pointing",
+        flags={"pointing": True},
+    )
+    s_tagged = mock_client.create_source(
+        position=ICRS(4.0 * u.deg, 4.0 * u.deg),
+        name="tagged",
+        flags={"extra": ["calibrator", "bright"]},
+    )
+    s_plain = mock_client.create_source(
+        position=ICRS(5.0 * u.deg, 5.0 * u.deg),
+        name="plain",
     )
 
     t_min = Time("2020-01-01")
     t_max = Time("2020-12-31")
 
-    all_monitored = mock_client.get_monitored_sources(t_min=t_min, t_max=t_max)
-    all_ids = [s.source.source_id for s in all_monitored]
-    assert s_mon_1.source_id in all_ids
-    assert s_mon_2.source_id in all_ids
-    assert s_unmon.source_id not in all_ids
+    monitored = mock_client.get_monitored_sources(t_min=t_min, t_max=t_max)
+    monitored_ids = [s.source.source_id for s in monitored]
+    assert s_mon_1.source_id in monitored_ids
+    assert s_mon_2.source_id in monitored_ids
+    assert s_pointing.source_id not in monitored_ids
+    assert s_plain.source_id not in monitored_ids
 
-    for s in [s_mon_1, s_mon_2, s_unmon]:
+    pointing = mock_client.get_pointing_sources(t_min=t_min, t_max=t_max)
+    pointing_ids = [s.source.source_id for s in pointing]
+    assert s_pointing.source_id in pointing_ids
+    assert s_mon_1.source_id not in pointing_ids
+
+    # or: any flag matches
+    flagged_or = mock_client.get_flagged_sources(
+        flags=["calibrator"], t_min=t_min, t_max=t_max, combine="or"
+    )
+    flagged_or_ids = [s.source.source_id for s in flagged_or]
+    assert s_tagged.source_id in flagged_or_ids
+    assert s_mon_1.source_id not in flagged_or_ids
+    assert s_plain.source_id not in flagged_or_ids
+
+    # and: all flags must match
+    flagged_and = mock_client.get_flagged_sources(
+        flags=["calibrator", "bright"], t_min=t_min, t_max=t_max, combine="and"
+    )
+    flagged_and_ids = [s.source.source_id for s in flagged_and]
+    assert s_tagged.source_id in flagged_and_ids  # has both
+
+    # xor: exactly one flag matches
+    flagged_xor = mock_client.get_flagged_sources(
+        flags=["calibrator", "other"], t_min=t_min, t_max=t_max, combine="xor"
+    )
+    flagged_xor_ids = [s.source.source_id for s in flagged_xor]
+    assert s_tagged.source_id in flagged_xor_ids  # has calibrator but not other
+
+    # xand: no flags match
+    flagged_xand = mock_client.get_flagged_sources(
+        flags=["calibrator"], t_min=t_min, t_max=t_max, combine="xand"
+    )
+    flagged_xand_ids = [s.source.source_id for s in flagged_xand]
+    assert s_tagged.source_id not in flagged_xand_ids
+    assert s_mon_1.source_id in flagged_xand_ids
+    assert s_plain.source_id in flagged_xand_ids
+
+    for s in [s_mon_1, s_mon_2, s_pointing, s_tagged, s_plain]:
         mock_client.delete_source(source_id=s.source_id)
 
 

@@ -89,8 +89,9 @@ class Client(ClientBase):
         position: ICRS,
         name: str | None = None,
         flux: Quantity | None = None,
-        monitored: bool = False,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource:
+        flags = flags or {}
         if flux is not None:
             flux = flux.to_value("mJy")
 
@@ -99,7 +100,9 @@ class Client(ClientBase):
             dec_deg=position.dec.to_value("deg"),
             name=name,
             flux_mJy=flux,
-            monitored=monitored,
+            monitored=flags.get("monitored", False),
+            pointing=flags.get("pointing", False),
+            extra=flags.get("extra", []),
         )
         with self._get_session() as session:
             session.add(source)
@@ -186,6 +189,60 @@ class Client(ClientBase):
             for s in all_sources
         ]
 
+    def get_pointing_sources(
+        self,
+        *,
+        t_min: Time,
+        t_max: Time,
+    ) -> list["SourceGenerator"]:
+        with self._get_session() as session:
+            fixed = session.execute(statements.get_pointing_fixed_sources())
+            ssos = session.execute(
+                statements.get_pointing_ssos(t_min=t_min, t_max=t_max)
+            )
+            all_sources = [s.to_model() for s in fixed.scalars().all()] + [
+                s.to_model() for s in ssos.scalars().all()
+            ]
+        return [
+            SourceGenerator(
+                source=s,
+                t_min=t_min,
+                t_max=t_max,
+                client=self,
+                session_factory=self._session_factory,
+            )
+            for s in all_sources
+        ]
+
+    def get_flagged_sources(
+        self,
+        *,
+        flags: list[str],
+        t_min: Time,
+        t_max: Time,
+        combine: str = "or",
+    ) -> list["SourceGenerator"]:
+        with self._get_session() as session:
+            fixed = session.execute(
+                statements.get_flagged_fixed_sources(flags=flags, combine=combine)
+            )
+            ssos = session.execute(
+                statements.get_all_flagged_ssos(flags=flags, combine=combine)
+            )
+            all_sources = [s.to_model() for s in fixed.scalars().all()] + [
+                s.to_model() for s in ssos.scalars().all()
+            ]
+        return [
+            SourceGenerator(
+                source=s,
+                t_min=t_min,
+                t_max=t_max,
+                client=self,
+                session_factory=self._session_factory,
+            )
+            for s in all_sources
+        ]
+
     def update_source(
         self,
         *,
@@ -193,7 +250,7 @@ class Client(ClientBase):
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
-        monitored: bool | None = None,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource | None:
         with self._get_session() as session:
             session.execute(
@@ -202,7 +259,7 @@ class Client(ClientBase):
                     position=position,
                     name=name,
                     flux=flux,
-                    monitored=monitored,
+                    flags=flags,
                 )
             )
             source = session.get(RegisteredFixedSourceTable, source_id)
@@ -305,8 +362,10 @@ class Client(ClientBase):
     def delete_ephem(self, *, ephem_id: int) -> None:
         return self._ephem.delete_ephem(ephem_id=ephem_id)
 
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
-        return self._sso.create_sso(name=name, MPC_id=MPC_id)
+    def create_sso(
+        self, *, name: str, MPC_id: int | None, flags: dict | None = None
+    ) -> SolarSystemObject:
+        return self._sso.create_sso(name=name, MPC_id=MPC_id, flags=flags)
 
     def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
         return self._sso.get_sso(sso_id=sso_id)
@@ -574,9 +633,16 @@ class SolarSystemClient(SolarSystemClientBase):
         )
 
     def create_sso(
-        self, *, name: str, MPC_id: int | None, monitored: bool = False
+        self, *, name: str, MPC_id: int | None, flags: dict | None = None
     ) -> SolarSystemObject:
-        source = SolarSystemObjectTable(name=name, MPC_id=MPC_id, monitored=monitored)
+        flags = flags or {}
+        source = SolarSystemObjectTable(
+            name=name,
+            MPC_id=MPC_id,
+            monitored=flags.get("monitored", False),
+            pointing=flags.get("pointing", False),
+            extra=flags.get("extra", []),
+        )
 
         with self._get_session() as session:
             session.add(source)

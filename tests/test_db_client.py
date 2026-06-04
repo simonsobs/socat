@@ -42,12 +42,27 @@ def test_fixed_source_crud_and_queries(db_client):
     source_mon_1 = client.create_source(
         position=ICRS(5.0 * u.deg, 5.0 * u.deg),
         name="db-mon-1",
-        monitored=True,
+        flags={"monitored": True},
     )
     source_mon_2 = client.create_source(
         position=ICRS(6.0 * u.deg, 6.0 * u.deg),
         name="db-mon-2",
-        monitored=True,
+        flags={"monitored": True},
+    )
+    source_pointing = client.create_source(
+        position=ICRS(7.0 * u.deg, 7.0 * u.deg),
+        name="db-pointing",
+        flags={"pointing": True},
+    )
+    source_tagged = client.create_source(
+        position=ICRS(8.0 * u.deg, 8.0 * u.deg),
+        name="db-tagged",
+        flags={"monitored": True, "extra": ["calibrator"]},
+    )
+    source_ignored = client.create_source(
+        position=ICRS(8.0 * u.deg, 8.0 * u.deg),
+        name="db-ignored",
+        flags={"extra": ["ignored"]},
     )
 
     t_min = Time("2020-01-01")
@@ -59,6 +74,27 @@ def test_fixed_source_crud_and_queries(db_client):
     assert source_mon_2.source_id in all_monitored_ids
     assert source_1.source_id not in all_monitored_ids
     assert source_2.source_id not in all_monitored_ids
+    assert source_pointing.source_id not in all_monitored_ids
+
+    pointing = client.get_pointing_sources(t_min=t_min, t_max=t_max)
+    pointing_ids = {src.source.source_id for src in pointing}
+    assert source_pointing.source_id in pointing_ids
+    assert source_mon_1.source_id not in pointing_ids
+
+    ## how to require a flag
+    flagged = client.get_flagged_sources(flags=["calibrator"], t_min=t_min, t_max=t_max)
+    flagged_ids = {src.source.source_id for src in flagged}
+    assert source_tagged.source_id in flagged_ids
+    assert source_mon_1.source_id not in flagged_ids
+
+    ## how to ignore a flag
+    flagged = client.get_flagged_sources(
+        flags=["ignored"], t_min=t_min, t_max=t_max, combine="xand"
+    )
+    flagged_ids = {src.source.source_id for src in flagged}
+    assert source_ignored.source_id not in flagged_ids
+    assert source_mon_1.source_id in flagged_ids
+    assert source_tagged.source_id in flagged_ids
 
     updated = client.update_source(
         source_id=source_1.source_id,

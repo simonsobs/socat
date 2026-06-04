@@ -2,6 +2,12 @@
 Core functions for working with dbs
 """
 
+from .all_sources import (
+    get_box,
+    get_flagged_sources,
+    get_monitored_sources,
+    get_pointing_sources,
+)  # isort: skip
 from .fixed_sources import (
     create_source,
     delete_source,
@@ -35,8 +41,6 @@ from .sso import (
     update_sso,
 )
 
-from .all_sources import get_box, get_monitored_sources  # isort: skip
-
 __all__ = [
     "create_ephem",
     "create_service",
@@ -53,7 +57,9 @@ __all__ = [
     "get_ephem",
     "get_ephem_by_sso_id",
     "get_ephem_points",
+    "get_flagged_sources",
     "get_monitored_sources",
+    "get_pointing_sources",
     "get_service",
     "get_service_name",
     "get_source",

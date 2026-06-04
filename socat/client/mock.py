@@ -87,7 +87,7 @@ class Client(ClientBase):
         position: ICRS,
         name: str | None = None,
         flux: Quantity | None = None,
-        monitored: bool = False,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource:
         """
         Create a new source and add it to the catalog.
@@ -100,14 +100,15 @@ class Client(ClientBase):
             Flux of source.
         name : str | None, Default: None
             Name of source
-        monitored : bool, Default: False
-            Whether this source is monitored
+        flags : dict | None, Default: None
+            Dict of flags. Keys: 'monitored' (bool), 'pointing' (bool), 'extra' (list[str]).
 
         Returns
         -------
         source : RegisteredFixedSource
             Registered Fixed Source that was added
         """
+        flags = flags or {}
         if flux is not None:
             flux = flux.to(u.mJy)
         source = RegisteredFixedSource(
@@ -115,7 +116,9 @@ class Client(ClientBase):
             position=position,
             flux=flux,
             name=name,
-            monitored=monitored,
+            monitored=flags.get("monitored", False),
+            pointing=flags.get("pointing", False),
+            extra=flags.get("extra", []),
         )
         self.catalog[self.n] = source
         self.n += 1
@@ -275,6 +278,72 @@ class Client(ClientBase):
             for s in list(fixed) + list(ssos)
         ]
 
+    def get_pointing_sources(
+        self,
+        *,
+        t_min: Time,
+        t_max: Time,
+    ) -> list["SourceGenerator"]:
+        """
+        Get all pointing sources (fixed and SSOs) as SourceGenerators.
+        t_min/t_max bound the ephemeris range for SSO interpolators.
+        """
+        fixed = filter(lambda x: x.pointing, self.catalog.values())
+        sso_ids_with_ephems = {
+            e.sso_id for e in self._ephem.catalog.values() if t_min <= e.time <= t_max
+        }
+        ssos = filter(
+            lambda x: x.pointing and x.sso_id in sso_ids_with_ephems,
+            self._sso.catalog.values(),
+        )
+        return [
+            SourceGenerator(source=s, t_min=t_min, t_max=t_max, client=self)
+            for s in list(fixed) + list(ssos)
+        ]
+
+    def get_flagged_sources(
+        self,
+        *,
+        flags: list[str],
+        t_min: Time,
+        t_max: Time,
+        combine: str = "or",
+    ) -> list["SourceGenerator"]:
+        """
+        Get sources matched against the extra list using combine mode.
+        combine: 'or' any, 'and' all, 'xor' exactly one, 'xand' none.
+        t_min/t_max bound the ephemeris range for SSO interpolators.
+        """
+        flag_set = set(flags)
+
+        def _matches(extra: list[str]) -> bool:
+            overlap = len(set(extra) & flag_set)
+            if combine == "or":
+                return overlap >= 1
+            elif combine == "and":
+                return flag_set <= set(extra)
+            elif combine == "xor":
+                return overlap == 1
+            elif combine == "xand":
+                return overlap == 0
+            else:
+                raise ValueError(
+                    f"Unknown combine mode: {combine!r}. Use 'or', 'and', 'xor', or 'xand'."
+                )
+
+        fixed = filter(lambda x: _matches(x.extra), self.catalog.values())
+        sso_ids_with_ephems = {
+            e.sso_id for e in self._ephem.catalog.values() if t_min <= e.time <= t_max
+        }
+        ssos = filter(
+            lambda x: _matches(x.extra) and x.sso_id in sso_ids_with_ephems,
+            self._sso.catalog.values(),
+        )
+        return [
+            SourceGenerator(source=s, t_min=t_min, t_max=t_max, client=self)
+            for s in list(fixed) + list(ssos)
+        ]
+
     def update_source(
         self,
         *,
@@ -282,21 +351,21 @@ class Client(ClientBase):
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
-        monitored: bool | None = None,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource | None:
         """
-        Update a source by id
+        Update a source by id.
 
         Parameters
         ----------
-        position : ICRS | Float, Default: None
+        position : ICRS | None, Default: None
             Position of source
         name : str | None, Default: None
             Name of source
         flux : Quantity | None, Default: None
             Flux of source
-        monitored : bool | None, Default: None
-            Whether this source is monitored
+        flags : dict | None, Default: None
+            Flags to update. Keys present are updated; absent keys are unchanged.
 
         Returns
         -------
@@ -308,12 +377,15 @@ class Client(ClientBase):
         if current is None:
             return None
 
+        flags = flags or {}
         new = RegisteredFixedSource(
             source_id=current.source_id,
             position=current.position if position is None else position,
             name=current.name if name is None else name,
             flux=current.flux if flux is None else flux,
-            monitored=current.monitored if monitored is None else monitored,
+            monitored=flags.get("monitored", current.monitored),
+            pointing=flags.get("pointing", current.pointing),
+            extra=flags.get("extra", current.extra),
         )
 
         self.catalog[source_id] = new
@@ -1103,7 +1175,7 @@ class SolarSystemClient(SolarSystemClientBase):
         self.n = 0
 
     def create_sso(
-        self, *, name: str, MPC_id: int | None, monitored: bool = False
+        self, *, name: str, MPC_id: int | None, flags: dict | None = None
     ) -> SolarSystemObject:
         """
         Create a new solar system source.
@@ -1114,16 +1186,22 @@ class SolarSystemClient(SolarSystemClientBase):
             Name of source
         MPC_id : int
             Minor Planet Center ID of source
-        monitored : bool, Default: False
-            Whether this source is monitored
+        flags : dict | None, Default: None
+            Dict of flags. Keys: 'monitored' (bool), 'pointing' (bool), 'extra' (list[str]).
 
         Returns
         -------
         solar_source : SolarSystemObject
             Solar system source that was added.
         """
+        flags = flags or {}
         solar_source = SolarSystemObject(
-            sso_id=self.n, name=name, MPC_id=MPC_id, monitored=monitored
+            sso_id=self.n,
+            name=name,
+            MPC_id=MPC_id,
+            monitored=flags.get("monitored", False),
+            pointing=flags.get("pointing", False),
+            extra=flags.get("extra", []),
         )
         self.catalog[self.n] = solar_source
         self.n += 1

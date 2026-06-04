@@ -3,13 +3,17 @@ Contains functions that generate SQL(Alchemy) and associated statements for the
 database that are anything more than simple cases.
 """
 
+from functools import reduce
 from importlib import import_module
+from operator import add as op_add
+from typing import Literal
 
 import astropy.units as u
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
+from sqlalchemy import String, and_, case, cast, or_
 from sqlmodel import select, union_all, update
 
 from socat.database.services import AstroqueryServiceTable
@@ -234,6 +238,115 @@ def get_all_monitored_ssos() -> select:
     )
 
 
+def get_pointing_fixed_sources() -> select:
+    """
+    Get all fixed sources with pointing=True.
+    """
+    return select(RegisteredFixedSourceTable).where(
+        RegisteredFixedSourceTable.pointing == True  # noqa: E712
+    )
+
+
+def get_all_pointing_ssos() -> select:
+    """
+    Get all solar system objects with pointing=True.
+    """
+    return select(SolarSystemObjectTable).where(
+        SolarSystemObjectTable.pointing == True  # noqa: E712
+    )
+
+
+def get_pointing_ssos(t_min: Time, t_max: Time) -> select:
+    """
+    Get solar system objects with pointing=True that have at least one
+    ephemeris point in [t_min, t_max].
+    """
+    return (
+        select(SolarSystemObjectTable)
+        .join(
+            RegisteredMovingSourceTable,
+            RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
+        )
+        .where(
+            SolarSystemObjectTable.pointing == True,  # noqa: E712
+            t_min.datetime <= RegisteredMovingSourceTable.time,
+            RegisteredMovingSourceTable.time <= t_max.datetime,
+        )
+        .distinct()
+    )
+
+
+FlagCombine = Literal["or", "and", "xor", "xand"]
+
+
+def _flag_condition(col, flags: list[str], combine: FlagCombine):
+    """
+    Build a SQLAlchemy WHERE condition for matching flags against a JSON-list column.
+
+    Semantics:
+        or   – any flag is present (|extra ∩ flags| ≥ 1)
+        and  – all flags are present (flags ⊆ extra)
+        xor  – exactly one flag is present (|extra ∩ flags| == 1)
+        xand – no flag is present (extra ∩ flags = ∅)
+
+    Raises
+    ------
+    ValueError
+        If combine is not one of 'or', 'and', 'xor', 'xand'.
+    """
+    conditions = [cast(col, String).contains(f'"{flag}"') for flag in flags]
+
+    if combine == "or":
+        return or_(*conditions)
+    elif combine == "and":
+        return and_(*conditions)
+    elif combine == "xor":
+        match_count = reduce(op_add, [case((c, 1), else_=0) for c in conditions])
+        return match_count == 1
+    elif combine == "xand":
+        return and_(*(~c for c in conditions))
+    else:
+        raise ValueError(
+            f"Unknown combine mode: {combine!r}. Use 'or', 'and', 'xor', or 'xand'."
+        )
+
+
+def get_flagged_fixed_sources(flags: list[str], combine: FlagCombine = "or") -> select:
+    """
+    Get fixed sources matched against the extra list using the given combine mode.
+
+    Parameters
+    ----------
+    flags : list[str]
+        Tags to search for in the extra field.
+    combine : {'or', 'and', 'xor', 'xand'}
+        How to combine multiple flags. See _flag_condition for semantics.
+    """
+    if not flags:
+        return select(RegisteredFixedSourceTable).where(False)  # noqa: E712
+    return select(RegisteredFixedSourceTable).where(
+        _flag_condition(RegisteredFixedSourceTable.extra, flags, combine)
+    )
+
+
+def get_all_flagged_ssos(flags: list[str], combine: FlagCombine = "or") -> select:
+    """
+    Get solar system objects matched against the extra list using the given combine mode.
+
+    Parameters
+    ----------
+    flags : list[str]
+        Tags to search for in the extra field.
+    combine : {'or', 'and', 'xor', 'xand'}
+        How to combine multiple flags. See _flag_condition for semantics.
+    """
+    if not flags:
+        return select(SolarSystemObjectTable).where(False)  # noqa: E712
+    return select(SolarSystemObjectTable).where(
+        _flag_condition(SolarSystemObjectTable.extra, flags, combine)
+    )
+
+
 def get_monitored_ssos(t_min: Time, t_max: Time) -> select:
     """
     Get solar system objects with monitored=True that have at least one
@@ -271,7 +384,7 @@ def update_source(
     position: ICRS | None = None,
     flux: Quantity | None = None,
     name: str | None = None,
-    monitored: bool | None = None,
+    flags: dict | None = None,
 ) -> update:
     """
     Generate an update statement for a source.
@@ -286,8 +399,9 @@ def update_source(
         Flux of source. Optional.
     name : str | None
         Name of source. Optional.
-    monitored : bool | None
-        Whether this source is monitored. Optional.
+    flags : dict | None
+        Dict of flags to update. Keys present in the dict are updated;
+        absent keys are left unchanged. Valid keys: 'monitored', 'pointing', 'extra'.
 
     Returns
     -------
@@ -303,17 +417,18 @@ def update_source(
         RegisteredFixedSourceTable.source_id == source_id
     )
 
-    values = {
-        k: v
-        for k, v in {
-            "ra_deg": position.ra.to_value("deg") if position is not None else None,
-            "dec_deg": position.dec.to_value("deg") if position is not None else None,
-            "flux_mJy": flux.to_value("mJy") if flux is not None else None,
-            "name": name,
-            "monitored": monitored,
-        }.items()
-        if v is not None
-    }
+    values = {}
+    if position is not None:
+        values["ra_deg"] = position.ra.to_value("deg")
+        values["dec_deg"] = position.dec.to_value("deg")
+    if flux is not None:
+        values["flux_mJy"] = flux.to_value("mJy")
+    if name is not None:
+        values["name"] = name
+    if flags:
+        for key in ("monitored", "pointing", "extra"):
+            if key in flags:
+                values[key] = flags[key]
 
     if values:
         return stmt.values(**values)

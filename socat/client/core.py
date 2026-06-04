@@ -51,10 +51,11 @@ class ClientBase(ABC):
         position: ICRS,
         name: str | None = None,
         flux: Quantity | None = None,
-        monitored: bool = False,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource:
         """
-        Create a new source in the catlaog.
+        Create a new source in the catalog.
+        flags dict keys: 'monitored' (bool), 'pointing' (bool), 'extra' (list[str]).
         """
         return  # pragma: no cover
 
@@ -114,6 +115,35 @@ class ClientBase(ABC):
         return []  # pragma: no cover
 
     @abstractmethod
+    def get_pointing_sources(
+        self,
+        *,
+        t_min: Time,
+        t_max: Time,
+    ) -> list["SourceGeneratorBase"]:
+        """
+        Get all pointing sources (fixed and SSOs) as SourceGenerators.
+        t_min/t_max bound the ephemeris range for SSO interpolators.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def get_flagged_sources(
+        self,
+        *,
+        flags: list[str],
+        t_min: Time,
+        t_max: Time,
+        combine: str = "or",
+    ) -> list["SourceGeneratorBase"]:
+        """
+        Get sources matched against the extra list using combine mode.
+        combine: 'or' any, 'and' all, 'xor' exactly one, 'xand' none.
+        t_min/t_max bound the ephemeris range for SSO interpolators.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
     def update_source(
         self,
         *,
@@ -121,10 +151,11 @@ class ClientBase(ABC):
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
-        monitored: bool | None = None,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource | None:
         """
         Update a source. If the source is updated, return its new value. Else, return None.
+        flags dict keys present are updated; absent keys are left unchanged.
         """
         return None  # pragma: no cover
 
@@ -237,9 +268,12 @@ class ClientBase(ABC):
         return []  # pragma: no cover
 
     @abstractmethod
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
+    def create_sso(
+        self, *, name: str, MPC_id: int | None, flags: dict | None = None
+    ) -> SolarSystemObject:
         """
         Create a new solar system source in the catalog.
+        flags dict keys: 'monitored' (bool), 'pointing' (bool), 'extra' (list[str]).
         """
         return  # pragma: no cover
 
@@ -403,10 +437,11 @@ class EphemClientBase(ABC):
 class SolarSystemClientBase(ABC):
     @abstractmethod
     def create_sso(
-        self, *, name: str, MPC_id: int | None, monitored: bool = False
+        self, *, name: str, MPC_id: int | None, flags: dict | None = None
     ) -> SolarSystemObject:
         """
         Create a new solar system source in the catalog.
+        flags dict keys: 'monitored' (bool), 'pointing' (bool), 'extra' (list[str]).
         """
         return  # pragma: no cover
 

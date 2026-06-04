@@ -51,7 +51,7 @@ def ingest_fits_file(
             ),
             flux=row["fluxJy"] * u.Jy,
             name=row["name"],
-            monitored=row["fluxJy"] * u.Jy >= flux_threshold,
+            flags={"monitored": row["fluxJy"] * u.Jy >= flux_threshold},
         )
 
         number_of_sources += 1

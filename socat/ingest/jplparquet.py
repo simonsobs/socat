@@ -74,7 +74,7 @@ def ingest_jpl_parquet_file(
     for designation, rows in data.groupby("designation", sort=False):
         mpc_id, name = _parse_designation(designation)
         client.sso.create_sso(
-            name=name, MPC_id=mpc_id, monitored=True
+            name=name, MPC_id=mpc_id, flags={"monitored": True}
         )  ## ASSUME ALL JPL OBJECTS ARE MONITORED FOR NOW
         number_of_ssos += 1
         sso = client.sso.get_sso_MPC_id(MPC_id=mpc_id)[0]

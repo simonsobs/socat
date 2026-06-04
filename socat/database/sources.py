@@ -5,6 +5,9 @@ from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropydantic import AstroPydanticICRS, AstroPydanticQuantity, AstroPydanticTime
 from pydantic import BaseModel
+from pydantic import Field as PydanticField
+from sqlalchemy import Column
+from sqlalchemy.types import JSON
 from sqlmodel import Field, SQLModel
 
 
@@ -36,11 +39,17 @@ class RegisteredFixedSource(RegisteredSource):
         Name of source. Optional
     monitored : bool
         Whether this source is monitored
+    pointing : bool
+        Whether this source is used for pointing
+    extra : list[str]
+        Extra string tags attached to this source
     """
 
     source_id: int | None = None
     name: str | None  # Not a foreign key
     monitored: bool = False
+    pointing: bool = False
+    extra: list[str] = PydanticField(default_factory=list)
 
 
 class RegisteredMovingSource(RegisteredSource):
@@ -89,12 +98,18 @@ class SolarSystemObject(BaseModel):
         Name of source
     monitored : bool
         Whether this source is monitored
+    pointing : bool
+        Whether this source is used for pointing
+    extra : list[str]
+        Extra string tags attached to this source
     """
 
     sso_id: int
     MPC_id: int | None
     name: str
     monitored: bool = False
+    pointing: bool = False
+    extra: list[str] = PydanticField(default_factory=list)
 
 
 class RegisteredFixedSourceTable(SQLModel, table=True):
@@ -117,6 +132,8 @@ class RegisteredFixedSourceTable(SQLModel, table=True):
     flux_mJy: float | None = Field(nullable=True)
     name: str = Field(index=True, nullable=True)
     monitored: bool = Field(default=False, nullable=False)
+    pointing: bool = Field(default=False, nullable=False)
+    extra: list | None = Field(default=None, sa_column=Column(JSON, nullable=True))
 
     def to_model(self) -> RegisteredFixedSource:
         """
@@ -137,6 +154,8 @@ class RegisteredFixedSourceTable(SQLModel, table=True):
             flux=flux,
             name=self.name,
             monitored=self.monitored,
+            pointing=self.pointing,
+            extra=self.extra or [],
         )
 
 
@@ -153,6 +172,8 @@ class SolarSystemObjectTable(SolarSystemObject, SQLModel, table=True):
     MPC_id: int | None = Field(index=True, nullable=True, unique=True)
     name: str = Field(index=True, nullable=False, unique=True)
     monitored: bool = Field(default=False, nullable=False)
+    pointing: bool = Field(default=False, nullable=False)
+    extra: list | None = Field(default=None, sa_column=Column(JSON, nullable=True))
 
     def to_model(self) -> SolarSystemObject:
         """
@@ -168,6 +189,8 @@ class SolarSystemObjectTable(SolarSystemObject, SQLModel, table=True):
             MPC_id=self.MPC_id,
             name=self.name,
             monitored=self.monitored,
+            pointing=self.pointing,
+            extra=self.extra or [],
         )
 
 
