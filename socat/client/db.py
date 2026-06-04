@@ -6,15 +6,14 @@ from collections.abc import Callable
 from contextlib import AbstractContextManager
 from typing import Any
 
-import numpy as np
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
-from scipy.interpolate import make_interp_spline
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
+from socat.core import SourceGenerator
 from socat.database import (
     AstroqueryService,
     AstroqueryServiceTable,
@@ -36,7 +35,6 @@ from .core import (
     ClientBase,
     EphemClientBase,
     SolarSystemClientBase,
-    SourceGeneratorBase,
 )
 
 
@@ -71,15 +69,15 @@ class Client(ClientBase):
         self._ephem = EphemClient(session_factory=session_factory)
 
     @property
-    def astroquery(self) -> AstroqueryClientBase:
+    def astroquery(self) -> AstroqueryClientBase:  # pragma: no cover
         return self._astroquery
 
     @property
-    def sso(self) -> SolarSystemClientBase:
+    def sso(self) -> SolarSystemClientBase:  # pragma: no cover
         return self._sso
 
     @property
-    def ephem(self) -> EphemClientBase:
+    def ephem(self) -> EphemClientBase:  # pragma: no cover
         return self._ephem
 
     def create_source(
@@ -288,7 +286,7 @@ class Client(ClientBase):
         upper_right: ICRS,
         t_min: Time,
         t_max: Time,
-    ) -> list["SourceGenerator"] | None:
+    ) -> list[SourceGenerator] | None:
         fixed_sources: list[RegisteredFixedSource] = self.get_box_fixed(
             lower_left=lower_left,
             upper_right=upper_right,
@@ -301,12 +299,10 @@ class Client(ClientBase):
         )
 
         return [
-            SourceGenerator(
+            self.get_source_generator(
                 source=s,
                 t_min=t_min,
                 t_max=t_max,
-                client=self,
-                session_factory=self._session_factory,
             )
             for s in fixed_sources + sso_sources
         ]
@@ -324,6 +320,40 @@ class Client(ClientBase):
 
     def delete_sso(self, *, sso_id: int) -> None:
         return self._sso.delete_sso(sso_id=sso_id)
+
+    def get_source_generator(
+        self,
+        source: RegisteredFixedSource | SolarSystemObject,
+        t_min: Time,
+        t_max: Time,
+    ) -> SourceGenerator:
+        """
+        SourceGenerator factory method.
+
+        Parameters
+        ----------
+        source : RegisteredFixedSource | SolarSystemObject
+            The source to generate for.
+        t_min : Time
+            The minimum time to generate for.
+        t_max : Time
+            The maximum time to generate for.
+
+        Returns
+        -------
+        SourceGenerator
+            A SourceGenerator for the given source and time range.
+        """
+        ephems = None
+        if type(source) is SolarSystemObject:
+            with self._get_session() as session:
+                ephems = session.execute(
+                    statements.get_ephem_points(
+                        sso_id=source.sso_id, t_min=t_min, t_max=t_max
+                    )
+                )
+                ephems = [e.to_model() for e in ephems.scalars().all()]
+        return SourceGenerator(source=source, ephems=ephems)
 
 
 class AstorqueryClient(AstroqueryClientBase):
@@ -626,104 +656,3 @@ class SolarSystemClient(SolarSystemClientBase):
 
             session.delete(source)
             session.commit()
-
-
-class SourceGenerator(SourceGeneratorBase):
-    _get_session: Callable[[], AbstractContextManager]
-
-    def __init__(
-        self,
-        *,
-        db_url: str | None = None,
-        engine: Engine | None = None,
-        session_factory: sessionmaker | None = None,
-        source: RegisteredFixedSource | SolarSystemObject,
-        t_min: Time,
-        t_max: Time,
-        client: Client,
-    ):
-        self._get_session = create_sync_session_interface(
-            db_url=db_url,
-            engine=engine,
-            session_factory=session_factory,
-        )
-        self.source = source
-        self.t_min = t_min
-        self.t_max = t_max
-        self.client = client
-        self.interp = None
-
-    def init_interp(self) -> None:
-        """
-        Initialize the interpolator for this source generator. Must be called before at_time().
-
-        Returns
-        -------
-        None
-        """
-        if type(self.source) is RegisteredFixedSource:
-            self.ra_unit = self.source.position.ra.unit
-            self.dec_unit = self.source.position.dec.unit
-            self.flux_unit = self.source.flux.unit
-            self.interp = lambda _: (
-                self.source.position.ra.value,
-                self.source.position.dec.value,
-                self.source.flux.value,
-            )
-
-        elif type(self.source) is SolarSystemObject:
-            ephem_points = self.client.get_ephem_points(
-                sso_id=self.source.sso_id, t_min=self.t_min, t_max=self.t_max
-            )
-            x = np.zeros(len(ephem_points))
-            y = np.zeros((len(ephem_points), 3))
-            for i, ephem in enumerate(ephem_points):
-                x[i] = ephem.time.unix
-                y[i] = (
-                    ephem.position.ra.value,
-                    ephem.position.dec.value,
-                    ephem.flux.value,
-                )
-
-            self.ra_unit = ephem.position.ra.unit
-            self.dec_unit = ephem.position.dec.unit
-            self.flux_unit = ephem.flux.unit
-            self.interp = make_interp_spline(x, y, k=1)
-
-    def at_time(self, *, t: Time) -> tuple[ICRS, Quantity]:
-        """
-        Get the position and flux of the source at a given time. init_interp() must be called before this method.
-
-        Parameters
-        ----------
-        time : Time
-            Time to get position and flux at.
-
-        Returns
-        -------
-        position : ICRS
-             Position of source at given time
-        flux : Quantity
-             Flux of source at given time
-
-        Raises
-        ------
-        RuntimeError
-            If interp is not initialized. Call init_interp() first.
-        ValueError
-            If time is out of range for source generator
-        """
-        if self.interp is None:
-            raise RuntimeError(
-                "Interpolator not initialized. Call init_interp() first."
-            )
-
-        if t < self.t_min or t > self.t_max:
-            raise ValueError("Time out of range for source generator")
-
-        ra_deg, dec_deg, flux_mJy = self.interp(t.unix)
-
-        position = ICRS(ra_deg * self.ra_unit, dec_deg * self.dec_unit)
-        flux = flux_mJy * self.flux_unit
-
-        return (position, flux)

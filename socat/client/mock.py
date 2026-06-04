@@ -6,13 +6,12 @@ from importlib import import_module
 from typing import Any
 
 import astropy.units as u
-import numpy as np
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
-from scipy.interpolate import make_interp_spline
 
+from socat.core import SourceGenerator
 from socat.database import (
     AstroqueryService,
     RegisteredFixedSource,
@@ -25,7 +24,6 @@ from .core import (
     ClientBase,
     EphemClientBase,
     SolarSystemClientBase,
-    SourceGeneratorBase,
 )
 
 
@@ -627,7 +625,7 @@ class Client(ClientBase):
         upper_right: ICRS,
         t_min: Time,
         t_max: Time,
-    ) -> list["SourceGenerator"] | None:
+    ) -> list[SourceGenerator] | None:
         """
         Get all sources (both fixed and moving) inside a given box within a given time range.
 
@@ -658,7 +656,7 @@ class Client(ClientBase):
         )
 
         return [
-            SourceGenerator(source=s, t_min=t_min, t_max=t_max, client=self)
+            self.get_source_generator(source=s, t_min=t_min, t_max=t_max)
             for s in fixed_sources + sso_sources
         ]
 
@@ -731,6 +729,38 @@ class Client(ClientBase):
         None
         """
         self.sso.delete_sso(sso_id=sso_id)
+
+    def get_source_generator(
+        self,
+        *,
+        source: RegisteredFixedSource | SolarSystemObject,
+        t_min: Time,
+        t_max: Time,
+    ) -> SourceGenerator:
+        """
+        Get a source generator for a given source and time range.
+
+        Parameters
+        ----------
+        source : RegisteredFixedSource | SolarSystemObject
+            Source for which to get generator
+        t_min : Time
+            Minimum time for generator
+        t_max : Time
+            Maximum time for generator
+
+        Returns
+        -------
+        SourceGenerator
+            Source generator for given source and time range.
+        """
+        ephems = None
+        if type(source) is SolarSystemObject:
+            ephems = self.get_ephem_points(
+                sso_id=source.sso_id, t_min=t_min, t_max=t_max
+            )
+
+        return SourceGenerator(source=source, ephems=ephems)
 
 
 class AstorqueryClient(AstroqueryClientBase):
@@ -1249,99 +1279,3 @@ class SolarSystemClient(SolarSystemClientBase):
         check = self.catalog.pop(sso_id, None)
         if check is not None:
             self.n -= 1
-
-
-class SourceGenerator(SourceGeneratorBase):
-    def __init__(
-        self,
-        source: RegisteredFixedSource | SolarSystemObject,
-        t_min: Time,
-        t_max: Time,
-        client: ClientBase,
-    ):
-        self.source = source
-        self.t_min = t_min
-        self.t_max = t_max
-        self.interp = None
-        self.client = client
-
-    def init_interp(self) -> None:
-        """
-        Initialize the interpolator object.
-        If our source type is a RegisteredFixedSource, then
-        interp will always just return the same ra/dec/flux
-        (Recall that the RegisteredFixedSource.flux is
-        a fixed estimate and not the light curve). If
-        the soure type is SolarSystemObject, then linear
-        interp ra/dec/flux over the requested time range.
-
-        Returns
-        -------
-        None
-        """
-        if type(self.source) is RegisteredFixedSource:
-            self.ra_unit = self.source.position.ra.unit
-            self.dec_unit = self.source.position.dec.unit
-            self.flux_unit = self.source.flux.unit
-            self.interp = lambda _: (
-                self.source.position.ra.value,
-                self.source.position.dec.value,
-                self.source.flux.value,
-            )
-
-        elif type(self.source) is SolarSystemObject:
-            # For simplicity just do linear interpolation between endpoints.
-            # In real implementation would want to use all ephem points and do something more sophisticated.
-            # Also in real implementation would want to query ephem points from database rather than having them passed in.
-            ephems = self.client.get_ephem_points(
-                sso_id=self.source.sso_id, t_min=self.t_min, t_max=self.t_max
-            )
-            x = np.zeros(len(ephems))
-            y = np.zeros((len(ephems), 3))
-            for i, ephem in enumerate(ephems):
-                x[i] = ephem.time.unix
-                y[i] = (
-                    ephem.position.ra.value,
-                    ephem.position.dec.value,
-                    ephem.flux.value,
-                )
-
-            self.ra_unit = ephem.position.ra.unit  # This assumes all ephem points have same units but this should probably be enforced upstream anyway.
-            self.dec_unit = ephem.position.dec.unit
-            self.flux_unit = ephem.flux.unit
-            self.interp = make_interp_spline(x, y, k=1)
-
-    def at_time(self, *, t: Time) -> tuple[ICRS, Quantity]:
-        """
-        Get the position and flux of the source at a given time.
-
-        Parameters
-        ----------
-        time : Time
-            Time at which to get position and flux
-
-        Returns
-        -------
-        position : ICRS
-            Position of source at given time
-        flux : Quantity
-            Flux of source at given time
-
-        Raises
-        ------
-        RuntimeError
-            If interp is not initialized. Call init_interp() first.
-        ValueError
-            If time is out of range for source generator
-        """
-        if self.interp is None:
-            raise RuntimeError(
-                "Interpolator not initialized. Call init_interp() first."
-            )
-        if t < self.t_min or t > self.t_max:
-            raise ValueError("Time out of range for source generator")
-        ra, dec, flux = self.interp(t.unix)
-        position = ICRS(ra=ra * self.ra_unit, dec=dec * self.dec_unit)
-        flux = flux * self.flux_unit
-
-        return (position, flux)
