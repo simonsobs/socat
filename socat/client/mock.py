@@ -63,7 +63,7 @@ class Client(ClientBase):
         """
         self.catalog = {}
         self.n = 0
-        self._astroquery = AstorqueryClient()
+        self._astroquery = AstroqueryClient()
         self._sso = SolarSystemClient()
         self._ephem = EphemClient()
 
@@ -763,7 +763,7 @@ class Client(ClientBase):
         return SourceGenerator(source=source, ephems=ephems)
 
 
-class AstorqueryClient(AstroqueryClientBase):
+class AstroqueryClient(AstroqueryClientBase):
     """
     Mock client for testing Astroquery
 
