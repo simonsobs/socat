@@ -3,9 +3,11 @@ from astropy.time import Time
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socat.core.fixed_sources import get_box_fixed
+from socat.core.moving_sources import get_ephem_points
 from socat.core.sso import get_box_sso
 from socat.database import RegisteredFixedSource, SolarSystemObject
-from socat.generator import SourceGenerator
+
+from .generator import SourceGenerator
 
 
 async def get_box(
@@ -34,13 +36,17 @@ async def get_box(
     all_sources = []
 
     for source in fixed_sources:
-        gen = SourceGenerator(source, t_min, t_max)
-        await gen.init_interp(session=session)
+        gen = SourceGenerator(
+            source=source,
+            ephems=None,
+        )
         all_sources.append(gen)
 
     for source in sso_sources:
-        gen = SourceGenerator(source, t_min, t_max)
-        await gen.init_interp(session=session)
+        ephems = await get_ephem_points(
+            source=source, t_min=t_min, t_max=t_max, session=session
+        )
+        gen = SourceGenerator(source=source, ephems=ephems)
         all_sources.append(gen)
 
     return all_sources

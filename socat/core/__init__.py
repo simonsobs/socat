@@ -9,6 +9,7 @@ from .fixed_sources import (
     get_source,
     update_source,
 )
+from .generator import SourceGenerator
 from .moving_sources import (
     create_ephem,
     delete_ephem,
@@ -38,6 +39,7 @@ from .sso import (
 from .all_sources import get_box  # isort: skip
 
 __all__ = [
+    "SourceGenerator",
     "create_ephem",
     "create_service",
     "create_source",

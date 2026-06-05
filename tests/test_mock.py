@@ -119,7 +119,7 @@ def test_photometry(mock_client):
 
 
 def test_add_and_remove_astroquery(mock_client):
-    service = mock_client.astroquery.create_service(
+    service = mock_client.create_service(
         name="Simbad",
         config={"name_col": "main_id", "ra_col": "ra", "dec_col": "dec"},
     )
@@ -127,14 +127,14 @@ def test_add_and_remove_astroquery(mock_client):
     assert service.name == "Simbad"
     assert service.config == {"name_col": "main_id", "ra_col": "ra", "dec_col": "dec"}
 
-    service = mock_client.astroquery.get_service(service_id=service.service_id)
+    service = mock_client.get_service(service_id=service.service_id)
 
-    service = mock_client.astroquery.update_service(
+    service = mock_client.update_service(
         service_id=service.service_id,
         name="VizieR",
         config={"name_col": "name", "ra_col": "ra_deg", "dec_col": "dec_deg"},
     )
-    service = mock_client.astroquery.get_service(service_id=service.service_id)
+    service = mock_client.get_service(service_id=service.service_id)
     assert service.name == "VizieR"
     assert service.config == {
         "name_col": "name",
@@ -142,16 +142,16 @@ def test_add_and_remove_astroquery(mock_client):
         "dec_col": "dec_deg",
     }
 
-    service_list = mock_client.astroquery.get_service_name(name="VizieR")
+    service_list = mock_client.get_service_name(name="VizieR")
     assert len(service_list) == 1
     assert service_list[0].service_id == 0
 
-    mock_client.astroquery.delete_service(service_id=0)
+    mock_client.delete_service(service_id=0)
 
-    service_list = mock_client.astroquery.get_service_name(name="NOT_A_SERVICE")
+    service_list = mock_client.get_service_name(name="NOT_A_SERVICE")
     assert service_list is None
 
-    service = mock_client.astroquery.update_service(
+    service = mock_client.update_service(
         service_id=999999, name="FAILURE", config="FRAUD"
     )
     assert service is None
