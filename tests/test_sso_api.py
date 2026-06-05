@@ -1,5 +1,6 @@
 import astropy.units as u
 import pytest
+import uuid7 as uuid
 from astropy.time import Time
 from httpx import HTTPStatusError
 
@@ -198,26 +199,26 @@ def test_get_box(client):
 
 def test_bad_id(client):
     with pytest.raises(HTTPStatusError):
-        response = client.get(f"api/v1/sso/{999999}")
+        response = client.get(f"api/v1/sso/{uuid.create()}")
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
         response = client.post(
-            f"api/v1/sso/{999999}", json={"MPC_id": 511, "name": "Davida"}
+            f"api/v1/sso/{uuid.create()}", json={"MPC_id": 511, "name": "Davida"}
         )
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
-        response = client.delete(f"api/v1/sso/{999999}")
+        response = client.delete(f"api/v1/sso/{uuid.create()}")
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
-        response = client.get(f"api/v1/ephem/{999999}")
+        response = client.get(f"api/v1/ephem/{uuid.create()}")
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
         response = client.post(
-            f"api/v1/ephem/{999999}",
+            f"api/v1/ephem/{uuid.create()}",
             json={
                 "sso_id": 1,
                 "MPC_id": 423,
@@ -233,5 +234,5 @@ def test_bad_id(client):
         response.raise_for_status()
 
     with pytest.raises(HTTPStatusError):
-        response = client.delete(f"api/v1/ephem/{999999}")
+        response = client.delete(f"api/v1/ephem/{uuid.create()}")
         response.raise_for_status()

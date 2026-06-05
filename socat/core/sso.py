@@ -2,6 +2,7 @@
 Core functionality providing access to the sso database.
 """
 
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from sqlalchemy import select
@@ -41,13 +42,13 @@ async def create_sso(
     return source.to_model()
 
 
-async def get_sso(sso_id: int, session: AsyncSession) -> SolarSystemObject:
+async def get_sso(sso_id: uuid.UUID, session: AsyncSession) -> SolarSystemObject:
     """
     Get a solar system source from the database by id.
 
     Parameters
     ----------
-    sso_id :  int
+    sso_id :  uuid.UUID
         ID of source
     session : AsyncSession
         Asynchronous session to use
@@ -183,7 +184,7 @@ async def get_sso_MPC_id(MPC_id: int, session: AsyncSession) -> list[SolarSystem
 
 
 async def update_sso(
-    sso_id: int,
+    sso_id: uuid.UUID,
     name: str | None,
     MPC_id: int | None,
     session: AsyncSession,
@@ -192,7 +193,7 @@ async def update_sso(
     Update a solar system source.
     Parameters
     ----------
-    sso_id : int
+    sso_id : uuid.UUID
         Internal SO source ID
     name : str
         Name of solar system source
@@ -225,13 +226,13 @@ async def update_sso(
     return source.to_model()
 
 
-async def delete_sso(sso_id: int, session: AsyncSession) -> None:
+async def delete_sso(sso_id: uuid.UUID, session: AsyncSession) -> None:
     """
     Delete a solar system source from the dattabase.
 
     Parameters
     ----------
-    sso_id : int
+    sso_id : uuid.UUID
         ID of source
     session : AsyncSession
         Asynchronous session to use

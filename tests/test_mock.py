@@ -1,5 +1,6 @@
 import astropy.units as u
 import pytest
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from astroquery.exceptions import NoResultsWarning
@@ -9,7 +10,6 @@ def test_add_and_remove(mock_client):
     position = ICRS(0.0 * u.deg, 0.0 * u.deg)
     flux = 1.0 * u.mJy
     source = mock_client.create_source(position=position, name="mySrc", flux=flux)
-    assert source.source_id == 0
     assert source.position.ra.value == 0.0
     assert source.position.dec.value == 0.0
     assert source.flux.value == 1.0
@@ -23,29 +23,26 @@ def test_add_and_remove(mock_client):
         source_id=source.source_id, position=position, name="mySrcUpdate", flux=flux
     )
     source = mock_client.get_source(source_id=source.source_id)
-    assert source.source_id == 0
     assert source.position.ra.value == 1.0
     assert source.position.dec.value == 1.0
     assert source.flux.value == 2.0
     assert source.name == "mySrcUpdate"
 
-    mock_client.delete_source(source_id=0)
+    mock_client.delete_source(source_id=source.source_id)
 
 
 def test_add_and_remove_by_name(mock_client):
     source = mock_client.create_name(name="m1", astroquery_service="Simbad")
-    assert source.source_id == 0
     assert source.position.ra.value == 83.6324
     assert source.position.dec.value == 22.0174
 
     mock_client.delete_source(source_id=0)
 
     source = mock_client.create_name(name="m2", astroquery_service="Simbad")
-    assert source.source_id == 0
     assert source.position.ra.value == 323.36258333333336
     assert source.position.dec.value == -0.8232499999999998
 
-    mock_client.delete_source(source_id=0)
+    mock_client.delete_source(source_id=source.source_id)
 
 
 def test_bad_create_name(mock_client):
@@ -56,7 +53,9 @@ def test_bad_create_name(mock_client):
 def test_bad_id(mock_client):
     position = ICRS(1.0 * u.deg, 1.0 * u.deg)
     flux = 2.0 * u.mJy
-    source = mock_client.update_source(source_id=999999, position=position, flux=flux)
+    source = mock_client.update_source(
+        source_id=uuid.create(), position=position, flux=flux
+    )
     assert source is None
 
 
@@ -210,7 +209,6 @@ def test_add_and_remove_astroquery(mock_client):
         name="Simbad",
         config={"name_col": "main_id", "ra_col": "ra", "dec_col": "dec"},
     )
-    assert service.service_id == 0
     assert service.name == "Simbad"
     assert service.config == {"name_col": "main_id", "ra_col": "ra", "dec_col": "dec"}
 
@@ -231,14 +229,13 @@ def test_add_and_remove_astroquery(mock_client):
 
     service_list = mock_client.get_service_name(name="VizieR")
     assert len(service_list) == 1
-    assert service_list[0].service_id == 0
 
-    mock_client.delete_service(service_id=0)
+    mock_client.delete_service(service_id=service_list[0].service_id)
 
     service_list = mock_client.get_service_name(name="NOT_A_SERVICE")
     assert service_list is None
 
     service = mock_client.update_service(
-        service_id=999999, name="FAILURE", config="FRAUD"
+        service_id=uuid.create(), name="FAILURE", config="FRAUD"
     )
     assert service is None

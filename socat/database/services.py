@@ -4,6 +4,7 @@ Core database tables storing information about services.
 
 from typing import Any
 
+import uuid7 as uuid
 from pydantic import BaseModel, ConfigDict
 from sqlmodel import JSON, Column, Field, SQLModel
 
@@ -16,7 +17,7 @@ class AstroqueryService(BaseModel):
     """An allowable astroquery service
     Attributes
     ----------
-    service_id : int
+    service_id : uuid.UUID
         Unique service identifier
     name : str
         Name of service
@@ -24,7 +25,7 @@ class AstroqueryService(BaseModel):
         json to be deserialized to config options
     """
 
-    service_id: int
+    service_id: uuid.UUID
     name: str
     config: dict[str, Any]
 
@@ -41,13 +42,13 @@ class AstroqueryServiceTable(AstroqueryService, SQLModel, table=True):
     for responding to a query with using the `to_model` method.
     Attributes
     ----------
-    id : int
+    service_id : uuid.UUID
         Unique service identifier
     """
 
     __tablename__ = "astroquery_services"
 
-    service_id: int = Field(primary_key=True)
+    service_id: uuid.UUID = Field(default_factory=uuid.create, primary_key=True)
     name: str = Field(index=True)
     config: dict[str, Any] = Field(sa_column=Column(JSON))
 

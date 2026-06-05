@@ -4,6 +4,7 @@ Core functionality providing access to the services database.
 
 from typing import Any
 
+import uuid7 as uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,13 +39,15 @@ async def create_service(
     return service.to_model()
 
 
-async def get_service(service_id: int, session: AsyncSession) -> AstroqueryService:
+async def get_service(
+    service_id: uuid.UUID, session: AsyncSession
+) -> AstroqueryService:
     """
     Get an astroquery service from the database by id.
 
     Parameters
     ----------
-    service_id :  int
+    service_id : uuid.UUID
         ID of service
     session : AsyncSession
         Asynchronous session to use
@@ -98,8 +101,8 @@ async def get_service_name(
 
     Parameters
     ----------
-    service_name :  int
-        ID of service
+    service_name : str
+        Name of service
     session : AsyncSession
         Asynchronous session to use
 
@@ -130,7 +133,7 @@ async def get_service_name(
 
 
 async def update_service(
-    service_id: int,
+    service_id: uuid.UUID,
     name: str | None,
     config: dict[str, Any] | None,
     session: AsyncSession,
@@ -140,7 +143,7 @@ async def update_service(
 
      Parameters
      ----------
-     service_name : int
+     service_id : uuid.UUID
          ID of service
      name : str | None
          Name of service
@@ -176,13 +179,13 @@ async def update_service(
     return model
 
 
-async def delete_service(service_id: int, session: AsyncSession) -> None:
+async def delete_service(service_id: uuid.UUID, session: AsyncSession) -> None:
     """
     Delete a source from the database.
 
     Parameters
     ----------
-    service_id : int
+    service_id : uuid.UUID
         ID of service
     session : AsyncSession
         Asynchronous session to use

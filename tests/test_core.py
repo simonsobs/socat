@@ -4,6 +4,7 @@ Test the core functions
 
 import astropy.units as u
 import pytest
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 
 from socat import core
@@ -154,17 +155,15 @@ async def test_update(database_async_sessionmaker):
 async def test_bad_id(database_async_sessionmaker):
     with pytest.raises(ValueError):
         async with database_async_sessionmaker() as session:
-            await core.get_source(
-                source_id=999999, session=session
-            )  # I suppose this isn't stictly safe if you have a test catalog with 1M entries
+            await core.get_source(source_id=uuid.create(), session=session)
 
     position = ICRS(1 * u.deg, 1 * u.deg)
     with pytest.raises(ValueError):
         async with database_async_sessionmaker() as session:
             await core.update_source(
-                source_id=999999, position=position, session=session
+                source_id=uuid.create(), position=position, session=session
             )
 
     with pytest.raises(ValueError):
         async with database_async_sessionmaker() as session:
-            await core.delete_source(source_id=999999, session=session)
+            await core.delete_source(source_id=uuid.create(), session=session)

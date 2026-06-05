@@ -7,6 +7,7 @@ client.
 from abc import ABC, abstractmethod
 from typing import Any
 
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
@@ -57,7 +58,7 @@ class ClientBase(ABC):
         return []  # pragma: no cover
 
     @abstractmethod
-    def get_source(self, *, source_id: int) -> RegisteredFixedSource | None:
+    def get_source(self, *, source_id: uuid.UUID) -> RegisteredFixedSource | None:
         """
         Get information about a specific source. If the source is not found, we return None.
         """
@@ -85,7 +86,7 @@ class ClientBase(ABC):
     def update_source(
         self,
         *,
-        source_id: int,
+        source_id: uuid.UUID,
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
@@ -97,7 +98,7 @@ class ClientBase(ABC):
         return None  # pragma: no cover
 
     @abstractmethod
-    def delete_source(self, *, source_id: int) -> None:
+    def delete_source(self, *, source_id: uuid.UUID) -> None:
         """
         Delete a source from the catalog.
         """
@@ -111,7 +112,7 @@ class ClientBase(ABC):
         return  # pragma: no cover
 
     @abstractmethod
-    def get_service(self, *, service_id: int) -> AstroqueryService | None:
+    def get_service(self, *, service_id: uuid.UUID) -> AstroqueryService | None:
         """
         Get information about a specific service. If the service is not found, we return None.
         """
@@ -128,7 +129,7 @@ class ClientBase(ABC):
     def update_service(
         self,
         *,
-        service_id: int,
+        service_id: uuid.UUID,
         name: str | None = None,
         config: dict[str, Any] | None = None,
     ) -> AstroqueryService | None:
@@ -138,7 +139,7 @@ class ClientBase(ABC):
         return None  # pragma: no cover
 
     @abstractmethod
-    def delete_service(self, *, service_id: int) -> None:
+    def delete_service(self, *, service_id: uuid.UUID) -> None:
         """
         Delete a service from the catalog.
         """
@@ -148,7 +149,7 @@ class ClientBase(ABC):
     def create_ephem(
         self,
         *,
-        sso_id: int,
+        sso_id: uuid.UUID,
         MPC_id: int | None,
         name: str,
         time: Time,
@@ -161,7 +162,7 @@ class ClientBase(ABC):
         return []  # pragma: no cover
 
     @abstractmethod
-    def get_ephem(self, *, ephem_id: int) -> RegisteredMovingSource | None:
+    def get_ephem(self, *, ephem_id: uuid.UUID) -> RegisteredMovingSource | None:
         """
         Get a single ephem point.
         """
@@ -171,7 +172,7 @@ class ClientBase(ABC):
     def get_ephem_points(
         self,
         *,
-        sso_id: int,
+        sso_id: uuid.UUID,
         t_min: Time,
         t_max: Time,
     ) -> list[RegisteredMovingSource] | None:
@@ -184,8 +185,8 @@ class ClientBase(ABC):
     def update_ephem(
         self,
         *,
-        ephem_id: int,
-        sso_id: int | None,
+        ephem_id: uuid.UUID,
+        sso_id: uuid.UUID | None,
         MPC_id: int | None,
         name: str | None,
         time: Time | None,
@@ -198,7 +199,7 @@ class ClientBase(ABC):
         return []  # pragma: no cover
 
     @abstractmethod
-    def delete_ephem(self, *, ephem_id: int) -> None:
+    def delete_ephem(self, *, ephem_id: uuid.UUID) -> None:
         """
         Delete a single ephem point.
         """
@@ -214,7 +215,7 @@ class ClientBase(ABC):
         return  # pragma: no cover
 
     @abstractmethod
-    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
+    def get_sso(self, *, sso_id: uuid.UUID) -> SolarSystemObject | None:
         """
         Get information about a specific solar system source. If the service is not found, we return None.
         """
@@ -264,7 +265,7 @@ class ClientBase(ABC):
 
     @abstractmethod
     def update_sso(
-        self, *, sso_id: int, name: str | None, MPC_id: int | None
+        self, *, sso_id: uuid.UUID, name: str | None, MPC_id: int | None
     ) -> SolarSystemObject | None:
         """
         Update information about a solar system source.
@@ -272,7 +273,7 @@ class ClientBase(ABC):
         return []  #  pragma: no cover
 
     @abstractmethod
-    def delete_sso(self, *, sso_id: int) -> None:
+    def delete_sso(self, *, sso_id: uuid.UUID) -> None:
         """
         Delete solar system source.
         """
@@ -301,7 +302,7 @@ class AstroqueryClientBase(ABC):
         return  # pragma: no cover
 
     @abstractmethod
-    def get_service(self, *, service_id: int) -> AstroqueryService | None:
+    def get_service(self, *, service_id: uuid.UUID) -> AstroqueryService | None:
         """
         Get information about a specific service. If the service is not found, we return None.
         """
@@ -318,7 +319,7 @@ class AstroqueryClientBase(ABC):
     def update_service(
         self,
         *,
-        service_id: int,
+        service_id: uuid.UUID,
         name: str | None = None,
         config: dict[str, Any] | None = None,
     ) -> AstroqueryService | None:
@@ -328,7 +329,7 @@ class AstroqueryClientBase(ABC):
         return None  # pragma: no cover
 
     @abstractmethod
-    def delete_service(self, *, service_id: int) -> None:
+    def delete_service(self, *, service_id: uuid.UUID) -> None:
         """
         Delete a service from the catalog.
         """
@@ -340,7 +341,7 @@ class EphemClientBase(ABC):
     def create_ephem(
         self,
         *,
-        sso_id: int,
+        sso_id: uuid.UUID,
         MPC_id: int | None,
         name: str,
         time: Time,
@@ -353,7 +354,7 @@ class EphemClientBase(ABC):
         return []  # pragma: no cover
 
     @abstractmethod
-    def get_ephem(self, *, ephem_id: int) -> RegisteredMovingSource | None:
+    def get_ephem(self, *, ephem_id: uuid.UUID) -> RegisteredMovingSource | None:
         """
         Get a single ephem point.
         """
@@ -363,7 +364,7 @@ class EphemClientBase(ABC):
     def get_ephem_points(
         self,
         *,
-        sso_id: int,
+        sso_id: uuid.UUID,
         t_min: Time,
         t_max: Time,
     ) -> list[RegisteredMovingSource] | None:
@@ -376,8 +377,8 @@ class EphemClientBase(ABC):
     def update_ephem(
         self,
         *,
-        ephem_id: int,
-        sso_id: int | None,
+        ephem_id: uuid.UUID,
+        sso_id: uuid.UUID | None,
         MPC_id: int | None,
         name: str | None,
         time: Time | None,
@@ -390,7 +391,7 @@ class EphemClientBase(ABC):
         return []  # pragma: no cover
 
     @abstractmethod
-    def delete_ephem(self, *, ephem_id: int) -> None:
+    def delete_ephem(self, *, ephem_id: uuid.UUID) -> None:
         """
         Delete a single ephem point.
         """
@@ -408,7 +409,7 @@ class SolarSystemClientBase(ABC):
         return  # pragma: no cover
 
     @abstractmethod
-    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
+    def get_sso(self, *, sso_id: uuid.UUID) -> SolarSystemObject | None:
         """
         Get information about a specific solar system source. If the service is not found, we return None.
         """
@@ -430,7 +431,7 @@ class SolarSystemClientBase(ABC):
 
     @abstractmethod
     def update_sso(
-        self, *, sso_id: int, name: str | None, MPC_id: int | None
+        self, *, sso_id: uuid.UUID, name: str | None, MPC_id: int | None
     ) -> SolarSystemObject | None:
         """
         Update information about a solar system source.
@@ -438,7 +439,7 @@ class SolarSystemClientBase(ABC):
         return []  #  pragma: no cover
 
     @abstractmethod
-    def delete_sso(self, *, sso_id: int) -> None:
+    def delete_sso(self, *, sso_id: uuid.UUID) -> None:
         """
         Delete solar system source.
         """
