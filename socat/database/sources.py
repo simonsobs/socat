@@ -85,7 +85,7 @@ class SolarSystemObject(BaseModel):
 
     Attributes
     ----------
-    id : uuid.UUID
+    sso_id : uuid.UUID
         Internal SO ID of source
     MPC_id : int | None
         Minor Planet Center ID of ephem.
