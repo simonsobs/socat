@@ -21,30 +21,6 @@ from socat.database import (
 
 
 class ClientBase(ABC):
-    @property
-    @abstractmethod
-    def astroquery(self) -> "AstroqueryClientBase":
-        """
-        Access the astroquery-service client.
-        """
-        return  # pragma: no cover
-
-    @property
-    @abstractmethod
-    def sso(self) -> "SolarSystemClientBase":
-        """
-        Access the solar-system-object client.
-        """
-        return  # pragma: no cover
-
-    @property
-    @abstractmethod
-    def ephem(self) -> "EphemClientBase":
-        """
-        Access the ephemeris client.
-        """
-        return  # pragma: no cover
-
     @abstractmethod
     def create_source(
         self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None

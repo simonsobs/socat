@@ -67,18 +67,6 @@ class Client(ClientBase):
         self._sso = SolarSystemClient()
         self._ephem = EphemClient()
 
-    @property
-    def astroquery(self) -> AstroqueryClientBase:
-        return self._astroquery
-
-    @property
-    def sso(self) -> SolarSystemClientBase:
-        return self._sso
-
-    @property
-    def ephem(self) -> EphemClientBase:
-        return self._ephem
-
     def create_source(
         self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
     ) -> RegisteredFixedSource:
@@ -320,7 +308,7 @@ class Client(ClientBase):
         service : AstroqueryService
             Astroquery service that was added
         """
-        return self.astroquery.create_service(name=name, config=config)
+        return self._astroquery.create_service(name=name, config=config)
 
     def get_service(self, *, service_id: int) -> AstroqueryService | None:
         """
@@ -333,10 +321,10 @@ class Client(ClientBase):
 
         Returns
         -------
-        self.astroquery.get_service(service_id=service_id) : AstroqueryService | None
+        self._astroquery.get_service(service_id=service_id) : AstroqueryService | None
             Service corresponding to service_id. Returns None if service not found
         """
-        return self.astroquery.get_service(service_id=service_id)
+        return self._astroquery.get_service(service_id=service_id)
 
     def get_service_name(self, *, name: str) -> list[AstroqueryService] | None:
         """
@@ -352,7 +340,7 @@ class Client(ClientBase):
          : list[AstroqueryService] | None
             List of services corresponding to service_id. Returns None if service not found
         """
-        return self.astroquery.get_service_name(name=name)
+        return self._astroquery.get_service_name(name=name)
 
     def update_service(
         self, *, service_id: int, name: str | None, config: dict[str, Any] | None
@@ -374,7 +362,7 @@ class Client(ClientBase):
         new : AstroqueryService
             Service that has been updated
         """
-        return self.astroquery.update_service(
+        return self._astroquery.update_service(
             service_id=service_id, name=name, config=config
         )
 
@@ -391,7 +379,7 @@ class Client(ClientBase):
         -------
         None
         """
-        self.astroquery.delete_service(service_id=service_id)
+        self._astroquery.delete_service(service_id=service_id)
 
     def create_ephem(
         self,
@@ -426,7 +414,7 @@ class Client(ClientBase):
         ephem : RegisteredMovingSource
             Ephemeris point that was added.
         """
-        return self.ephem.create_ephem(
+        return self._ephem.create_ephem(
             sso_id=sso_id,
             MPC_id=MPC_id,
             name=name,
@@ -447,10 +435,10 @@ class Client(ClientBase):
 
         Returns
         -------
-        self.ephem.get_ephem(ephem_id=ephem_id) : RegisteredMovingSource | None
+        self._ephem.get_ephem(ephem_id=ephem_id) : RegisteredMovingSource | None
             Get requested ephem.
         """
-        return self.ephem.get_ephem(ephem_id=ephem_id)
+        return self._ephem.get_ephem(ephem_id=ephem_id)
 
     def get_ephem_points(
         self, *, sso_id: int, t_min: Time, t_max: Time
@@ -473,7 +461,7 @@ class Client(ClientBase):
             List of requested ephemeris points
 
         """
-        return self.ephem.get_ephem_points(sso_id=sso_id, t_min=t_min, t_max=t_max)
+        return self._ephem.get_ephem_points(sso_id=sso_id, t_min=t_min, t_max=t_max)
 
     def update_ephem(
         self,
@@ -510,7 +498,7 @@ class Client(ClientBase):
         new : RegisteredMovingSource | None
             Ephemeris point that was updated.
         """
-        return self.ephem.update_ephem(
+        return self._ephem.update_ephem(
             ephem_id=ephem_id,
             sso_id=sso_id,
             MPC_id=MPC_id,
@@ -533,7 +521,7 @@ class Client(ClientBase):
         -------
         None
         """
-        self.ephem.delete_ephem(ephem_id=ephem_id)
+        self._ephem.delete_ephem(ephem_id=ephem_id)
 
     def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
         """
@@ -551,7 +539,7 @@ class Client(ClientBase):
         solar_source : SolarSystemObject
             Solar system source that was added.
         """
-        return self.sso.create_sso(name=name, MPC_id=MPC_id)
+        return self._sso.create_sso(name=name, MPC_id=MPC_id)
 
     def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
         """
@@ -564,10 +552,10 @@ class Client(ClientBase):
 
         Returns
         -------
-        self.sso.get_sso(sso_id=sso_id) : SolarSytemSource
+        self._sso.get_sso(sso_id=sso_id) : SolarSytemSource
             Requested solar system source.
         """
-        return self.sso.get_sso(sso_id=sso_id)
+        return self._sso.get_sso(sso_id=sso_id)
 
     def get_box_sso(
         self,
@@ -609,12 +597,12 @@ class Client(ClientBase):
                 and (dec_min <= x.position.dec.value <= dec_max)
                 and (t_min <= x.time <= t_max)
             ),
-            self.ephem.catalog.values(),
+            self._ephem.catalog.values(),
         )
 
         ephem_ids = {ephem.sso_id for ephem in ephems}
 
-        sources = filter(lambda x: x.sso_id in ephem_ids, self.sso.catalog.values())
+        sources = filter(lambda x: x.sso_id in ephem_ids, self._sso.catalog.values())
 
         return list(sources)
 
@@ -674,7 +662,7 @@ class Client(ClientBase):
         solars : list[SolarSystemObject] | None
             Requested solar system source.
         """
-        return self.sso.get_sso_name(name=name)
+        return self._sso.get_sso_name(name=name)
 
     def get_sso_MPC_id(self, *, MPC_id: int) -> list[SolarSystemObject] | None:
         """
@@ -690,7 +678,7 @@ class Client(ClientBase):
         solars : list[SolarSystemObject] | None
             List of sources with requested MPC ID
         """
-        return self.sso.get_sso_MPC_id(MPC_id=MPC_id)
+        return self._sso.get_sso_MPC_id(MPC_id=MPC_id)
 
     def update_sso(
         self, *, sso_id: int, name: str | None, MPC_id: int | None
@@ -713,7 +701,7 @@ class Client(ClientBase):
         new : SolarSystemObject | None
             Updated solar system source
         """
-        return self.sso.update_sso(sso_id=sso_id, name=name, MPC_id=MPC_id)
+        return self._sso.update_sso(sso_id=sso_id, name=name, MPC_id=MPC_id)
 
     def delete_sso(self, *, sso_id: int):
         """
@@ -728,7 +716,7 @@ class Client(ClientBase):
         -------
         None
         """
-        self.sso.delete_sso(sso_id=sso_id)
+        self._sso.delete_sso(sso_id=sso_id)
 
     def get_source_generator(
         self,

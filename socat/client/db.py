@@ -68,18 +68,6 @@ class Client(ClientBase):
         self._sso = SolarSystemClient(session_factory=session_factory)
         self._ephem = EphemClient(session_factory=session_factory)
 
-    @property
-    def astroquery(self) -> AstroqueryClientBase:  # pragma: no cover
-        return self._astroquery
-
-    @property
-    def sso(self) -> SolarSystemClientBase:  # pragma: no cover
-        return self._sso
-
-    @property
-    def ephem(self) -> EphemClientBase:  # pragma: no cover
-        return self._ephem
-
     def create_source(
         self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
     ) -> RegisteredFixedSource:
