@@ -2,6 +2,7 @@
 The web API to access the socat moving source database.
 """
 
+import uuid7 as uuid
 from astropydantic import AstroPydanticICRS, AstroPydanticTime
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ValidationError
@@ -94,13 +95,13 @@ async def create_sso(
 
 
 @router.get("/sso/{sso_id}")
-async def get_sso(sso_id: int, session: SessionDependency) -> SolarSystemObject:
+async def get_sso(sso_id: uuid.UUID, session: SessionDependency) -> SolarSystemObject:
     """
     Get a solar sytem source by id from the database
 
     Parameters
     ----------
-    sso_id : int
+    sso_id : uuid.UUID
         ID of solar system source to querry
     session : SessionDependency
         Asynchronous session to use
@@ -174,7 +175,7 @@ async def get_box_sso(
 
 @router.post("/sso/{sso_id}")
 async def update_sso(
-    sso_id: int,
+    sso_id: uuid.UUID,
     model: SolarSystemObjectRequest,
     session: SessionDependency,
 ) -> SolarSystemObject:
@@ -183,7 +184,7 @@ async def update_sso(
 
     Parameters
     ----------
-    sso_id : int
+    sso_id : uuid.UUID
         ID of solar system source to update
     model : SolarSystemObjectRequest
         Parameters of model to modify
@@ -214,13 +215,13 @@ async def update_sso(
 
 
 @router.delete("/sso/{sso_id}")
-async def delete_sso(sso_id: int, session: SessionDependency) -> None:
+async def delete_sso(sso_id: uuid.UUID, session: SessionDependency) -> None:
     """
     Delete a solar system source by id
 
     Parameters
     ----------
-    sso_id : int
+    sso_id : uuid.UUID
         ID of solar system source to delete
     session : SessionDependency
         Asynchronous session to use

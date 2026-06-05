@@ -2,6 +2,7 @@
 Core functionality providing access to the fixed sourcedatabase.
 """
 
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.units import Quantity
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,20 +52,22 @@ async def create_source(
     return source.to_model()
 
 
-async def get_source(source_id: int, session: AsyncSession) -> RegisteredFixedSource:
+async def get_source(
+    source_id: uuid.UUID, session: AsyncSession
+) -> RegisteredFixedSource:
     """
     Get a source from the database.
 
     Parameters
     ----------
-    source_id : int
+    source_id : uuid.UUID
         ID of source of interest
     session : AsyncSession
         Asynchronous session to use
 
     Returns
     -------
-    source.to_mode() : RegisteredFixedSource
+    source.to_model() : RegisteredFixedSource
         Source that has been created
 
     Raises
@@ -113,7 +116,7 @@ async def get_box_fixed(
 
 
 async def update_source(
-    source_id: int,
+    source_id: uuid.UUID,
     position: ICRS | None,
     session: AsyncSession,
     flux: Quantity | None = None,
@@ -124,6 +127,8 @@ async def update_source(
 
     Parameters
     ----------
+    source_id : uuid.UUID
+        ID of source to update
     position : ICRS | None
         Position of source in ICRS coordinates
     flux : Quanity | None
@@ -166,13 +171,13 @@ async def update_source(
     return model
 
 
-async def delete_source(source_id: int, session: AsyncSession) -> None:
+async def delete_source(source_id: uuid.UUID, session: AsyncSession) -> None:
     """
     Delete a source from the database.
 
     Parameters
     ----------
-    id : int
+    source_id : uuid.UUID
         ID of source to delete
     session : AsyncSession
         Asynchronous session to use

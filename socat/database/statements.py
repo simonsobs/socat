@@ -6,6 +6,7 @@ database that are anything more than simple cases.
 from importlib import import_module
 
 import astropy.units as u
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
@@ -227,7 +228,7 @@ def get_forced_photometry_sources(minimum_flux: Quantity) -> select:
 
 
 def update_source(
-    source_id: int,
+    source_id: uuid.UUID,
     position: ICRS | None = None,
     flux: Quantity | None = None,
     name: str | None = None,
@@ -237,7 +238,7 @@ def update_source(
 
     Parameters
     ----------
-    source_id : int
+    source_id : uuid.UUID
         ID of source to update
     position : ICRS | None
         Position of source in ICRS coordinates. Optional.
@@ -324,7 +325,7 @@ def update_service(
 
 
 def update_sso(
-    sso_id: int,
+    sso_id: uuid.UUID,
     name: str | None,
     MPC_id: int | None,
 ) -> update:
@@ -333,7 +334,7 @@ def update_sso(
 
     Parameters
     ----------
-    sso_id: int
+    sso_id: uuid.UUID
         The ID of the sso source to be updated.
     name: str
         The new name to use.
@@ -370,8 +371,8 @@ def update_sso(
 
 
 def update_ephem(
-    ephem_id: int,
-    sso_id: int | None,
+    ephem_id: uuid.UUID,
+    sso_id: uuid.UUID | None,
     MPC_id: int | None,
     name: str | None,
     time: Time | None,
@@ -383,9 +384,9 @@ def update_ephem(
 
     Parameters
     ----------
-    ephem_id : int
+    ephem_id : uuid.UUID
         The ID of the ephemeris point to be updated.
-    sso_id : int | None
+    sso_id : uuid.UUID | None
         The new SSO ID for the ephemeris point.
     MPC_id : int | None
         The new MPC ID for the ephemeris point.
@@ -434,13 +435,13 @@ def update_ephem(
         )
 
 
-def get_ephem_points(sso_id: int, t_min: Time, t_max: Time) -> select:
+def get_ephem_points(sso_id: uuid.UUID, t_min: Time, t_max: Time) -> select:
     """
     Generate a select statement to get ephemeris points for a solar system object between t_min and t_max.
 
     Parameters
     ----------
-    sso_id : int
+    sso_id : uuid.UUID
         The ID of the solar system object to get ephemeris points for.
     t_min : Time
         The minimum time for ephemeris points to return.

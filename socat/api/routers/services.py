@@ -4,6 +4,7 @@ The web API to access the socat fixed source database.
 
 from typing import Any
 
+import uuid7 as uuid
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ValidationError
 
@@ -68,13 +69,15 @@ async def create_service(
 
 
 @router.get("/service/{service_id}")
-async def get_service(service_id: int, session: SessionDependency) -> AstroqueryService:
+async def get_service(
+    service_id: uuid.UUID, session: SessionDependency
+) -> AstroqueryService:
     """
     Get a astroquery service by id from the database
 
     Parameters
     ----------
-    service_id : int
+    service_id : uuid.UUID
         ID of service to querry
     session : SessionDependency
         Asynchronous session to use
@@ -130,15 +133,17 @@ async def get_service_name(
 
 @router.post("/service/{service_id}")
 async def update_service(
-    service_id: int, model: ServiceModificationRequestion, session: SessionDependency
+    service_id: uuid.UUID,
+    model: ServiceModificationRequestion,
+    session: SessionDependency,
 ) -> AstroqueryService:
     """
     Update astroquery service parameters by id
 
     Parameters
     ----------
-    service_name : int
-        Name of source to update
+    service_id : uuid.UUID
+        ID of service to update
     model : ServiceModificationRequestion
         Parameters of service to modify
     session : SessionDependency
@@ -152,7 +157,7 @@ async def update_service(
     Raises
     ------
     HTTPException
-        If id does not correspond to any source
+        If id does not correspond to any service
     """
     try:
         response = await core.update_service(
@@ -165,13 +170,13 @@ async def update_service(
 
 
 @router.delete("/service/{service_id}")
-async def delete_service(service_id: int, session: SessionDependency) -> None:
+async def delete_service(service_id: uuid.UUID, session: SessionDependency) -> None:
     """
     Delete a astroquery service by id
 
     Parameters
     ----------
-    service_id : int
+    service_id : uuid.UUID
         ID of astroquery service to delete
     session : SessionDependency
         Asynchronous session to use

@@ -6,6 +6,7 @@ from importlib import import_module
 from typing import Any
 
 import astropy.units as u
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
@@ -44,17 +45,17 @@ class Client(ClientBase):
         Create a source and add it to the catalog
     create_name(self, *, name: str, service_name: str)
         Create a source by name using astroquery and add it to the catalog
-    get_box(self, *, lower_left: ICRS, upper_right: IRCS)
+    get_box(self, *, lower_left: ICRS, upper_right: ICRS)
         Get sources within box
-    get_source(self, *, source_id: int)
+    get_source(self, *, source_id: uuid.UUID)
         Get a source by source_id
-    update_source(self, *, source_id: int, position: ICRS | None = None, name: str | None = None, flux: Quantity | None = None)
+    update_source(self, *, source_id: uuid.UUID, position: ICRS | None = None, name: str | None = None, flux: Quantity | None = None)
         Update source by source_id
-    delete_source(self, *, source_id: int)
+    delete_source(self, *, source_id: uuid.UUID)
         Delete source by source_id
     """
 
-    catalog: dict[int, RegisteredFixedSource]
+    catalog: dict[uuid.UUID, RegisteredFixedSource]
     n: int
 
     def __init__(self):
@@ -90,12 +91,12 @@ class Client(ClientBase):
         if flux is not None:
             flux = flux.to(u.mJy)
         source = RegisteredFixedSource(
-            source_id=self.n,
+            source_id=uuid.create(),
             position=position,
             flux=flux,
             name=name,
         )
-        self.catalog[self.n] = source
+        self.catalog[source.source_id] = source
         self.n += 1
 
         return source
@@ -151,12 +152,12 @@ class Client(ClientBase):
         if flux is not None:  # pragma: no cover
             flux *= u.mJy
         source = RegisteredFixedSource(
-            source_id=self.n,
+            source_id=uuid.create(),
             position=position,
             name=name,
             flux=flux,
         )
-        self.catalog[self.n] = source
+        self.catalog[source.source_id] = source
         self.n += 1
 
         return source
@@ -196,13 +197,13 @@ class Client(ClientBase):
 
         return list(sources)
 
-    def get_source(self, *, source_id: int) -> RegisteredFixedSource | None:
+    def get_source(self, *, source_id: uuid.UUID) -> RegisteredFixedSource | None:
         """
         Get source by id
 
         Parameters
         ----------
-        source_id : int
+        source_id : uuid.UUID
             ID of source of interest
 
 
@@ -275,13 +276,13 @@ class Client(ClientBase):
 
         return new
 
-    def delete_source(self, *, source_id: int):
+    def delete_source(self, *, source_id: uuid.UUID):
         """
         Delete source by id
 
         Parameters
         ----------
-        source_id : int
+        source_id : uuid.UUID
             ID of source to be deleted
 
         Returns
@@ -384,7 +385,7 @@ class Client(ClientBase):
     def create_ephem(
         self,
         *,
-        sso_id: int,
+        sso_id: uuid.UUID,
         MPC_id: int,
         name: str,
         time: Time,
@@ -396,7 +397,7 @@ class Client(ClientBase):
 
         Parameters
         ----------
-        sso_id : int
+        sso_id : uuid.UUID
             Internal SO ID of associated SSO (sso_id).
         MPC_id : int
             Minor Planet Center ID of SSO.
@@ -423,14 +424,14 @@ class Client(ClientBase):
             flux=flux,
         )
 
-    def get_ephem(self, *, ephem_id: int) -> RegisteredMovingSource | None:
+    def get_ephem(self, *, ephem_id: uuid.UUID) -> RegisteredMovingSource | None:
         """
         Get an ephem point by ID.
         Returns None if ephem not found.
 
         Parameters
         ----------
-        ephem_id : int
+        ephem_id : uuid.UUID
             Internal SO ID of ephem point.
 
         Returns
@@ -441,14 +442,14 @@ class Client(ClientBase):
         return self._ephem.get_ephem(ephem_id=ephem_id)
 
     def get_ephem_points(
-        self, *, sso_id: int, t_min: Time, t_max: Time
+        self, *, sso_id: uuid.UUID, t_min: Time, t_max: Time
     ) -> list[RegisteredMovingSource]:
         """
         Get all ephem points for a given source in a given time range.
 
         Parameters
         ----------
-        sso_id : int
+        sso_id : uuid.UUID
             Internal SO ID of source for which to get ephemeris points
         t_min : Time
             Minimum time
@@ -466,8 +467,8 @@ class Client(ClientBase):
     def update_ephem(
         self,
         *,
-        ephem_id: int,
-        sso_id: int | None,
+        ephem_id: uuid.UUID,
+        sso_id: uuid.UUID | None,
         MPC_id: int | None,
         name: str | None,
         time: Time | None,
@@ -480,9 +481,9 @@ class Client(ClientBase):
 
         Parameters
         ----------
-        ephem_id : int
+        ephem_id : uuid.UUID
             Internal SO ID of ephem point.
-        sso_id : int
+        sso_id : uuid.UUID | None
             Internal SO ID of associated SSO.
         MPC_id : int
             Minor Planet Center ID of associated SSO.
@@ -508,13 +509,13 @@ class Client(ClientBase):
             flux=flux,
         )
 
-    def delete_ephem(self, *, ephem_id: int) -> None:
+    def delete_ephem(self, *, ephem_id: uuid.UUID) -> None:
         """
         Delete an ephem point by ID.
 
         Parameters
         ----------
-        ephem_id : int
+        ephem_id : uuid.UUID
             Internal SO ID of ephem point.
 
         Returns
@@ -541,13 +542,13 @@ class Client(ClientBase):
         """
         return self._sso.create_sso(name=name, MPC_id=MPC_id)
 
-    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
+    def get_sso(self, *, sso_id: uuid.UUID) -> SolarSystemObject | None:
         """
         Get a solar system source.
 
         Parameters
         ----------
-        sso_id : int
+        sso_id : uuid.UUID
             Internal SO ID of solar system source
 
         Returns
@@ -681,7 +682,7 @@ class Client(ClientBase):
         return self._sso.get_sso_MPC_id(MPC_id=MPC_id)
 
     def update_sso(
-        self, *, sso_id: int, name: str | None, MPC_id: int | None
+        self, *, sso_id: uuid.UUID, name: str | None, MPC_id: int | None
     ) -> SolarSystemObject | None:
         """
         Update a solar system source by ID.
@@ -689,7 +690,7 @@ class Client(ClientBase):
 
         Parameters
         ----------
-        sso_id : int
+        sso_id : uuid.UUID
             Internal SO ID of solar system source
         name : str | None
             Name of source
@@ -703,13 +704,13 @@ class Client(ClientBase):
         """
         return self._sso.update_sso(sso_id=sso_id, name=name, MPC_id=MPC_id)
 
-    def delete_sso(self, *, sso_id: int):
+    def delete_sso(self, *, sso_id: uuid.UUID):
         """
         Delete a solar system source by ID.
 
         Parameters
         ----------
-        sso_id : int
+        sso_id : uuid.UUID
             Internal SO ID of solar system source
 
         Returns
@@ -769,7 +770,7 @@ class AstroqueryClient(AstroqueryClientBase):
 
     """
 
-    catalog: dict[int, AstroqueryService]
+    catalog: dict[uuid.UUID, AstroqueryService]
     n: int
 
     def __init__(self):
@@ -795,19 +796,19 @@ class AstroqueryClient(AstroqueryClientBase):
         service : AstroqueryService
             Astroquery service that was added
         """
-        service = AstroqueryService(service_id=self.n, name=name, config=config)
-        self.catalog[self.n] = service
+        service = AstroqueryService(service_id=uuid.create(), name=name, config=config)
+        self.catalog[service.service_id] = service
         self.n += 1
 
         return service
 
-    def get_service(self, *, service_id: int) -> AstroqueryService | None:
+    def get_service(self, *, service_id: uuid.UUID) -> AstroqueryService | None:
         """
         Get a service by id number
 
         Parameters
         ----------
-        service_id : int
+        service_id : uuid.UUID
             ID of service to get
 
         Returns
@@ -843,14 +844,14 @@ class AstroqueryClient(AstroqueryClientBase):
         return service
 
     def update_service(
-        self, *, service_id: int, name: str | None, config: dict[str, Any] | None
+        self, *, service_id: uuid.UUID, name: str | None, config: dict[str, Any] | None
     ) -> AstroqueryService:
         """
         Update a service by id
 
         Parameters
         ----------
-        service_id : int
+        service_id : uuid.UUID
             ID of service to be updated
         name : str | None, Default: None
             Name of source
@@ -877,13 +878,13 @@ class AstroqueryClient(AstroqueryClientBase):
 
         return new
 
-    def delete_service(self, *, service_id: int):
+    def delete_service(self, *, service_id: uuid.UUID):
         """
         Delete service by id
 
         Parameters
         ----------
-        service_id : int
+        service_id : uuid.UUID
             ID of service to be deleted
 
         Returns
@@ -901,26 +902,26 @@ class EphemClient(EphemClientBase):
 
     Attributes
     ----------
-    catalog : dict[int, SolarSystemObject]
+    catalog : dict[uuid.UUID, SolarSystemObject]
         Dictionary of solar system sources replicating a catalog
     n : int
         Number of entries in catalog
 
     Methods
     -------
-    create_ephem(self,*,sso_id: int,MPC_id: int | None,name: str,time: Time,position: ICRS,flux: Quantity | None = None,)
+    create_ephem(self,*,sso_id: uuid.UUID,MPC_id: int | None,name: str,time: Time,position: ICRS,flux: Quantity | None = None,)
         Create a single ephemera point for solar system source.
-    get_ephem(self, *, ephem_id: int)
+    get_ephem(self, *, ephem_id: uuid.UUID)
         Get a single ephem point.
-    get_ephem_points(self, *, sso_id: int, t_min: Time, t_max: Time)
+    get_ephem_points(self, *, sso_id: uuid.UUID, t_min: Time, t_max: Time)
         Get all ephem points for a given source in a given time range. Note this takes sso_id instead of passing a SolarSystemObject.
-    update_ephem(self,*,ephem_id: int,sso_id: int | None,MPC_id: int | None,name: str | None,time: Time | None,position: ICRS | None,flux: Quantity | None,)
+    update_ephem(self,*,ephem_id: uuid.UUID,sso_id: uuid.UUID | None,MPC_id: int | None,name: str | None,time: Time | None,position: ICRS | None,flux: Quantity | None,)
         Update a single ephem point.
-    delete_ephem(self, *, ephem_id: int)
+    delete_ephem(self, *, ephem_id: uuid.UUID)
         Delete a single ephem point.
     """
 
-    catalog: dict[int, AstroqueryService]
+    catalog: dict[uuid.UUID, AstroqueryService]
     n: int
 
     def __init__(self):
@@ -933,7 +934,7 @@ class EphemClient(EphemClientBase):
     def create_ephem(
         self,
         *,
-        sso_id: int,
+        sso_id: uuid.UUID,
         MPC_id: int,
         name: str,
         time: Time,
@@ -945,7 +946,7 @@ class EphemClient(EphemClientBase):
 
         Parameters
         ----------
-        sso_id : int
+        sso_id : uuid.UUID
             Internal SO ID of associated SSO (sso_id).
         MPC_id : int
             Minor Planet Center ID of SSO.
@@ -964,7 +965,7 @@ class EphemClient(EphemClientBase):
             Ephemeris point that was added.
         """
         ephem = RegisteredMovingSource(
-            ephem_id=self.n,
+            ephem_id=uuid.create(),
             sso_id=sso_id,
             MPC_id=MPC_id,
             name=name,
@@ -972,19 +973,19 @@ class EphemClient(EphemClientBase):
             position=position,
             flux=flux,
         )
-        self.catalog[self.n] = ephem
+        self.catalog[ephem.ephem_id] = ephem
         self.n += 1
 
         return ephem
 
-    def get_ephem(self, *, ephem_id: int) -> RegisteredMovingSource | None:
+    def get_ephem(self, *, ephem_id: uuid.UUID) -> RegisteredMovingSource | None:
         """
         Get an ephem point by ID.
         Returns None if ephem not found.
 
         Parameters
         ----------
-        ephem_id : int
+        ephem_id : uuid.UUID
             Internal SO ID of ephem point.
 
         Returns
@@ -996,14 +997,14 @@ class EphemClient(EphemClientBase):
         return self.catalog.get(ephem_id, None)
 
     def get_ephem_points(
-        self, *, sso_id: int, t_min: Time, t_max: Time
+        self, *, sso_id: uuid.UUID, t_min: Time, t_max: Time
     ) -> list[RegisteredMovingSource]:
         """
         Get all ephem points for a given source in a given time range.
 
         Parameters
         ----------
-        sso_id : int
+        sso_id : uuid.UUID
             Internal SO ID of source for which to get ephemeris points
         t_min : Time
             Minimum time
@@ -1025,8 +1026,8 @@ class EphemClient(EphemClientBase):
     def update_ephem(
         self,
         *,
-        ephem_id: int,
-        sso_id: int | None,
+        ephem_id: uuid.UUID,
+        sso_id: uuid.UUID | None,
         MPC_id: int | None,
         name: str | None,
         time: Time | None,
@@ -1039,15 +1040,15 @@ class EphemClient(EphemClientBase):
 
         Parameters
         ----------
-        ephem_id : int
+        ephem_id : uuid.UUID
             Internal SO ID of ephem point.
-        sso_id : int
+        sso_id : uuid.UUID | None
             Internal SO ID of associated SSO.
-        MPC_id : int
+        MPC_id : int | None
             Minor Planet Center ID of associated SSO.
-        name : str
+        name : str | None
             Name of associated SSO.
-        time : Time
+        time : Time | None
             Time of ephem.
         flux : Quantity | None, default=None
             Flux at ephemeris.
@@ -1076,13 +1077,13 @@ class EphemClient(EphemClientBase):
 
         return new
 
-    def delete_ephem(self, *, ephem_id: int) -> None:
+    def delete_ephem(self, *, ephem_id: uuid.UUID) -> None:
         """
         Delete an ephem point by ID.
 
         Parameters
         ----------
-        ephem_id : int
+        ephem_id : uuid.UUID
             Internal SO ID of ephem point.
 
         Returns
@@ -1109,15 +1110,15 @@ class SolarSystemClient(SolarSystemClientBase):
     -------
     create_sso(self, *, name: str, MPC_id: int | None)
         Create a solar system source.
-    get_sso(self, *, sso_id: int)
+    get_sso(self, *, sso_id: uuid.UUID)
         Get a solar system source.
     get_sso_name(self, *, name: str)
         Get a solar system source by name.
     get_sso_MPC_id(self, *, MPC_id: int)
         Get a solar system source by MPC ID.
-    update_sso(self, *, sso_id: int, name: str | None, MPC_id: int | None)
+    update_sso(self, *, sso_id: uuid.UUID, name: str | None, MPC_id: int | None)
         Update a solar system source.
-    delete_sso(sefl, *, sso_id: int)
+    delete_sso(self, *, sso_id: uuid.UUID)
         Delete a solar system source.
     """
 
@@ -1147,19 +1148,19 @@ class SolarSystemClient(SolarSystemClientBase):
         solar_source : SolarSystemObject
             Solar system source that was added.
         """
-        solar_source = SolarSystemObject(sso_id=self.n, name=name, MPC_id=MPC_id)
-        self.catalog[self.n] = solar_source
+        solar_source = SolarSystemObject(sso_id=uuid.create(), name=name, MPC_id=MPC_id)
+        self.catalog[solar_source.sso_id] = solar_source
         self.n += 1
 
         return solar_source
 
-    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
+    def get_sso(self, *, sso_id: uuid.UUID) -> SolarSystemObject | None:
         """
         Get a solar system source.
 
         Parameters
         ----------
-        sso_id : int
+        sso_id : uuid.UUID
             Internal SO ID of solar system source
 
         Returns
@@ -1216,7 +1217,7 @@ class SolarSystemClient(SolarSystemClientBase):
         return solars
 
     def update_sso(
-        self, *, sso_id: int, name: str | None, MPC_id: int | None
+        self, *, sso_id: uuid.UUID, name: str | None, MPC_id: int | None
     ) -> SolarSystemObject | None:
         """
         Update a solar system source by ID.
@@ -1224,7 +1225,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
         Parameters
         ----------
-        sso_id : int
+        sso_id : uuid.UUID
             Internal SO ID of solar system source
         name : str | None
             Name of source
@@ -1251,13 +1252,13 @@ class SolarSystemClient(SolarSystemClientBase):
 
         return new
 
-    def delete_sso(self, *, sso_id: int) -> None:
+    def delete_sso(self, *, sso_id: uuid.UUID) -> None:
         """
         Delete solar system source by ID.
 
         Parameters:
         -----------
-        sso_id : int
+        sso_id : uuid.UUID
             Internal SO ID of source
 
         Returns

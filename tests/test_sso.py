@@ -4,6 +4,7 @@ Test the solar system object functions
 
 import astropy.units as u
 import pytest
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.time import Time
 
@@ -258,7 +259,7 @@ async def test_time_box(database_async_sessionmaker):
 async def test_bad_id(database_async_sessionmaker):
     with pytest.raises(ValueError):
         async with database_async_sessionmaker() as session:
-            await core.get_sso(sso_id=999999, session=session)
+            await core.get_sso(sso_id=uuid.create(), session=session)
 
     with pytest.raises(ValueError):
         async with database_async_sessionmaker() as session:
@@ -270,12 +271,12 @@ async def test_bad_id(database_async_sessionmaker):
 
     with pytest.raises(ValueError):
         async with database_async_sessionmaker() as session:
-            await core.get_ephem(ephem_id=999999, session=session)
+            await core.get_ephem(ephem_id=uuid.create(), session=session)
 
     with pytest.raises(ValueError):
         async with database_async_sessionmaker() as session:
             await core.update_sso(
-                sso_id=999999,
+                sso_id=uuid.create(),
                 name="Davida",
                 MPC_id=511,
                 session=session,
@@ -286,9 +287,9 @@ async def test_bad_id(database_async_sessionmaker):
     with pytest.raises(ValueError):
         async with database_async_sessionmaker() as session:
             await core.update_ephem(
-                ephem_id=999999,
+                ephem_id=uuid.create(),
                 session=session,
-                sso_id=1,
+                sso_id=uuid.create(),
                 name="Davida",
                 MPC_id=511,
                 time=Time("2025-01-01T00:00:00.00"),
@@ -298,8 +299,8 @@ async def test_bad_id(database_async_sessionmaker):
 
     with pytest.raises(ValueError):
         async with database_async_sessionmaker() as session:
-            await core.delete_sso(sso_id=999999, session=session)
+            await core.delete_sso(sso_id=uuid.create(), session=session)
 
     with pytest.raises(ValueError):
         async with database_async_sessionmaker() as session:
-            await core.delete_ephem(ephem_id=999999, session=session)
+            await core.delete_ephem(ephem_id=uuid.create(), session=session)

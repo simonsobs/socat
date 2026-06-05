@@ -2,6 +2,7 @@
 Core functionality providing access to the moving source ephem database.
 """
 
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
@@ -18,7 +19,7 @@ from socat.database import (
 
 async def create_ephem(
     session: AsyncSession,
-    sso_id: int,
+    sso_id: uuid.UUID,
     MPC_id: int | None,
     name: str,
     time: Time,
@@ -32,7 +33,7 @@ async def create_ephem(
     ----------
     session : AsyncSession
         Session to use
-    sso_id :int
+    sso_id : uuid.UUID
         Internal SO ID of source
     MPC_id : int | None
         MPC ID of source
@@ -70,13 +71,15 @@ async def create_ephem(
     return ephem.to_model()
 
 
-async def get_ephem(ephem_id: int, session: AsyncSession) -> RegisteredMovingSource:
+async def get_ephem(
+    ephem_id: uuid.UUID, session: AsyncSession
+) -> RegisteredMovingSource:
     """
     Get a solar system ephemeris point from the database.
 
     Parameters
     ----------
-    ephem_id : int
+    ephem_id : uuid.UUID
         ID of solar system ephemeris point
     session : AsyncSession
         Asynchronous session to use
@@ -129,14 +132,14 @@ async def get_ephem_points(
 
 
 async def get_ephem_by_sso_id(
-    sso_id: int, session: AsyncSession
+    sso_id: uuid.UUID, session: AsyncSession
 ) -> list[RegisteredMovingSource]:
     """
     Get all solar system ephemeris points for a given source.
 
     Parameters
     ----------
-    sso_id : int
+    sso_id : uuid.UUID
         Internal ID of source for which to get ephemeris points
     session : AsyncSession
         Asynchronous session to use
@@ -157,9 +160,9 @@ async def get_ephem_by_sso_id(
 
 
 async def update_ephem(
-    ephem_id: int,
+    ephem_id: uuid.UUID,
     session: AsyncSession,
-    sso_id: int | None,
+    sso_id: uuid.UUID | None,
     MPC_id: int | None,
     name: str | None,
     time: Time | None,
@@ -171,11 +174,11 @@ async def update_ephem(
 
     Parameters
     ----------
-    ephem_id : int
+    ephem_id : uuid.UUID
         ID of ephem.
     session : AsyncSession
         Session to use
-    sso_id :int | None
+    sso_id : uuid.UUID | None
         Internal SO ID of source
     MPC_id : int | None
         MPC ID of source
@@ -223,14 +226,14 @@ async def update_ephem(
     return model
 
 
-async def delete_ephem(ephem_id: int, session: AsyncSession) -> None:
+async def delete_ephem(ephem_id: uuid.UUID, session: AsyncSession) -> None:
     """
     Delete a solar system ephemeris point from the dattabase.
 
     Parameters
     ----------
-    ephem_id : int
-        ID of sephem pointource
+    ephem_id : uuid.UUID
+        ID of ephemeris point to delete
     session : AsyncSession
         Asynchronous session to use
 
