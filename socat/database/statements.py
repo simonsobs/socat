@@ -217,7 +217,7 @@ def get_monitored_fixed_sources() -> select:
         Database statement.
     """
     return select(RegisteredFixedSourceTable).where(
-        RegisteredFixedSourceTable.monitored == True  # noqa: E712
+        RegisteredFixedSourceTable.monitored
     )
 
 
@@ -230,9 +230,7 @@ def get_pointing_fixed_sources() -> select:
     select:
         Database statement.
     """
-    return select(RegisteredFixedSourceTable).where(
-        RegisteredFixedSourceTable.pointing == True  # noqa: E712
-    )
+    return select(RegisteredFixedSourceTable).where(RegisteredFixedSourceTable.pointing)
 
 
 def get_monitored_ssos(t_min: Time, t_max: Time) -> select:
@@ -259,7 +257,7 @@ def get_monitored_ssos(t_min: Time, t_max: Time) -> select:
             RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
         )
         .where(
-            SolarSystemObjectTable.monitored == True,  # noqa: E712
+            SolarSystemObjectTable.monitored,
             t_min.datetime <= RegisteredMovingSourceTable.time,
             RegisteredMovingSourceTable.time <= t_max.datetime,
         )
@@ -291,7 +289,7 @@ def get_pointing_ssos(t_min: Time, t_max: Time) -> select:
             RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
         )
         .where(
-            SolarSystemObjectTable.pointing == True,  # noqa: E712
+            SolarSystemObjectTable.pointing,
             t_min.datetime <= RegisteredMovingSourceTable.time,
             RegisteredMovingSourceTable.time <= t_max.datetime,
         )
