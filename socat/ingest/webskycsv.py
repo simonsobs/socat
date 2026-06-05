@@ -35,7 +35,7 @@ def ingest_csv_file(
         The number of sources added to the catalog.
     """
     data = pd.read_csv(filename)
-    data.columns = data.columns.str.strip().str.lstrip("# #").str.strip()
+    data.columns = data.columns.str.strip()
     number_of_sources = 0
     for _, row in data.iterrows():
         flux = row["flux(Jy)"] * u.Jy
