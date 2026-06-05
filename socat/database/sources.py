@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import astropy.units as u
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropydantic import AstroPydanticICRS, AstroPydanticQuantity, AstroPydanticTime
@@ -30,13 +31,13 @@ class RegisteredFixedSource(RegisteredSource):
 
     Attributes
     ----------
-    source_id : int
+    source_id : uuid.UUID
         Unique source identifier. Internal to SO
     name : str | None
         Name of source. Optional
     """
 
-    source_id: int | None = None
+    source_id: uuid.UUID
     name: str | None  # Not a foreign key
 
 
@@ -52,9 +53,9 @@ class RegisteredMovingSource(RegisteredSource):
 
     Attributes
     ----------
-    ephem_id : int
+    ephem_id : uuid.UUID
         ID of ephem point.
-    sso_id :int
+    sso_id : uuid.UUID
         Internal SO ID of source
     MPC_id : int | None
         MPC ID of source
@@ -64,8 +65,8 @@ class RegisteredMovingSource(RegisteredSource):
         Name of source
     """
 
-    ephem_id: int
-    sso_id: int
+    ephem_id: uuid.UUID
+    sso_id: uuid.UUID
     MPC_id: int | None
     time: AstroPydanticTime
     name: str | None  # Foreign key to MovingSourceTable
@@ -78,7 +79,7 @@ class SolarSystemObject(BaseModel):
 
     Attributes
     ----------
-    id : int
+    id : uuid.UUID
         Internal SO ID of source
     MPC_id : int | None
         Minor Planet Center ID of ephem.
@@ -86,7 +87,7 @@ class SolarSystemObject(BaseModel):
         Name of source
     """
 
-    sso_id: int
+    sso_id: uuid.UUID
     MPC_id: int | None
     name: str
 
@@ -105,7 +106,7 @@ class RegisteredFixedSourceTable(SQLModel, table=True):
 
     __tablename__ = "fixed_sources"
 
-    source_id: int = Field(primary_key=True)
+    source_id: uuid.UUID = Field(primary_key=True, default_factory=uuid.create)
     ra_deg: float = Field(nullable=False)
     dec_deg: float = Field(nullable=False)
     flux_mJy: float | None = Field(nullable=True)
@@ -141,7 +142,7 @@ class SolarSystemObjectTable(SolarSystemObject, SQLModel, table=True):
 
     __tablename__ = "solarsystem_objects"
 
-    sso_id: int = Field(primary_key=True)
+    sso_id: uuid.UUID = Field(primary_key=True, default_factory=uuid.create)
     MPC_id: int | None = Field(index=True, nullable=True, unique=True)
     name: str = Field(index=True, nullable=False, unique=True)
 
@@ -170,8 +171,8 @@ class RegisteredMovingSourceTable(SQLModel, table=True):
 
     __tablename__ = "moving_sources"
 
-    ephem_id: int = Field(primary_key=True)
-    sso_id: int = Field(
+    ephem_id: uuid.UUID = Field(primary_key=True, default_factory=uuid.create)
+    sso_id: uuid.UUID = Field(
         foreign_key="solarsystem_objects.sso_id",
         nullable=False,
         ondelete="CASCADE",
@@ -181,7 +182,7 @@ class RegisteredMovingSourceTable(SQLModel, table=True):
         nullable=True,
         ondelete="CASCADE",
     )
-    name: int = Field(
+    name: str = Field(
         foreign_key="solarsystem_objects.name",
         nullable=False,
         ondelete="CASCADE",

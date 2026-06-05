@@ -3,6 +3,7 @@ The web API to access the socat moving source database.
 """
 
 import astropy.units as u
+import uuid7 as uuid
 from astropydantic import AstroPydanticICRS, AstroPydanticQuantity, AstroPydanticTime
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ValidationError
@@ -21,7 +22,7 @@ class EphemModificationRequest(BaseModel):
 
     Attributes
     ----------
-    sso_id : int | None
+    sso_id : uuid.UUID | None
         Internal SO identifier of solar system source
     MPC_id : int | None
         MPC ID of source
@@ -35,7 +36,7 @@ class EphemModificationRequest(BaseModel):
         Flux of source at ephem point in mJy
     """
 
-    sso_id: int | None
+    sso_id: uuid.UUID | None
     MPC_id: int | None
     name: str | None
     time: AstroPydanticTime | None
@@ -90,14 +91,14 @@ async def create_ephem(
 
 @router.get("/ephem/{ephem_id}")
 async def get_ephem(
-    ephem_id: int, session: SessionDependency
+    ephem_id: uuid.UUID, session: SessionDependency
 ) -> RegisteredMovingSource:
     """
     Get an ephem point by id from the database
 
     Parameters
     ----------
-    ephem_id : int
+    ephem_id : uuid.UUID
         ID of ephemeris point to querry
     session : SessionDependency
         Asynchronous session to use
@@ -122,14 +123,14 @@ async def get_ephem(
 
 @router.post("/ephem/{ephem_id}")
 async def update_ephem(
-    ephem_id: int, model: EphemModificationRequest, session: SessionDependency
+    ephem_id: uuid.UUID, model: EphemModificationRequest, session: SessionDependency
 ) -> RegisteredMovingSource:
     """
     Update an ephem point by id
 
     Parameters
     ----------
-    ephem_id : int
+    ephem_id : uuid.UUID
         ID of ephem point to update
     model : EphemModificationRequest
         Parameters of model to modify
@@ -164,13 +165,13 @@ async def update_ephem(
 
 
 @router.delete("/ephem/{ephem_id}")
-async def delete_ephem(ephem_id: int, session: SessionDependency) -> None:
+async def delete_ephem(ephem_id: uuid.UUID, session: SessionDependency) -> None:
     """
     Delete a ephem point by id
 
     Parameters
     ----------
-    ephem_id : int
+    ephem_id : uuid.UUID
         ID of ephem point to delete
     session : SessionDependency
         Asynchronous session to use

@@ -1,5 +1,6 @@
 import astropy.units as u
 import pytest
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.time import Time
 
@@ -9,7 +10,6 @@ from socat.client.mock import SourceGenerator
 def test_add_and_remove(mock_client):
     sso = mock_client.create_sso(name="Davida", MPC_id=511)
 
-    assert sso.sso_id == 0
     assert sso.name == "Davida"
     assert sso.MPC_id == 511
 
@@ -25,7 +25,6 @@ def test_add_and_remove(mock_client):
         flux=flux,
     )
 
-    assert ephem.ephem_id == 0
     assert ephem.sso_id == sso.sso_id
     assert ephem.MPC_id == 511
     assert ephem.name == "Davida"
@@ -36,7 +35,6 @@ def test_add_and_remove(mock_client):
 
     sso = mock_client.update_sso(sso_id=sso.sso_id, name="Diotima", MPC_id=423)
 
-    assert sso.sso_id == 0
     assert sso.name == "Diotima"
     assert sso.MPC_id == 423
 
@@ -53,7 +51,6 @@ def test_add_and_remove(mock_client):
         flux=flux,
     )
 
-    assert ephem.ephem_id == 0
     assert ephem.sso_id == sso.sso_id
     assert ephem.MPC_id == 423
     assert ephem.name == "Diotima"
@@ -66,29 +63,28 @@ def test_add_and_remove(mock_client):
     ssos = mock_client.get_sso_name(name="Diotima")
     assert len(ssos) == 1  # TODO: Should probably add a second source to the catalog
     sso = ssos[0]
-    assert sso.sso_id == 0
     assert sso.name == "Diotima"
     assert sso.MPC_id == 423
 
     sso = mock_client.get_sso_MPC_id(MPC_id=423)
     assert len(ssos) == 1  # TODO: Should probably add a second source to the catalog
     sso = ssos[0]
-    assert sso.sso_id == 0
     assert sso.name == "Diotima"
     assert sso.MPC_id == 423
 
-    mock_client.delete_sso(sso_id=0)
-    mock_client.delete_ephem(ephem_id=0)
+    mock_client.delete_sso(sso_id=sso.sso_id)
+    mock_client.delete_ephem(ephem_id=ephem.ephem_id)
 
 
 def test_get_ephem_points(mock_client):
     sso = mock_client.create_sso(name="Davida", MPC_id=511)
 
+    all_ephems = []
     for i in range(10):
         time = Time("2025-01-01T00:00:00") + i * u.h
         position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
         flux = (1 + i) * u.mJy
-        mock_client.create_ephem(
+        ephem = mock_client.create_ephem(
             sso_id=sso.sso_id,
             MPC_id=511,
             name="Davida",
@@ -96,6 +92,8 @@ def test_get_ephem_points(mock_client):
             position=position,
             flux=flux,
         )
+
+        all_ephems.append(ephem)
 
     ephems = mock_client.get_ephem_points(
         sso_id=sso.sso_id,
@@ -105,7 +103,6 @@ def test_get_ephem_points(mock_client):
 
     assert len(ephems) == 4
     for i, ephem in enumerate(ephems):
-        assert ephem.ephem_id == i + 2
         assert ephem.sso_id == sso.sso_id
         assert ephem.MPC_id == 511
         assert ephem.name == "Davida"
@@ -114,9 +111,9 @@ def test_get_ephem_points(mock_client):
         assert ephem.position.dec.value == (1 + i + 2)
         assert ephem.flux.value == (1 + i + 2)
 
-    for i in range(10):
-        mock_client.delete_ephem(ephem_id=i)
-    mock_client.delete_sso(sso_id=0)
+    for i in range(len(all_ephems)):
+        mock_client.delete_ephem(ephem_id=all_ephems[i].ephem_id)
+    mock_client.delete_sso(sso_id=sso.sso_id)
 
 
 def test_get_box(mock_client):
@@ -125,12 +122,12 @@ def test_get_box(mock_client):
     sso2 = mock_client.create_sso(name="Diotima", MPC_id=423)
     sso3 = mock_client.create_sso(name="Ceres", MPC_id=1)
 
-    mock_client.create_source(
+    source1 = mock_client.create_source(
         name="mySrc1",
         position=ICRS(1 * u.deg, 1 * u.deg),
         flux=1.0 * u.mJy,
     )
-    mock_client.create_source(
+    source2 = mock_client.create_source(
         name="mySrc2",
         position=ICRS(4 * u.deg, 4 * u.deg),
         flux=2.0 * u.mJy,
@@ -211,11 +208,11 @@ def test_get_box(mock_client):
 
     for i in range(30):
         mock_client.delete_ephem(ephem_id=i)
-    mock_client.delete_sso(sso_id=0)
-    mock_client.delete_sso(sso_id=1)
-    mock_client.delete_sso(sso_id=2)
-    mock_client.delete_source(source_id=0)
-    mock_client.delete_source(source_id=1)
+    mock_client.delete_sso(sso_id=sso1.sso_id)
+    mock_client.delete_sso(sso_id=sso2.sso_id)
+    mock_client.delete_sso(sso_id=sso3.sso_id)
+    mock_client.delete_source(source_id=source1.source_id)
+    mock_client.delete_source(source_id=source2.source_id)
 
 
 def test_get_box_sso(mock_client):
@@ -284,17 +281,21 @@ def test_get_box_sso(mock_client):
     assert ssos[0].name == "Davida"
     assert ssos[0].MPC_id == 511
 
+    mock_client.delete_sso(sso_id=sso1.sso_id)
+    mock_client.delete_sso(sso_id=sso2.sso_id)
+    mock_client.delete_sso(sso_id=sso3.sso_id)
+
 
 def test_bad_id(mock_client):
-    sso = mock_client.update_sso(sso_id=999999, name="Davida", MPC_id=411)
+    sso = mock_client.update_sso(sso_id=uuid.create(), name="Davida", MPC_id=411)
     assert sso is None
 
     position = ICRS(1.0 * u.deg, 1.0 * u.deg)
     flux = 2.0 * u.mJy
     time = Time("2025-01-01T00:00:00")
     ephem = mock_client.update_ephem(
-        ephem_id=999999,
-        sso_id=0,
+        ephem_id=uuid.create(),
+        sso_id=uuid.create(),
         MPC_id=423,
         name="Diotima",
         time=time,

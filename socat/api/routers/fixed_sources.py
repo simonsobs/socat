@@ -3,6 +3,7 @@ The web API to access the socat fixed source database.
 """
 
 import astropy.units as u
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropydantic import AstroPydanticICRS, AstroPydanticQuantity
 from fastapi import APIRouter, HTTPException, status
@@ -257,14 +258,14 @@ async def get_box_fixed(
 
 @router.get("/source/{source_id}")
 async def get_source(
-    source_id: int, session: SessionDependency
+    source_id: uuid.UUID, session: SessionDependency
 ) -> RegisteredFixedSource:
     """
     Get a source by id from the database
 
     Parameters
     ----------
-    source_id : int
+    source_id : uuid.UUID
         ID of source to querry
     session : SessionDependency
         Asynchronous session to use
@@ -289,14 +290,14 @@ async def get_source(
 
 @router.post("/source/{source_id}")
 async def update_source(
-    source_id: int, model: SourceModificationRequest, session: SessionDependency
+    source_id: uuid.UUID, model: SourceModificationRequest, session: SessionDependency
 ) -> RegisteredFixedSource:
     """
     Update source parameters by id
 
     Parameters
     ----------
-    source_id : int
+    source_id : uuid.UUID
         ID of source to update
     model : SourceModificationRequest
         Parameters of model to modify
@@ -324,13 +325,13 @@ async def update_source(
 
 
 @router.delete("/source/{source_id}")
-async def delete_source(source_id: int, session: SessionDependency) -> None:
+async def delete_source(source_id: uuid.UUID, session: SessionDependency) -> None:
     """
     Delete a source by id
 
     Parameters
     ----------
-    source_id : int
+    source_id : uuid.UUID
         ID of source to delete
     session : SessionDependency
         Asynchronous session to use

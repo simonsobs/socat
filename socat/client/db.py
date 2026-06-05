@@ -6,6 +6,7 @@ from collections.abc import Callable
 from contextlib import AbstractContextManager
 from typing import Any
 
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
@@ -108,7 +109,7 @@ class Client(ClientBase):
 
             return [s.to_model() for s in sources.scalars().all()]
 
-    def get_source(self, *, source_id: int) -> RegisteredFixedSource | None:
+    def get_source(self, *, source_id: uuid.UUID) -> RegisteredFixedSource | None:
         with self._get_session() as session:
             source = session.get(RegisteredFixedSourceTable, source_id)
             if source is None:
@@ -127,7 +128,7 @@ class Client(ClientBase):
     def update_source(
         self,
         *,
-        source_id: int,
+        source_id: uuid.UUID,
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
@@ -154,7 +155,7 @@ class Client(ClientBase):
 
             return model
 
-    def delete_source(self, *, source_id: int) -> None:
+    def delete_source(self, *, source_id: uuid.UUID) -> None:
         with self._get_session() as session:
             source = session.get(RegisteredFixedSourceTable, source_id)
             if source is None:
@@ -166,7 +167,7 @@ class Client(ClientBase):
     def create_service(self, *, name: str, config: dict[str, Any]) -> AstroqueryService:
         return self._astroquery.create_service(name=name, config=config)
 
-    def get_service(self, *, service_id: int) -> AstroqueryService | None:
+    def get_service(self, *, service_id: uuid.UUID) -> AstroqueryService | None:
         return self._astroquery.get_service(service_id=service_id)
 
     def get_service_name(self, *, name: str) -> list[AstroqueryService] | None:
@@ -175,7 +176,7 @@ class Client(ClientBase):
     def update_service(
         self,
         *,
-        service_id: int,
+        service_id: uuid.UUID,
         name: str | None,
         config: dict[str, Any] | None,
     ) -> AstroqueryService | None:
@@ -183,13 +184,13 @@ class Client(ClientBase):
             service_id=service_id, name=name, config=config
         )
 
-    def delete_service(self, *, service_id: int) -> None:
+    def delete_service(self, *, service_id: uuid.UUID) -> None:
         return self._astroquery.delete_service(service_id=service_id)
 
     def create_ephem(
         self,
         *,
-        sso_id: int,
+        sso_id: uuid.UUID,
         MPC_id: int | None,
         name: str,
         time: Time,
@@ -205,13 +206,13 @@ class Client(ClientBase):
             flux=flux,
         )
 
-    def get_ephem(self, *, ephem_id: int) -> RegisteredMovingSource | None:
+    def get_ephem(self, *, ephem_id: uuid.UUID) -> RegisteredMovingSource | None:
         return self._ephem.get_ephem(ephem_id=ephem_id)
 
     def get_ephem_points(
         self,
         *,
-        sso_id: int,
+        sso_id: uuid.UUID,
         t_min: Time,
         t_max: Time,
     ) -> list[RegisteredMovingSource] | None:
@@ -220,8 +221,8 @@ class Client(ClientBase):
     def update_ephem(
         self,
         *,
-        ephem_id: int,
-        sso_id: int | None,
+        ephem_id: uuid.UUID,
+        sso_id: uuid.UUID | None,
         MPC_id: int | None,
         name: str | None,
         time: Time | None,
@@ -238,13 +239,13 @@ class Client(ClientBase):
             flux=flux,
         )
 
-    def delete_ephem(self, *, ephem_id: int) -> None:
+    def delete_ephem(self, *, ephem_id: uuid.UUID) -> None:
         return self._ephem.delete_ephem(ephem_id=ephem_id)
 
     def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
         return self._sso.create_sso(name=name, MPC_id=MPC_id)
 
-    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
+    def get_sso(self, *, sso_id: uuid.UUID) -> SolarSystemObject | None:
         return self._sso.get_sso(sso_id=sso_id)
 
     def get_box_sso(
@@ -302,11 +303,11 @@ class Client(ClientBase):
         return self._sso.get_sso_MPC_id(MPC_id=MPC_id)
 
     def update_sso(
-        self, *, sso_id: int, name: str | None, MPC_id: int | None
+        self, *, sso_id: uuid.UUID, name: str | None, MPC_id: int | None
     ) -> SolarSystemObject | None:
         return self._sso.update_sso(sso_id=sso_id, name=name, MPC_id=MPC_id)
 
-    def delete_sso(self, *, sso_id: int) -> None:
+    def delete_sso(self, *, sso_id: uuid.UUID) -> None:
         return self._sso.delete_sso(sso_id=sso_id)
 
     def get_source_generator(
@@ -374,7 +375,7 @@ class AstorqueryClient(AstroqueryClientBase):
 
             return service.to_model()
 
-    def get_service(self, *, service_id: int) -> AstroqueryService | None:
+    def get_service(self, *, service_id: uuid.UUID) -> AstroqueryService | None:
         with self._get_session() as session:
             service = session.get(AstroqueryServiceTable, service_id)
 
@@ -400,7 +401,7 @@ class AstorqueryClient(AstroqueryClientBase):
     def update_service(
         self,
         *,
-        service_id: int,
+        service_id: uuid.UUID,
         name: str | None,
         config: dict[str, Any] | None,
     ) -> AstroqueryService | None:
@@ -420,7 +421,7 @@ class AstorqueryClient(AstroqueryClientBase):
 
             return model
 
-    def delete_service(self, *, service_id: int) -> None:
+    def delete_service(self, *, service_id: uuid.UUID) -> None:
         with self._get_session() as session:
             service = session.get(AstroqueryServiceTable, service_id)
             if service is None:
@@ -453,7 +454,7 @@ class EphemClient(EphemClientBase):
     def create_ephem(
         self,
         *,
-        sso_id: int,
+        sso_id: uuid.UUID,
         MPC_id: int | None,
         name: str,
         time: Time,
@@ -479,7 +480,7 @@ class EphemClient(EphemClientBase):
 
             return ephem.to_model()
 
-    def get_ephem(self, *, ephem_id: int) -> RegisteredMovingSource | None:
+    def get_ephem(self, *, ephem_id: uuid.UUID) -> RegisteredMovingSource | None:
         with self._get_session() as session:
             ephem = session.get(RegisteredMovingSourceTable, ephem_id)
 
@@ -491,7 +492,7 @@ class EphemClient(EphemClientBase):
     def get_ephem_points(
         self,
         *,
-        sso_id: int,
+        sso_id: uuid.UUID,
         t_min: Time,
         t_max: Time,
     ) -> list[RegisteredMovingSource]:
@@ -505,8 +506,8 @@ class EphemClient(EphemClientBase):
     def update_ephem(
         self,
         *,
-        ephem_id: int,
-        sso_id: int | None,
+        ephem_id: uuid.UUID,
+        sso_id: uuid.UUID | None,
         MPC_id: int | None,
         name: str | None,
         time: Time | None,
@@ -537,7 +538,7 @@ class EphemClient(EphemClientBase):
 
         return model
 
-    def delete_ephem(self, *, ephem_id: int) -> None:
+    def delete_ephem(self, *, ephem_id: uuid.UUID) -> None:
         with self._get_session() as session:
             ephem = session.get(RegisteredMovingSourceTable, ephem_id)
             if ephem is None:
@@ -581,7 +582,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
             return source.to_model()
 
-    def get_sso(self, *, sso_id: int) -> SolarSystemObject | None:
+    def get_sso(self, *, sso_id: uuid.UUID) -> SolarSystemObject | None:
         with self._get_session() as session:
             source = session.get(SolarSystemObjectTable, sso_id)
 
@@ -619,7 +620,7 @@ class SolarSystemClient(SolarSystemClientBase):
             return source_list
 
     def update_sso(
-        self, *, sso_id: int, name: str | None, MPC_id: int | None
+        self, *, sso_id: uuid.UUID, name: str | None, MPC_id: int | None
     ) -> SolarSystemObject | None:
         with self._get_session() as session:
             session.execute(
@@ -636,7 +637,7 @@ class SolarSystemClient(SolarSystemClientBase):
 
         return model
 
-    def delete_sso(self, *, sso_id: int) -> None:
+    def delete_sso(self, *, sso_id: uuid.UUID) -> None:
         with self._get_session() as session:
             source = session.get(SolarSystemObjectTable, sso_id)
             if source is None:

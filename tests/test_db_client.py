@@ -1,5 +1,6 @@
 import astropy.units as u
 import pytest
+import uuid7 as uuid
 from astropy.coordinates import ICRS
 from astropy.time import Time
 
@@ -104,7 +105,7 @@ def test_service_crud_and_lookup(db_client):
 
     # Check null update doesn't work
     with pytest.raises(ValueError):
-        client.update_service(service_id=999999, name=None, config=None)
+        client.update_service(service_id=uuid.create(), name=None, config=None)
 
     by_name = client.get_service_name(name="VizieR")
     assert by_name is not None
@@ -370,27 +371,27 @@ def test_not_found_behavior(db_client):
     client = db_client
 
     with pytest.raises(ValueError):
-        client.get_source(source_id=999999)
+        client.get_source(source_id=uuid.create())
 
     with pytest.raises(ValueError):
         client.update_source(
-            source_id=999999,
+            source_id=uuid.create(),
             position=ICRS(1.0 * u.deg, 1.0 * u.deg),
             name="missing",
             flux=1.0 * u.mJy,
         )
 
     with pytest.raises(ValueError):
-        client.get_service(service_id=999999)
+        client.get_service(service_id=uuid.create())
 
     with pytest.raises(ValueError):
         client.get_service_name(name="missing-service")
 
     with pytest.raises(ValueError):
-        client.update_service(service_id=999999, name="x", config={})
+        client.update_service(service_id=uuid.create(), name="x", config={})
 
     with pytest.raises(ValueError):
-        client.get_sso(sso_id=999999)
+        client.get_sso(sso_id=uuid.create())
 
     with pytest.raises(ValueError):
         client.get_sso_name(name="missing-sso")
@@ -399,15 +400,15 @@ def test_not_found_behavior(db_client):
         client.get_sso_MPC_id(MPC_id=999999)
 
     with pytest.raises(ValueError):
-        client.update_sso(sso_id=999999, name="x", MPC_id=1)
+        client.update_sso(sso_id=uuid.create(), name="x", MPC_id=1)
 
     with pytest.raises(ValueError):
-        client.get_ephem(ephem_id=999999)
+        client.get_ephem(ephem_id=uuid.create())
 
     with pytest.raises(ValueError):
         client.update_ephem(
-            ephem_id=999999,
-            sso_id=1,
+            ephem_id=uuid.create(),
+            sso_id=uuid.create(),
             MPC_id=1,
             name="x",
             time=Time("2025-01-01T00:00:00.00"),
@@ -415,10 +416,10 @@ def test_not_found_behavior(db_client):
             flux=1.0 * u.mJy,
         )
 
-    client.delete_source(source_id=999999)
-    client.delete_service(service_id=999999)
-    client.delete_sso(sso_id=999999)
-    client.delete_ephem(ephem_id=999999)
+    client.delete_source(source_id=uuid.create())
+    client.delete_service(service_id=uuid.create())
+    client.delete_sso(sso_id=uuid.create())
+    client.delete_ephem(ephem_id=uuid.create())
 
 
 def test_direct_secondary_client_backcompat(database):
