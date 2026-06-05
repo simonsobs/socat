@@ -73,12 +73,11 @@ def ingest_jpl_parquet_file(
 
     for designation, rows in data.groupby("designation", sort=False):
         mpc_id, name = _parse_designation(designation)
-        client.sso.create_sso(name=name, MPC_id=mpc_id)
+        sso = client.create_sso(name=name, MPC_id=mpc_id, flags={"monitored": True})
         number_of_ssos += 1
-        sso = client.sso.get_sso_MPC_id(MPC_id=mpc_id)[0]
 
         for _, row in tqdm(
-            rows.iterrows()[::downsample],
+            rows[::downsample].iterrows(),
             desc=f"Ingesting {designation}",
             total=len(rows[::downsample]),
         ):
@@ -88,7 +87,7 @@ def ingest_jpl_parquet_file(
 
             unix_time = Time(row["julian_day"], format="jd")
 
-            client.ephem.create_ephem(
+            client.create_ephem(
                 sso_id=sso.sso_id,
                 MPC_id=mpc_id,
                 name=name,

@@ -17,6 +17,8 @@ def ingest_fits_file(
     client: ClientBase,
     filename: Path,
     hdu: int = 1,
+    monitored_flux_threshold: u.Quantity = 20.0 * u.mJy,
+    pointing_flux_threshold: u.Quantity = 300.0 * u.mJy,
 ) -> int:
     """
     Ingest a FITS file into the provided SOCat client.
@@ -29,6 +31,10 @@ def ingest_fits_file(
         Path to the ACT-compatible FITS point source file to load.
     hdu: int = 1
         The HDU in the file that corresponds to the sources table.
+    monitored_flux_threshold: u.Quantity = 20.0 * u.mJy
+        Sources at or above this flux are flagged monitored=True.
+    pointing_flux_threshold: u.Quantity = 300.0 * u.mJy
+        Sources at or above this flux are flagged pointing=True.
 
     Returns
     -------
@@ -41,13 +47,18 @@ def ingest_fits_file(
     number_of_sources = 0
 
     for row in table.data:
+        flux = row["fluxJy"] * u.Jy
         client.create_source(
             position=ICRS(
                 ra=row["raDeg"] * u.deg,
                 dec=row["decDeg"] * u.deg,
             ),
-            flux=row["fluxJy"] * u.Jy,
+            flux=flux,
             name=row["name"],
+            flags={
+                "monitored": flux >= monitored_flux_threshold,
+                "pointing": flux >= pointing_flux_threshold,
+            },
         )
 
         number_of_sources += 1
@@ -68,6 +79,20 @@ def main():  # pragma: no cover
         type=Path,
         help="Input FITS file conforming to the ACT point source standard",
         required=True,
+    )
+
+    parser.add_argument(
+        "--monitored-flux-threshold-mJy",
+        type=float,
+        help="Flux threshold (mJy) above which sources are flagged monitored",
+        default=20.0,
+    )
+
+    parser.add_argument(
+        "--pointing-flux-threshold-mJy",
+        type=float,
+        help="Flux threshold (mJy) above which sources are flagged for pointing",
+        default=300.0,
     )
 
     parser.add_argument(
@@ -95,7 +120,12 @@ def main():  # pragma: no cover
         else:
             output_path = None
 
-    number_of_sources = ingest_fits_file(client=client, filename=args.file)
+    number_of_sources = ingest_fits_file(
+        client=client,
+        filename=args.file,
+        monitored_flux_threshold=args.monitored_flux_threshold_mJy * u.mJy,
+        pointing_flux_threshold=args.pointing_flux_threshold_mJy * u.mJy,
+    )
 
     print(f"Ingested {number_of_sources} sources")
 
