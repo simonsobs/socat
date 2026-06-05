@@ -31,13 +31,13 @@ class RegisteredFixedSource(RegisteredSource):
 
     Attributes
     ----------
-    source_id : uuid.UUID | None, default: None
+    source_id : uuid.UUID
         Unique source identifier. Internal to SO
     name : str | None
         Name of source. Optional
     """
 
-    source_id: uuid.UUID | None = None
+    source_id: uuid.UUID
     name: str | None  # Not a foreign key
 
 
