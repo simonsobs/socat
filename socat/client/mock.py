@@ -1227,13 +1227,13 @@ class SolarSystemClient(SolarSystemClientBase):
         if flags is None:
             flags = {}
         solar_source = SolarSystemObject(
-            sso_id=self.n,
+            sso_id=uuid.create(),
             name=name,
             MPC_id=MPC_id,
             monitored=flags.get("monitored", False),
             pointing=flags.get("pointing", False),
         )
-        self.catalog[self.n] = solar_source
+        self.catalog[solar_source.sso_id] = solar_source
         self.n += 1
 
         return solar_source
