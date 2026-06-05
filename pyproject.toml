@@ -27,6 +27,7 @@ dependencies = [
     "astropydantic",
     "pandas",
     "pyarrow",
+    "uuid7-standard",
 ]
 
 [project.optional-dependencies]
