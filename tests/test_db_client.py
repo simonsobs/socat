@@ -39,11 +39,6 @@ def test_fixed_source_crud_and_queries(db_client):
     assert source_1.source_id in partial_ids
     assert source_2.source_id not in partial_ids
 
-    forced = client.get_forced_photometry_sources(minimum_flux=10.0 * u.mJy)
-    forced_ids = {src.source_id for src in forced}
-    assert source_1.source_id not in forced_ids
-    assert source_2.source_id in forced_ids
-
     updated = client.update_source(
         source_id=source_1.source_id,
         position=ICRS(4.0 * u.deg, 5.0 * u.deg),
@@ -419,6 +414,114 @@ def test_not_found_behavior(db_client):
     client.delete_service(service_id=999999)
     client.delete_sso(sso_id=999999)
     client.delete_ephem(ephem_id=999999)
+
+
+def test_monitored_and_pointing_flags(db_client):
+    """Test that get_monitored_sources and get_pointing_sources return the correct sources."""
+    client = db_client
+
+    t_min = Time("2025-03-01T00:00:00.00")
+    t_max = t_min + 5 * u.h
+
+    # Create fixed sources with different flags
+    src_monitored = client.create_source(
+        position=ICRS(10.0 * u.deg, 10.0 * u.deg),
+        name="flag-monitored",
+        flux=1.0 * u.mJy,
+        flags={"monitored": True},
+    )
+    src_pointing = client.create_source(
+        position=ICRS(11.0 * u.deg, 11.0 * u.deg),
+        name="flag-pointing",
+        flux=2.0 * u.mJy,
+        flags={"pointing": True},
+    )
+    src_both = client.create_source(
+        position=ICRS(12.0 * u.deg, 12.0 * u.deg),
+        name="flag-both",
+        flux=3.0 * u.mJy,
+        flags={"monitored": True, "pointing": True},
+    )
+    src_neither = client.create_source(
+        position=ICRS(13.0 * u.deg, 13.0 * u.deg),
+        name="flag-neither",
+        flux=4.0 * u.mJy,
+    )
+
+    # Create SSOs with monitored and pointing flags
+    sso_monitored = client.create_sso(
+        name="flag-sso-monitored", MPC_id=88801, flags={"monitored": True}
+    )
+    for i in range(3):
+        client.create_ephem(
+            sso_id=sso_monitored.sso_id,
+            MPC_id=sso_monitored.MPC_id,
+            name=sso_monitored.name,
+            time=t_min + i * u.h,
+            position=ICRS((20 + i) * u.deg, (20 + i) * u.deg),
+        )
+
+    sso_pointing = client.create_sso(
+        name="flag-sso-pointing", MPC_id=88802, flags={"pointing": True}
+    )
+    for i in range(3):
+        client.create_ephem(
+            sso_id=sso_pointing.sso_id,
+            MPC_id=sso_pointing.MPC_id,
+            name=sso_pointing.name,
+            time=t_min + i * u.h,
+            position=ICRS((30 + i) * u.deg, (30 + i) * u.deg),
+        )
+
+    sso_unflagged = client.create_sso(name="flag-sso-neither", MPC_id=88803)
+    for i in range(3):
+        client.create_ephem(
+            sso_id=sso_unflagged.sso_id,
+            MPC_id=sso_unflagged.MPC_id,
+            name=sso_unflagged.name,
+            time=t_min + i * u.h,
+            position=ICRS((40 + i) * u.deg, (40 + i) * u.deg),
+        )
+
+    # Check monitored sources
+    monitored_gens = client.get_monitored_sources(t_min=t_min, t_max=t_max)
+    monitored_names = {g.source.name for g in monitored_gens}
+    assert "flag-monitored" in monitored_names
+    assert "flag-both" in monitored_names
+    assert "flag-sso-monitored" in monitored_names
+    assert "flag-pointing" not in monitored_names
+    assert "flag-neither" not in monitored_names
+    assert "flag-sso-pointing" not in monitored_names
+    assert "flag-sso-neither" not in monitored_names
+
+    # Check pointing sources
+    pointing_gens = client.get_pointing_sources(t_min=t_min, t_max=t_max)
+    pointing_names = {g.source.name for g in pointing_gens}
+    assert "flag-pointing" in pointing_names
+    assert "flag-both" in pointing_names
+    assert "flag-sso-pointing" in pointing_names
+    assert "flag-monitored" not in pointing_names
+    assert "flag-neither" not in pointing_names
+    assert "flag-sso-monitored" not in pointing_names
+    assert "flag-sso-neither" not in pointing_names
+
+    # Check that update_source can update flags
+    updated = client.update_source(
+        source_id=src_neither.source_id,
+        flags={"monitored": True},
+    )
+    assert updated is not None
+    assert updated.monitored is True
+    assert updated.pointing is False
+
+    # Cleanup
+    client.delete_source(source_id=src_monitored.source_id)
+    client.delete_source(source_id=src_pointing.source_id)
+    client.delete_source(source_id=src_both.source_id)
+    client.delete_source(source_id=src_neither.source_id)
+    client.delete_sso(sso_id=sso_monitored.sso_id)
+    client.delete_sso(sso_id=sso_pointing.sso_id)
+    client.delete_sso(sso_id=sso_unflagged.sso_id)
 
 
 def test_direct_secondary_client_backcompat(database):

@@ -23,7 +23,12 @@ from socat.database import (
 class ClientBase(ABC):
     @abstractmethod
     def create_source(
-        self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
+        self,
+        *,
+        position: ICRS,
+        name: str | None = None,
+        flux: Quantity | None = None,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource:
         """
         Create a new source in the catlaog.
@@ -59,11 +64,20 @@ class ClientBase(ABC):
         return None  # pragma: no cover
 
     @abstractmethod
-    def get_forced_photometry_sources(
-        self, *, minimum_flux: Quantity
-    ) -> list[RegisteredFixedSource]:
+    def get_monitored_sources(
+        self, *, t_min: Time, t_max: Time
+    ) -> list[SourceGenerator]:
         """
-        Get all sources that are used for forced photometry based on a minimum flux.
+        Get all sources flagged as monitored within the given time range.
+        """
+        return []  # pragma: no cover
+
+    @abstractmethod
+    def get_pointing_sources(
+        self, *, t_min: Time, t_max: Time
+    ) -> list[SourceGenerator]:
+        """
+        Get all sources flagged as pointing sources within the given time range.
         """
         return []  # pragma: no cover
 
@@ -75,6 +89,7 @@ class ClientBase(ABC):
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource | None:
         """
         Update a source. If the source is updated, return its new value. Else, return None.
@@ -190,7 +205,9 @@ class ClientBase(ABC):
         return []  # pragma: no cover
 
     @abstractmethod
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
+    def create_sso(
+        self, *, name: str, MPC_id: int | None, flags: dict | None = None
+    ) -> SolarSystemObject:
         """
         Create a new solar system source in the catalog.
         """
@@ -382,7 +399,9 @@ class EphemClientBase(ABC):
 
 class SolarSystemClientBase(ABC):
     @abstractmethod
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
+    def create_sso(
+        self, *, name: str, MPC_id: int | None, flags: dict | None = None
+    ) -> SolarSystemObject:
         """
         Create a new solar system source in the catalog.
         """
