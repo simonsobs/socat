@@ -35,10 +35,16 @@ class RegisteredFixedSource(RegisteredSource):
         Unique source identifier. Internal to SO
     name : str | None
         Name of source. Optional
+    monitored : bool
+        Whether this source is flagged for monitoring. Default False.
+    pointing : bool
+        Whether this source is flagged as a pointing source. Default False.
     """
 
     source_id: uuid.UUID
     name: str | None  # Not a foreign key
+    monitored: bool = False
+    pointing: bool = False
 
 
 class RegisteredMovingSource(RegisteredSource):
@@ -79,17 +85,23 @@ class SolarSystemObject(BaseModel):
 
     Attributes
     ----------
-    id : uuid.UUID
+    sso_id : uuid.UUID
         Internal SO ID of source
     MPC_id : int | None
         Minor Planet Center ID of ephem.
     name : str
         Name of source
+    monitored : bool
+        Whether this SSO is flagged for monitoring. Default False.
+    pointing : bool
+        Whether this SSO is flagged as a pointing source. Default False.
     """
 
     sso_id: uuid.UUID
     MPC_id: int | None
     name: str
+    monitored: bool = False
+    pointing: bool = False
 
 
 class RegisteredFixedSourceTable(SQLModel, table=True):
@@ -111,6 +123,8 @@ class RegisteredFixedSourceTable(SQLModel, table=True):
     dec_deg: float = Field(nullable=False)
     flux_mJy: float | None = Field(nullable=True)
     name: str = Field(index=True, nullable=True)
+    monitored: bool = Field(default=False, nullable=False)
+    pointing: bool = Field(default=False, nullable=False)
 
     def to_model(self) -> RegisteredFixedSource:
         """
@@ -130,6 +144,8 @@ class RegisteredFixedSourceTable(SQLModel, table=True):
             position=ICRS(ra=self.ra_deg * u.deg, dec=self.dec_deg * u.deg),
             flux=flux,
             name=self.name,
+            monitored=self.monitored,
+            pointing=self.pointing,
         )
 
 
@@ -145,6 +161,8 @@ class SolarSystemObjectTable(SolarSystemObject, SQLModel, table=True):
     sso_id: uuid.UUID = Field(primary_key=True, default_factory=uuid.create)
     MPC_id: int | None = Field(index=True, nullable=True, unique=True)
     name: str = Field(index=True, nullable=False, unique=True)
+    monitored: bool = Field(default=False, nullable=False)
+    pointing: bool = Field(default=False, nullable=False)
 
     def to_model(self) -> SolarSystemObject:
         """
@@ -159,6 +177,8 @@ class SolarSystemObjectTable(SolarSystemObject, SQLModel, table=True):
             sso_id=self.sso_id,
             MPC_id=self.MPC_id,
             name=self.name,
+            monitored=self.monitored,
+            pointing=self.pointing,
         )
 
 

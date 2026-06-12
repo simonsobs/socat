@@ -207,15 +207,9 @@ def get_box_sso(
         )
 
 
-def get_forced_photometry_sources(minimum_flux: Quantity) -> select:
+def get_monitored_fixed_sources() -> select:
     """
-    Get sources for which to perform forced photometry, i.e. sources with flux
-    above a certain threshold.
-
-    Parameters
-    ----------
-    minimum_flux : Quantity
-        Minimum flux of sources to return
+    Get all fixed sources flagged as monitored.
 
     Returns
     -------
@@ -223,7 +217,83 @@ def get_forced_photometry_sources(minimum_flux: Quantity) -> select:
         Database statement.
     """
     return select(RegisteredFixedSourceTable).where(
-        RegisteredFixedSourceTable.flux_mJy >= minimum_flux.to_value("mJy")
+        RegisteredFixedSourceTable.monitored
+    )
+
+
+def get_pointing_fixed_sources() -> select:
+    """
+    Get all fixed sources flagged as pointing sources.
+
+    Returns
+    -------
+    select:
+        Database statement.
+    """
+    return select(RegisteredFixedSourceTable).where(RegisteredFixedSourceTable.pointing)
+
+
+def get_monitored_ssos(t_min: Time, t_max: Time) -> select:
+    """
+    Get all solar system objects flagged as monitored that have at least one
+    ephemeris point in [t_min, t_max].
+
+    Parameters
+    ----------
+    t_min : Time
+        Start of time range.
+    t_max : Time
+        End of time range.
+
+    Returns
+    -------
+    select:
+        Database statement.
+    """
+    return (
+        select(SolarSystemObjectTable)
+        .join(
+            RegisteredMovingSourceTable,
+            RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
+        )
+        .where(
+            SolarSystemObjectTable.monitored,
+            t_min.datetime <= RegisteredMovingSourceTable.time,
+            RegisteredMovingSourceTable.time <= t_max.datetime,
+        )
+        .distinct()
+    )
+
+
+def get_pointing_ssos(t_min: Time, t_max: Time) -> select:
+    """
+    Get all solar system objects flagged as pointing sources that have at least one
+    ephemeris point in [t_min, t_max].
+
+    Parameters
+    ----------
+    t_min : Time
+        Start of time range.
+    t_max : Time
+        End of time range.
+
+    Returns
+    -------
+    select:
+        Database statement.
+    """
+    return (
+        select(SolarSystemObjectTable)
+        .join(
+            RegisteredMovingSourceTable,
+            RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
+        )
+        .where(
+            SolarSystemObjectTable.pointing,
+            t_min.datetime <= RegisteredMovingSourceTable.time,
+            RegisteredMovingSourceTable.time <= t_max.datetime,
+        )
+        .distinct()
     )
 
 
@@ -232,6 +302,7 @@ def update_source(
     position: ICRS | None = None,
     flux: Quantity | None = None,
     name: str | None = None,
+    flags: dict | None = None,
 ) -> update:
     """
     Generate an update statement for a source.
@@ -246,6 +317,9 @@ def update_source(
         Flux of source. Optional.
     name : str | None
         Name of source. Optional.
+    flags : dict | None
+        Dictionary of flag values to update. Accepted keys: 'monitored' (bool),
+        'pointing' (bool). Optional.
 
     Returns
     -------
@@ -261,16 +335,20 @@ def update_source(
         RegisteredFixedSourceTable.source_id == source_id
     )
 
-    values = {
-        k: v
-        for k, v in {
-            "ra_deg": position.ra.to_value("deg") if position is not None else None,
-            "dec_deg": position.dec.to_value("deg") if position is not None else None,
-            "flux_mJy": flux.to_value("mJy") if flux is not None else None,
-            "name": name,
-        }.items()
-        if v is not None
+    candidate = {
+        "ra_deg": position.ra.to_value("deg") if position is not None else None,
+        "dec_deg": position.dec.to_value("deg") if position is not None else None,
+        "flux_mJy": flux.to_value("mJy") if flux is not None else None,
+        "name": name,
     }
+
+    if flags is not None:
+        if "monitored" in flags:
+            candidate["monitored"] = bool(flags["monitored"])
+        if "pointing" in flags:
+            candidate["pointing"] = bool(flags["pointing"])
+
+    values = {k: v for k, v in candidate.items() if v is not None}
 
     if values:
         return stmt.values(**values)

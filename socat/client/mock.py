@@ -69,7 +69,12 @@ class Client(ClientBase):
         self._ephem = EphemClient()
 
     def create_source(
-        self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
+        self,
+        *,
+        position: ICRS,
+        name: str | None = None,
+        flux: Quantity | None = None,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource:
         """
         Create a new source and add it to the catalog.
@@ -82,6 +87,9 @@ class Client(ClientBase):
             Flux of source.
         name : str | None, Default: None
             Name of source
+        flags : dict | None, Default: None
+            Dictionary of flag values. Accepted keys: 'monitored' (bool),
+            'pointing' (bool).
 
         Returns
         -------
@@ -90,11 +98,15 @@ class Client(ClientBase):
         """
         if flux is not None:
             flux = flux.to(u.mJy)
+        if flags is None:
+            flags = {}
         source = RegisteredFixedSource(
             source_id=uuid.create(),
             position=position,
             flux=flux,
             name=name,
+            monitored=flags.get("monitored", False),
+            pointing=flags.get("pointing", False),
         )
         self.catalog[source.source_id] = source
         self.n += 1
@@ -214,26 +226,71 @@ class Client(ClientBase):
         """
         return self.catalog.get(source_id, None)
 
-    def get_forced_photometry_sources(
-        self, *, minimum_flux: Quantity
-    ) -> list[RegisteredFixedSource]:
+    def get_monitored_sources(
+        self, *, t_min: Time, t_max: Time
+    ) -> list[SourceGenerator]:
         """
-        Get all sources that are used for forced photometry based on a minimum flux.
+        Get all sources flagged as monitored within the given time range.
 
         Parameters
         ----------
-        minimum_flux : Quantity
-            Minimum flux for source to be included
+        t_min : Time
+            Start of time range.
+        t_max : Time
+            End of time range.
 
         Returns
         -------
-        filter : iterable[RegisteredFixedSource]
-            List of sources with flux greater than minimum_flux
+        list[SourceGenerator]
+            List of SourceGenerators for all monitored sources.
         """
-        return filter(
-            lambda x: x.flux is not None and x.flux >= minimum_flux,
-            self.catalog.values(),
-        )
+        fixed_sources = [x for x in self.catalog.values() if x.monitored]
+        sso_sources = [
+            x
+            for x in self._sso.catalog.values()
+            if x.monitored
+            and any(
+                e.sso_id == x.sso_id and t_min <= e.time <= t_max
+                for e in self._ephem.catalog.values()
+            )
+        ]
+        return [
+            self.get_source_generator(source=s, t_min=t_min, t_max=t_max)
+            for s in fixed_sources + sso_sources
+        ]
+
+    def get_pointing_sources(
+        self, *, t_min: Time, t_max: Time
+    ) -> list[SourceGenerator]:
+        """
+        Get all sources flagged as pointing sources within the given time range.
+
+        Parameters
+        ----------
+        t_min : Time
+            Start of time range.
+        t_max : Time
+            End of time range.
+
+        Returns
+        -------
+        list[SourceGenerator]
+            List of SourceGenerators for all pointing sources.
+        """
+        fixed_sources = [x for x in self.catalog.values() if x.pointing]
+        sso_sources = [
+            x
+            for x in self._sso.catalog.values()
+            if x.pointing
+            and any(
+                e.sso_id == x.sso_id and t_min <= e.time <= t_max
+                for e in self._ephem.catalog.values()
+            )
+        ]
+        return [
+            self.get_source_generator(source=s, t_min=t_min, t_max=t_max)
+            for s in fixed_sources + sso_sources
+        ]
 
     def update_source(
         self,
@@ -242,6 +299,7 @@ class Client(ClientBase):
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource | None:
         """
         Update a source by id
@@ -254,6 +312,9 @@ class Client(ClientBase):
             Name of source
         flux : Quantity | None, Default: None
             Flux of source
+        flags : dict | None, Default: None
+            Dictionary of flag values to update. Accepted keys: 'monitored' (bool),
+            'pointing' (bool).
 
         Returns
         -------
@@ -265,11 +326,16 @@ class Client(ClientBase):
         if current is None:
             return None
 
+        if flags is None:
+            flags = {}
+
         new = RegisteredFixedSource(
             source_id=current.source_id,
             position=current.position if position is None else position,
             name=current.name if name is None else name,
             flux=current.flux if flux is None else flux,
+            monitored=flags.get("monitored", current.monitored),
+            pointing=flags.get("pointing", current.pointing),
         )
 
         self.catalog[source_id] = new
@@ -524,7 +590,9 @@ class Client(ClientBase):
         """
         self._ephem.delete_ephem(ephem_id=ephem_id)
 
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
+    def create_sso(
+        self, *, name: str, MPC_id: int | None, flags: dict | None = None
+    ) -> SolarSystemObject:
         """
         Create a new solar system source.
 
@@ -534,13 +602,16 @@ class Client(ClientBase):
             Name of source
         MPC_id : int
             Minor Planet Center ID of source
+        flags : dict | None, Default: None
+            Dictionary of flag values. Accepted keys: 'monitored' (bool),
+            'pointing' (bool).
 
         Returns
         -------
         solar_source : SolarSystemObject
             Solar system source that was added.
         """
-        return self._sso.create_sso(name=name, MPC_id=MPC_id)
+        return self._sso.create_sso(name=name, MPC_id=MPC_id, flags=flags)
 
     def get_sso(self, *, sso_id: uuid.UUID) -> SolarSystemObject | None:
         """
@@ -1132,7 +1203,9 @@ class SolarSystemClient(SolarSystemClientBase):
         self.catalog = {}
         self.n = 0
 
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
+    def create_sso(
+        self, *, name: str, MPC_id: int | None, flags: dict | None = None
+    ) -> SolarSystemObject:
         """
         Create a new solar system source.
 
@@ -1142,13 +1215,24 @@ class SolarSystemClient(SolarSystemClientBase):
             Name of source
         MPC_id : int
             Minor Planet Center ID of source
+        flags : dict | None, Default: None
+            Dictionary of flag values. Accepted keys: 'monitored' (bool),
+            'pointing' (bool).
 
         Returns
         -------
         solar_source : SolarSystemObject
             Solar system source that was added.
         """
-        solar_source = SolarSystemObject(sso_id=uuid.create(), name=name, MPC_id=MPC_id)
+        if flags is None:
+            flags = {}
+        solar_source = SolarSystemObject(
+            sso_id=uuid.create(),
+            name=name,
+            MPC_id=MPC_id,
+            monitored=flags.get("monitored", False),
+            pointing=flags.get("pointing", False),
+        )
         self.catalog[solar_source.sso_id] = solar_source
         self.n += 1
 

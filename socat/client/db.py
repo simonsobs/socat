@@ -70,16 +70,26 @@ class Client(ClientBase):
         self._ephem = EphemClient(session_factory=session_factory)
 
     def create_source(
-        self, *, position: ICRS, name: str | None = None, flux: Quantity | None = None
+        self,
+        *,
+        position: ICRS,
+        name: str | None = None,
+        flux: Quantity | None = None,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource:
         if flux is not None:
             flux = flux.to_value("mJy")
+
+        if flags is None:
+            flags = {}
 
         source = RegisteredFixedSourceTable(
             ra_deg=position.ra.to_value("deg"),
             dec_deg=position.dec.to_value("deg"),
             name=name,
             flux_mJy=flux,
+            monitored=flags.get("monitored", False),
+            pointing=flags.get("pointing", False),
         )
         with self._get_session() as session:
             session.add(source)
@@ -116,14 +126,39 @@ class Client(ClientBase):
                 raise ValueError(f"Source with ID {source_id} not found")
             return source.to_model()
 
-    def get_forced_photometry_sources(
-        self, *, minimum_flux: Quantity
-    ) -> list[RegisteredFixedSource]:
+    def get_monitored_sources(
+        self, *, t_min: Time, t_max: Time
+    ) -> list[SourceGenerator]:
         with self._get_session() as session:
-            sources = session.execute(
-                statements.get_forced_photometry_sources(minimum_flux=minimum_flux)
+            fixed_result = session.execute(statements.get_monitored_fixed_sources())
+            fixed_sources = [s.to_model() for s in fixed_result.scalars().all()]
+
+            sso_result = session.execute(
+                statements.get_monitored_ssos(t_min=t_min, t_max=t_max)
             )
-            return [s.to_model() for s in sources.scalars().all()]
+            sso_sources = [s.to_model() for s in sso_result.scalars().all()]
+
+        return [
+            self.get_source_generator(source=s, t_min=t_min, t_max=t_max)
+            for s in fixed_sources + sso_sources
+        ]
+
+    def get_pointing_sources(
+        self, *, t_min: Time, t_max: Time
+    ) -> list[SourceGenerator]:
+        with self._get_session() as session:
+            fixed_result = session.execute(statements.get_pointing_fixed_sources())
+            fixed_sources = [s.to_model() for s in fixed_result.scalars().all()]
+
+            sso_result = session.execute(
+                statements.get_pointing_ssos(t_min=t_min, t_max=t_max)
+            )
+            sso_sources = [s.to_model() for s in sso_result.scalars().all()]
+
+        return [
+            self.get_source_generator(source=s, t_min=t_min, t_max=t_max)
+            for s in fixed_sources + sso_sources
+        ]
 
     def update_source(
         self,
@@ -132,6 +167,7 @@ class Client(ClientBase):
         position: ICRS | None = None,
         name: str | None = None,
         flux: Quantity | None = None,
+        flags: dict | None = None,
     ) -> RegisteredFixedSource | None:
         with self._get_session() as session:
             session.execute(
@@ -140,6 +176,7 @@ class Client(ClientBase):
                     position=position,
                     name=name,
                     flux=flux,
+                    flags=flags,
                 )
             )
             source = session.get(RegisteredFixedSourceTable, source_id)
@@ -242,8 +279,10 @@ class Client(ClientBase):
     def delete_ephem(self, *, ephem_id: uuid.UUID) -> None:
         return self._ephem.delete_ephem(ephem_id=ephem_id)
 
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
-        return self._sso.create_sso(name=name, MPC_id=MPC_id)
+    def create_sso(
+        self, *, name: str, MPC_id: int | None, flags: dict | None = None
+    ) -> SolarSystemObject:
+        return self._sso.create_sso(name=name, MPC_id=MPC_id, flags=flags)
 
     def get_sso(self, *, sso_id: uuid.UUID) -> SolarSystemObject | None:
         return self._sso.get_sso(sso_id=sso_id)
@@ -572,8 +611,18 @@ class SolarSystemClient(SolarSystemClientBase):
             session_factory=session_factory,
         )
 
-    def create_sso(self, *, name: str, MPC_id: int | None) -> SolarSystemObject:
-        source = SolarSystemObjectTable(name=name, MPC_id=MPC_id)
+    def create_sso(
+        self, *, name: str, MPC_id: int | None, flags: dict | None = None
+    ) -> SolarSystemObject:
+        if flags is None:
+            flags = {}
+
+        source = SolarSystemObjectTable(
+            name=name,
+            MPC_id=MPC_id,
+            monitored=flags.get("monitored", False),
+            pointing=flags.get("pointing", False),
+        )
 
         with self._get_session() as session:
             session.add(source)

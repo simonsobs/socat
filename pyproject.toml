@@ -10,7 +10,7 @@ exclude=["*alembic*"]
 
 [project]
 name = "socat"
-version = "0.0.3"
+version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
     "sqlmodel",
@@ -33,7 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "ruff==0.14.5", # If you change this, also change the version in the CI
+    "ruff==0.15.16", # If you change this, also change the version in the CI
     "testcontainers",
     "coverage",
     "pytest-cov",

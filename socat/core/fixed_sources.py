@@ -15,6 +15,7 @@ async def create_source(
     session: AsyncSession,
     name: str | None = None,
     flux: Quantity | None = None,
+    flags: dict | None = None,
 ) -> RegisteredFixedSource:
     """
     Create a new source in the database.
@@ -29,6 +30,9 @@ async def create_source(
         Name of source. Optional.
     session : AsyncSession
         Asynchronous session to use
+    flags : dict | None
+        Dictionary of flag values. Accepted keys: 'monitored' (bool),
+        'pointing' (bool). Optional.
 
     Returns
     -------
@@ -38,11 +42,16 @@ async def create_source(
     if flux is not None:
         flux = flux.to_value("mJy")
 
+    if flags is None:
+        flags = {}
+
     source = RegisteredFixedSourceTable(
         ra_deg=position.ra.to_value("deg"),
         dec_deg=position.dec.to_value("deg"),
         name=name,
         flux_mJy=flux,
+        monitored=flags.get("monitored", False),
+        pointing=flags.get("pointing", False),
     )
 
     async with session.begin():

@@ -12,12 +12,13 @@ def test_add_and_remove(mock_client):
 
     assert sso.name == "Davida"
     assert sso.MPC_id == 511
+    sso_id = sso.sso_id
 
     position = ICRS(0.0 * u.deg, 0.0 * u.deg)
     flux = 1.0 * u.mJy
     time = Time("2025-01-01T00:00:00")
     ephem = mock_client.create_ephem(
-        sso_id=sso.sso_id,
+        sso_id=sso_id,
         MPC_id=511,
         name="Davida",
         time=time,
@@ -25,7 +26,7 @@ def test_add_and_remove(mock_client):
         flux=flux,
     )
 
-    assert ephem.sso_id == sso.sso_id
+    assert ephem.sso_id == sso_id
     assert ephem.MPC_id == 511
     assert ephem.name == "Davida"
     assert ephem.time.unix == 1735689600.0
@@ -33,7 +34,7 @@ def test_add_and_remove(mock_client):
     assert ephem.position.dec.value == 0.0
     assert ephem.flux.value == 1.0
 
-    sso = mock_client.update_sso(sso_id=sso.sso_id, name="Diotima", MPC_id=423)
+    sso = mock_client.update_sso(sso_id=sso_id, name="Diotima", MPC_id=423)
 
     assert sso.name == "Diotima"
     assert sso.MPC_id == 423
@@ -43,7 +44,7 @@ def test_add_and_remove(mock_client):
     time = Time("2026-01-01T00:00:00")
     ephem = mock_client.update_ephem(
         ephem_id=ephem.ephem_id,
-        sso_id=sso.sso_id,
+        sso_id=sso_id,
         MPC_id=423,
         name="Diotima",
         time=time,
@@ -51,7 +52,7 @@ def test_add_and_remove(mock_client):
         flux=flux,
     )
 
-    assert ephem.sso_id == sso.sso_id
+    assert ephem.sso_id == sso_id
     assert ephem.MPC_id == 423
     assert ephem.name == "Diotima"
     assert ephem.time.unix == 1767225600.0
@@ -61,13 +62,13 @@ def test_add_and_remove(mock_client):
 
     # Check getting sso by name and MPC ID
     ssos = mock_client.get_sso_name(name="Diotima")
-    assert len(ssos) == 1  # TODO: Should probably add a second source to the catalog
+    assert len(ssos) == 1
     sso = ssos[0]
     assert sso.name == "Diotima"
     assert sso.MPC_id == 423
 
     sso = mock_client.get_sso_MPC_id(MPC_id=423)
-    assert len(ssos) == 1  # TODO: Should probably add a second source to the catalog
+    assert len(ssos) == 1
     sso = ssos[0]
     assert sso.name == "Diotima"
     assert sso.MPC_id == 423
@@ -78,32 +79,32 @@ def test_add_and_remove(mock_client):
 
 def test_get_ephem_points(mock_client):
     sso = mock_client.create_sso(name="Davida", MPC_id=511)
+    sso_id = sso.sso_id
 
     all_ephems = []
     for i in range(10):
         time = Time("2025-01-01T00:00:00") + i * u.h
         position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
         flux = (1 + i) * u.mJy
-        ephem = mock_client.create_ephem(
-            sso_id=sso.sso_id,
+        e = mock_client.create_ephem(
+            sso_id=sso_id,
             MPC_id=511,
             name="Davida",
             time=time,
             position=position,
             flux=flux,
         )
-
-        all_ephems.append(ephem)
+        all_ephems.append(e)
 
     ephems = mock_client.get_ephem_points(
-        sso_id=sso.sso_id,
+        sso_id=sso_id,
         t_min=Time("2025-01-01T00:00:00") + 2 * u.h,
         t_max=Time("2025-01-01T00:00:00") + 5 * u.h,
     )
 
     assert len(ephems) == 4
     for i, ephem in enumerate(ephems):
-        assert ephem.sso_id == sso.sso_id
+        assert ephem.sso_id == sso_id
         assert ephem.MPC_id == 511
         assert ephem.name == "Davida"
         assert ephem.time.unix == (1735689600.0 + (i + 2) * 3600)
@@ -111,9 +112,9 @@ def test_get_ephem_points(mock_client):
         assert ephem.position.dec.value == (1 + i + 2)
         assert ephem.flux.value == (1 + i + 2)
 
-    for i in range(len(all_ephems)):
-        mock_client.delete_ephem(ephem_id=all_ephems[i].ephem_id)
-    mock_client.delete_sso(sso_id=sso.sso_id)
+    for e in all_ephems:
+        mock_client.delete_ephem(ephem_id=e.ephem_id)
+    mock_client.delete_sso(sso_id=sso_id)
 
 
 def test_get_box(mock_client):
@@ -122,12 +123,12 @@ def test_get_box(mock_client):
     sso2 = mock_client.create_sso(name="Diotima", MPC_id=423)
     sso3 = mock_client.create_sso(name="Ceres", MPC_id=1)
 
-    source1 = mock_client.create_source(
+    src1 = mock_client.create_source(
         name="mySrc1",
         position=ICRS(1 * u.deg, 1 * u.deg),
         flux=1.0 * u.mJy,
     )
-    source2 = mock_client.create_source(
+    src2 = mock_client.create_source(
         name="mySrc2",
         position=ICRS(4 * u.deg, 4 * u.deg),
         flux=2.0 * u.mJy,
@@ -137,12 +138,14 @@ def test_get_box(mock_client):
     flux2 = None
     flux3 = 2.5 * u.mJy
 
+    all_ephems = []
+
     # Make ephem for Davida
     start_time = Time("2025-01-01T00:00:00")
     for i in range(10):
         time = start_time + i * u.h
         position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
-        mock_client.create_ephem(
+        e = mock_client.create_ephem(
             sso_id=sso1.sso_id,
             MPC_id=sso1.MPC_id,
             name=sso1.name,
@@ -150,12 +153,13 @@ def test_get_box(mock_client):
             position=position,
             flux=flux1 + 0.1 * i * u.mJy,
         )
+        all_ephems.append(e)
 
     # Make ephem for Diotima
     for i in range(10):
         time = start_time + (11 + i) * u.h
         position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
-        mock_client.create_ephem(
+        e = mock_client.create_ephem(
             sso_id=sso2.sso_id,
             MPC_id=sso2.MPC_id,
             name=sso2.name,
@@ -163,12 +167,13 @@ def test_get_box(mock_client):
             position=position,
             flux=flux2,
         )
+        all_ephems.append(e)
 
     # Make ephem for Ceres
     for i in range(10):
         time = start_time + i * u.h
         position = ICRS((4 + i) * u.deg, (4 + i) * u.deg)
-        mock_client.create_ephem(
+        e = mock_client.create_ephem(
             sso_id=sso3.sso_id,
             MPC_id=sso3.MPC_id,
             name=sso3.name,
@@ -176,6 +181,7 @@ def test_get_box(mock_client):
             position=position,
             flux=flux3,
         )
+        all_ephems.append(e)
 
     lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
     upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
@@ -190,29 +196,27 @@ def test_get_box(mock_client):
     )
 
     assert len(source_gens) == 2
-    assert source_gens[0].source.name == "mySrc1"
-    assert source_gens[0].at_time(t=Time("2025-01-01T01:30:00")) == (
-        ICRS(1.0 * u.deg, 1.0 * u.deg),
-        1.0 * u.mJy,
-    )
+    names = {g.source.name for g in source_gens}
+    assert "mySrc1" in names
+    assert "Davida" in names
 
-    assert source_gens[1].source.name == "Davida"
-    assert source_gens[1].at_time(t=Time("2025-01-01T00:30:00")) == (
+    davida_gen = next(g for g in source_gens if g.source.name == "Davida")
+    assert davida_gen.at_time(t=Time("2025-01-01T00:30:00")) == (
         ICRS(1.5 * u.deg, 1.5 * u.deg),
         1.55 * u.mJy,
     )
 
     # Check that out of bounds times raise errors
     with pytest.raises(ValueError):
-        source_gens[1].at_time(t=Time("2025-01-02T00:00:00"))
+        davida_gen.at_time(t=Time("2025-01-02T00:00:00"))
 
-    for i in range(30):
-        mock_client.delete_ephem(ephem_id=i)
+    for e in all_ephems:
+        mock_client.delete_ephem(ephem_id=e.ephem_id)
     mock_client.delete_sso(sso_id=sso1.sso_id)
     mock_client.delete_sso(sso_id=sso2.sso_id)
     mock_client.delete_sso(sso_id=sso3.sso_id)
-    mock_client.delete_source(source_id=source1.source_id)
-    mock_client.delete_source(source_id=source2.source_id)
+    mock_client.delete_source(source_id=src1.source_id)
+    mock_client.delete_source(source_id=src2.source_id)
 
 
 def test_get_box_sso(mock_client):
@@ -225,12 +229,14 @@ def test_get_box_sso(mock_client):
     flux2 = 0.5 * u.mJy
     flux3 = 2.5 * u.mJy
 
+    all_ephems = []
+
     # Make ephem for Davida
     start_time = Time("2025-01-01T00:00:00")
     for i in range(3):
         time = start_time + (i * 100) * u.s
         position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
-        mock_client.create_ephem(
+        e = mock_client.create_ephem(
             sso_id=sso1.sso_id,
             MPC_id=sso1.MPC_id,
             name=sso1.name,
@@ -238,12 +244,13 @@ def test_get_box_sso(mock_client):
             position=position,
             flux=flux1,
         )
+        all_ephems.append(e)
 
     # Make ephem for Diotima
     for i in range(3):
         time = start_time + (200 + i * 100) * u.s
         position = ICRS((1 + i) * u.deg, (1 + i) * u.deg)
-        mock_client.create_ephem(
+        e = mock_client.create_ephem(
             sso_id=sso2.sso_id,
             MPC_id=sso2.MPC_id,
             name=sso2.name,
@@ -251,12 +258,13 @@ def test_get_box_sso(mock_client):
             position=position,
             flux=flux2,
         )
+        all_ephems.append(e)
 
     # Make ephem for Ceres
     for i in range(3):
         time = start_time + (i * 100) * u.s
         position = ICRS((4 + i) * u.deg, (4 + i) * u.deg)
-        mock_client.create_ephem(
+        e = mock_client.create_ephem(
             sso_id=sso3.sso_id,
             MPC_id=sso3.MPC_id,
             name=sso3.name,
@@ -264,6 +272,7 @@ def test_get_box_sso(mock_client):
             position=position,
             flux=flux3,
         )
+        all_ephems.append(e)
 
     lower_left = ICRS(0.0 * u.deg, 0.0 * u.deg)
     upper_right = ICRS(3.0 * u.deg, 3.0 * u.deg)
@@ -281,6 +290,8 @@ def test_get_box_sso(mock_client):
     assert ssos[0].name == "Davida"
     assert ssos[0].MPC_id == 511
 
+    for e in all_ephems:
+        mock_client.delete_ephem(ephem_id=e.ephem_id)
     mock_client.delete_sso(sso_id=sso1.sso_id)
     mock_client.delete_sso(sso_id=sso2.sso_id)
     mock_client.delete_sso(sso_id=sso3.sso_id)

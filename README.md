@@ -46,34 +46,26 @@ from astropy import units as u
 settings = SOCatClientSettings()
 catalog = settings.client
 
-sso_client = catalog.sso
-ephem_client = catalog.ephem
-
 sky_box = [
     SkyCoord(ra=0*u.deg,dec=-20*u.deg),
     SkyCoord(ra=120*u.deg,dec=20*u.deg)
 ]
 
-results = sso_client.get_box(
+results = catalog.get_box(
     lower_left=sky_box[0],
     upper_right=sky_box[1],
     t_min=Time("2019-06-08T00:00:00Z"),
     t_max=Time("2019-06-11T12:00:00Z"),
-    source_cat=catalog,
-    ephem_cat=ephem_client,
 )
 
 ```
 
 This returns a list of SourceGenerator objects, which you can query for positions and fluxes at time t
-by initializing the interpolator (whose valid range is the t_min, t_max you input above)
+like:
 
 
 ```
 t = Time("2019-01-01T00:00:00Z")
-
-for r in results:
-    r.init_interp(ephem_cat=ephem_client)
 
 sources = [r.at_time(t=t) for r in results]
 
@@ -85,6 +77,21 @@ In this way, you can query fixed astrophysical sources and moving objects in the
 The sotrplib library (github.com/simonsobs/sotrplib) has functional examples of loading in sources within
 map boundaries, and can be found in `sotrplib/source_catalog/socat.py`.
 
+
+The act_ingest script also allows you to set the flux limits for monitored sources as well as for pointing sources. 
+The current script has defaults of 20mJy for `monitored` and 300mJy for `pointing`.
+
+To then get only `monitored` sources from the catalog you simply query 
+
+```
+monitored_sources = catalog.get_monitored_sources(
+    lower_left=sky_box[0],
+    upper_right=sky_box[1],
+    t_min=Time("2019-06-08T00:00:00Z"),
+    t_max=Time("2019-06-11T12:00:00Z"),
+)
+```
+and the same goes for `pointing`, with the appropriate change in function name.
 
 Project Leads:
 

@@ -2,6 +2,7 @@ import astropy.units as u
 import pytest
 import uuid7 as uuid
 from astropy.coordinates import ICRS
+from astropy.time import Time
 from astroquery.exceptions import NoResultsWarning
 
 
@@ -90,31 +91,117 @@ def test_box(mock_client):
     mock_client.delete_source(source_id=id2)
 
 
-def test_photometry(mock_client):
-    position1 = ICRS(1.0 * u.deg, 1.0 * u.deg)
-    flux1 = 1.0 * u.mJy
-    source1 = mock_client.create_source(position=position1, name="mySrc", flux=flux1)
-    id1 = source1.source_id
-    position2 = ICRS(2.0 * u.deg, 2.0 * u.deg)
-    flux2 = 21.0 * u.mJy
-    source2 = mock_client.create_source(position=position2, name="mySrc2", flux=flux2)
-    id2 = source2.source_id
-    position3 = ICRS(3.0 * u.deg, 3.0 * u.deg)
-    flux3 = None
-    source3 = mock_client.create_source(position=position3, name="mySrc3", flux=flux3)
-    id3 = source3.source_id
+def test_monitored_and_pointing_flags(mock_client):
+    t_min = Time("2025-04-01T00:00:00.00")
+    t_max = t_min + 5 * u.h
 
-    sources = mock_client.get_forced_photometry_sources(minimum_flux=10.0 * u.mJy)
+    # Create fixed sources with different flags
+    src_monitored = mock_client.create_source(
+        position=ICRS(10.0 * u.deg, 10.0 * u.deg),
+        name="mock-monitored",
+        flux=1.0 * u.mJy,
+        flags={"monitored": True},
+    )
+    src_pointing = mock_client.create_source(
+        position=ICRS(11.0 * u.deg, 11.0 * u.deg),
+        name="mock-pointing",
+        flux=2.0 * u.mJy,
+        flags={"pointing": True},
+    )
+    src_both = mock_client.create_source(
+        position=ICRS(12.0 * u.deg, 12.0 * u.deg),
+        name="mock-both",
+        flux=3.0 * u.mJy,
+        flags={"monitored": True, "pointing": True},
+    )
+    src_neither = mock_client.create_source(
+        position=ICRS(13.0 * u.deg, 13.0 * u.deg),
+        name="mock-neither",
+        flux=4.0 * u.mJy,
+    )
 
-    id_list = [source.source_id for source in sources]
+    # Create SSOs with flags
+    sso_monitored = mock_client.create_sso(
+        name="mock-sso-monitored", MPC_id=99901, flags={"monitored": True}
+    )
+    ephems_monitored = []
+    for i in range(3):
+        e = mock_client.create_ephem(
+            sso_id=sso_monitored.sso_id,
+            MPC_id=sso_monitored.MPC_id,
+            name=sso_monitored.name,
+            time=t_min + i * u.h,
+            position=ICRS((20 + i) * u.deg, (20 + i) * u.deg),
+        )
+        ephems_monitored.append(e)
 
-    assert id1 not in id_list
-    assert id2 in id_list
-    assert id3 not in id_list
+    sso_pointing = mock_client.create_sso(
+        name="mock-sso-pointing", MPC_id=99902, flags={"pointing": True}
+    )
+    ephems_pointing = []
+    for i in range(3):
+        e = mock_client.create_ephem(
+            sso_id=sso_pointing.sso_id,
+            MPC_id=sso_pointing.MPC_id,
+            name=sso_pointing.name,
+            time=t_min + i * u.h,
+            position=ICRS((30 + i) * u.deg, (30 + i) * u.deg),
+        )
+        ephems_pointing.append(e)
 
-    mock_client.delete_source(source_id=id1)
-    mock_client.delete_source(source_id=id2)
-    mock_client.delete_source(source_id=id3)
+    sso_unflagged = mock_client.create_sso(name="mock-sso-neither", MPC_id=99903)
+    ephems_unflagged = []
+    for i in range(3):
+        e = mock_client.create_ephem(
+            sso_id=sso_unflagged.sso_id,
+            MPC_id=sso_unflagged.MPC_id,
+            name=sso_unflagged.name,
+            time=t_min + i * u.h,
+            position=ICRS((40 + i) * u.deg, (40 + i) * u.deg),
+        )
+        ephems_unflagged.append(e)
+
+    # Check monitored sources
+    monitored_gens = mock_client.get_monitored_sources(t_min=t_min, t_max=t_max)
+    monitored_names = {g.source.name for g in monitored_gens}
+    assert "mock-monitored" in monitored_names
+    assert "mock-both" in monitored_names
+    assert "mock-sso-monitored" in monitored_names
+    assert "mock-pointing" not in monitored_names
+    assert "mock-neither" not in monitored_names
+    assert "mock-sso-pointing" not in monitored_names
+    assert "mock-sso-neither" not in monitored_names
+
+    # Check pointing sources
+    pointing_gens = mock_client.get_pointing_sources(t_min=t_min, t_max=t_max)
+    pointing_names = {g.source.name for g in pointing_gens}
+    assert "mock-pointing" in pointing_names
+    assert "mock-both" in pointing_names
+    assert "mock-sso-pointing" in pointing_names
+    assert "mock-monitored" not in pointing_names
+    assert "mock-neither" not in pointing_names
+    assert "mock-sso-monitored" not in pointing_names
+    assert "mock-sso-neither" not in pointing_names
+
+    # Check that update_source can update flags
+    updated = mock_client.update_source(
+        source_id=src_neither.source_id,
+        flags={"monitored": True},
+    )
+    assert updated is not None
+    assert updated.monitored is True
+    assert updated.pointing is False
+
+    # Cleanup
+    mock_client.delete_source(source_id=src_monitored.source_id)
+    mock_client.delete_source(source_id=src_pointing.source_id)
+    mock_client.delete_source(source_id=src_both.source_id)
+    mock_client.delete_source(source_id=src_neither.source_id)
+    for e in ephems_monitored + ephems_pointing + ephems_unflagged:
+        mock_client.delete_ephem(ephem_id=e.ephem_id)
+    mock_client.delete_sso(sso_id=sso_monitored.sso_id)
+    mock_client.delete_sso(sso_id=sso_pointing.sso_id)
+    mock_client.delete_sso(sso_id=sso_unflagged.sso_id)
 
 
 def test_add_and_remove_astroquery(mock_client):
