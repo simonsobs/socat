@@ -9,14 +9,6 @@ from socat.client.core import ClientBase
 from socat.client.mock import Client as MockClient
 
 
-def _normalize_name(name):
-    if isinstance(name, bytes):
-        return name.decode("utf-8")
-    if isinstance(name, np.bytes_):
-        return name.decode("utf-8")
-    return str(name)
-
-
 def ingest_text_file(
     client: ClientBase,
     filename: Path,
@@ -39,20 +31,24 @@ def ingest_text_file(
 
     table = np.loadtxt(
         filename,
-        dtype=[("ra", "f8"), ("dec", "f8"), ("name", "U20")],
+        dtype=[("ra", "f8"), ("dec", "f8"), ("name", "S20")],
         skiprows=1,
     )
+    names = [
+        name.decode("utf-8") if isinstance(name, (bytes, np.bytes_)) else name
+        for name in table["name"]
+    ]
+    table["name"] = names
 
     number_of_sources = 0
 
     for row in table:
-        normalized_name = _normalize_name(row["name"])
         client.create_source(
             position=ICRS(
                 ra=float(row["ra"]) * u.deg,
                 dec=float(row["dec"]) * u.deg,
             ),
-            name=normalized_name,
+            name=row["name"],
             flags={
                 "monitored": True,
                 "pointing": False,
