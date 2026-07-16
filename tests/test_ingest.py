@@ -44,14 +44,15 @@ def text_catalog(tmp_path):
     n_sources = 10
     data = np.zeros(
         n_sources,
-        dtype=[("ra", "f8"), ("dec", "f8"), ("name", "U20")],
+        dtype=[("ra", "f8"), ("dec", "f8"), ("name", "U20"), ("monitored", "S20")],
     )
     data["ra"] = np.random.uniform(0, 360, n_sources)
     data["dec"] = np.random.uniform(-90, 90, n_sources)
     data["name"] = np.array([f"Source_{i}" for i in range(n_sources)], dtype="U20")
+    data["monitored"] = np.random.choice(["True", "False"], size=n_sources)
 
     text_path = tmp_path / "text_catalog.txt"
-    np.savetxt(text_path, data, fmt="%f %f %s", header="ra dec flux name")
+    np.savetxt(text_path, data, fmt="%f %f %s %s", header="ra dec name monitored")
 
     yield text_path
 
@@ -95,3 +96,4 @@ def test_ingest_text_catalog(text_catalog):
         assert source.name == f"Source_{i}"
         assert 0.0 <= source.position.ra.deg <= 360.0
         assert -90.0 <= source.position.dec.deg <= 90.0
+        assert source.monitored in [True, False]

@@ -31,7 +31,7 @@ def ingest_text_file(
 
     table = np.loadtxt(
         filename,
-        dtype=[("ra", "f8"), ("dec", "f8"), ("name", "S20")],
+        dtype=[("ra", "f8"), ("dec", "f8"), ("name", "S20"), ("monitored", "S20")],
         skiprows=1,
     )
     names = [
@@ -39,6 +39,8 @@ def ingest_text_file(
         for name in table["name"]
     ]
     table["name"] = names
+
+    table["monitored"] = [bool(monitored.decode("utf-8")) for monitored in table["monitored"]]
 
     number_of_sources = 0
 
@@ -50,7 +52,7 @@ def ingest_text_file(
             ),
             name=row["name"],
             flags={
-                "monitored": True,
+                "monitored": row["monitored"],
                 "pointing": False,
             },
         )
