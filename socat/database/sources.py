@@ -6,6 +6,7 @@ from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropydantic import AstroPydanticICRS, AstroPydanticQuantity, AstroPydanticTime
 from pydantic import BaseModel
+from sqlalchemy import Index
 from sqlmodel import Field, SQLModel
 
 
@@ -190,6 +191,13 @@ class RegisteredMovingSourceTable(SQLModel, table=True):
     """
 
     __tablename__ = "moving_sources"
+    __table_args__ = (
+        # get_ephem_points()/get_source_generator() filter by a known
+        # sso_id first, then narrow by time -- this composite index
+        # serves both that and plain sso_id-only lookups (leftmost
+        # prefix), so no separate single-column sso_id index is needed.
+        Index("idx_moving_sources_sso_time", "sso_id", "time"),
+    )
 
     ephem_id: uuid.UUID = Field(primary_key=True, default_factory=uuid.create)
     sso_id: uuid.UUID = Field(
@@ -207,7 +215,11 @@ class RegisteredMovingSourceTable(SQLModel, table=True):
         nullable=False,
         ondelete="CASCADE",
     )
-    time: datetime
+    # get_box_sso()/get_monitored_ssos()/get_pointing_ssos() have no
+    # sso_id to filter on (that's what they're looking up) -- they filter
+    # by time directly, so it needs its own leading index too, not just
+    # as the second column of the composite above.
+    time: datetime = Field(index=True, nullable=False)
     ra_deg: float = Field(nullable=False)
     dec_deg: float = Field(nullable=False)
     flux_mJy: float | None = Field(nullable=True)
