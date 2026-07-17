@@ -11,7 +11,7 @@ from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropy.units import Quantity
 from astroquery.query import BaseVOQuery
-from sqlmodel import select, union_all, update
+from sqlmodel import select, union, union_all, update
 
 from socat.database.services import AstroqueryServiceTable
 from socat.database.sources import (
@@ -146,6 +146,15 @@ def get_box_sso(
         Database statement.
     """
     if lower_left.ra > upper_right.ra:
+        # Each branch joins against every matching ephemeris point, so
+        # without its own .distinct() a single object with N matching
+        # ephem points produces N duplicate rows here -- and the
+        # .distinct() on the outer `select(...).from_statement(union_stmt)`
+        # below does NOT fix that: from_statement() replaces the executed
+        # SQL wholesale, so that outer .distinct() is a no-op. union_all
+        # (rather than union) is also insufficient on its own: an object
+        # can legitimately have ephem points on both sides of RA=0 within
+        # the same time window, and union_all wouldn't merge those.
         right_box = (
             select(SolarSystemObjectTable)
             .outerjoin(
@@ -163,6 +172,7 @@ def get_box_sso(
                 RegisteredMovingSourceTable.dec_deg
                 <= float(upper_right.dec.to_value("deg")),
             )
+            .distinct()
         )
         left_box = (
             select(SolarSystemObjectTable)
@@ -181,9 +191,10 @@ def get_box_sso(
                 RegisteredMovingSourceTable.dec_deg
                 <= float(upper_right.dec.to_value("deg")),
             )
+            .distinct()
         )
-        union_stmt = union_all(right_box, left_box)
-        return select(SolarSystemObjectTable).distinct().from_statement(union_stmt)
+        union_stmt = union(right_box, left_box)
+        return select(SolarSystemObjectTable).from_statement(union_stmt)
     else:
         return (
             select(SolarSystemObjectTable)

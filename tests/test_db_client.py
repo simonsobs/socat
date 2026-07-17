@@ -362,6 +362,107 @@ def test_box(db_client):
     client.delete_source(source_id=source_2.source_id)
 
 
+def test_box_ra_wraparound_dedup(db_client):
+    """
+    get_box_sso/get_box_fixed take a different code path when the box
+    wraps across RA=0/360 (lower_left.ra > upper_right.ra), splitting the
+    query into two RA sub-ranges combined with a union. A source with
+    several matching ephemeris points -- or points landing in both
+    sub-ranges -- must still come back as exactly one row.
+
+    db_client is session-scoped and shared across this module's tests, so
+    this uses a dec band (40-43) that no other test in this file touches,
+    to avoid colliding with fixtures other tests leave behind.
+    """
+    client = db_client
+
+    t_min = Time("2025-01-01T00:00:00.00")
+    t_max = t_min + 10 * u.h
+
+    fixed_in_box = client.create_source(
+        position=ICRS(355.0 * u.deg, 41.0 * u.deg),
+        name="wrap-fixed",
+        flux=1.0 * u.mJy,
+    )
+    fixed_out_of_box = client.create_source(
+        position=ICRS(180.0 * u.deg, 41.0 * u.deg),
+        name="not-wrapped-fixed",
+        flux=1.0 * u.mJy,
+    )
+
+    # Several ephem points, all within the "right" (350-360) sub-range --
+    # exercises per-branch dedup.
+    right_only = client.create_sso(name="wrap-right-only", MPC_id=9001)
+    for i in range(4):
+        client.create_ephem(
+            sso_id=right_only.sso_id,
+            MPC_id=right_only.MPC_id,
+            name=right_only.name,
+            time=t_min + i * u.h,
+            position=ICRS((355.0 + i) * u.deg, 41.0 * u.deg),
+            flux=1.0 * u.mJy,
+        )
+
+    # Ephem points on both sides of RA=0 within the window -- exercises
+    # cross-branch dedup (union vs union_all).
+    crosses_zero = client.create_sso(name="wrap-crosses-zero", MPC_id=9002)
+    for i, ra in enumerate([356.0, 358.0, 1.0, 3.0]):
+        client.create_ephem(
+            sso_id=crosses_zero.sso_id,
+            MPC_id=crosses_zero.MPC_id,
+            name=crosses_zero.name,
+            time=t_min + i * u.h,
+            position=ICRS(ra * u.deg, 41.0 * u.deg),
+            flux=1.0 * u.mJy,
+        )
+
+    # Outside the RA range entirely.
+    not_in_box = client.create_sso(name="wrap-not-in-box", MPC_id=9003)
+    client.create_ephem(
+        sso_id=not_in_box.sso_id,
+        MPC_id=not_in_box.MPC_id,
+        name=not_in_box.name,
+        time=t_min,
+        position=ICRS(180.0 * u.deg, 41.0 * u.deg),
+        flux=1.0 * u.mJy,
+    )
+
+    lower_left = ICRS(350.0 * u.deg, 40.0 * u.deg)
+    upper_right = ICRS(10.0 * u.deg, 43.0 * u.deg)
+
+    fixed_matches = client.get_box_fixed(lower_left=lower_left, upper_right=upper_right)
+    assert [s.name for s in fixed_matches] == ["wrap-fixed"]
+
+    sso_matches = client.get_box_sso(
+        lower_left=lower_left,
+        upper_right=upper_right,
+        t_min=t_min,
+        t_max=t_max,
+    )
+    assert sorted(s.name for s in sso_matches) == [
+        "wrap-crosses-zero",
+        "wrap-right-only",
+    ]
+
+    source_gens = client.get_box(
+        lower_left=lower_left,
+        upper_right=upper_right,
+        t_min=t_min,
+        t_max=t_max,
+    )
+    assert sorted(g.source.name for g in source_gens) == [
+        "wrap-crosses-zero",
+        "wrap-fixed",
+        "wrap-right-only",
+    ]
+
+    client.delete_sso(sso_id=right_only.sso_id)
+    client.delete_sso(sso_id=crosses_zero.sso_id)
+    client.delete_sso(sso_id=not_in_box.sso_id)
+    client.delete_source(source_id=fixed_in_box.source_id)
+    client.delete_source(source_id=fixed_out_of_box.source_id)
+
+
 def test_not_found_behavior(db_client):
     client = db_client
 
