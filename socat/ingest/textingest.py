@@ -2,6 +2,7 @@ import pickle
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from astropy import units as u
 from astropy.coordinates import ICRS
 
@@ -28,28 +29,10 @@ def ingest_text_file(
     number_of_sources: int
         The number of sources added to the catalog.
     """
-
-    table = np.loadtxt(
-        filename,
-        dtype=[("ra", "f8"), ("dec", "f8"), ("name", "S20"), ("monitored", "S20")],
-        skiprows=1,
-    )
-    names = [
-        name.decode("utf-8") if isinstance(name, (bytes, np.bytes_)) else name
-        for name in table["name"]
-    ]
-    table["name"] = names
-
-    table["monitored"] = [
-        bool(monitored.decode("utf-8"))
-        if isinstance(monitored, (bytes, np.bytes_))
-        else bool(monitored)
-        for monitored in table["monitored"]
-    ]
-
+    table = pd.read_csv(filename)
     number_of_sources = 0
 
-    for row in table:
+    for index, row in table.iterrows(): 
         client.create_source(
             position=ICRS(
                 ra=float(row["ra"]) * u.deg,
