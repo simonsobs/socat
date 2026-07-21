@@ -40,7 +40,9 @@ def ingest_text_file(
     ]
     table["name"] = names
 
-    table["monitored"] = [bool(monitored.decode("utf-8")) for monitored in table["monitored"]]
+    table["monitored"] = [
+        bool(monitored.decode("utf-8")) for monitored in table["monitored"]
+    ]
 
     number_of_sources = 0
 
@@ -114,3 +116,7 @@ def main():  # pragma: no cover
             pickle.dump(client, handle)
 
         print(f"Wrote serialized socat instance to {output_path}")
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()

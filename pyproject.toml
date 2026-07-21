@@ -48,6 +48,7 @@ socat-act-fits = "socat.ingest.actfits:main"
 socat-websky-csv = "socat.ingest.webskycsv:main"
 socat-migrate = "socat.migrate:migrate"
 socat-jpl-parqet = "socat.ingest.jplparquet:main"
+socat-text = "socat.ingest.textingest:main"
 
 [tool.ruff.lint]
 preview = true
