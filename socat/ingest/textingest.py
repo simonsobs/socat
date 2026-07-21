@@ -41,7 +41,10 @@ def ingest_text_file(
     table["name"] = names
 
     table["monitored"] = [
-        bool(monitored.decode("utf-8")) for monitored in table["monitored"]
+        bool(monitored.decode("utf-8"))
+        if isinstance(monitored, (bytes, np.bytes_))
+        else bool(monitored)
+        for monitored in table["monitored"]
     ]
 
     number_of_sources = 0
