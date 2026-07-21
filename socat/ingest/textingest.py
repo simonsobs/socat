@@ -32,7 +32,7 @@ def ingest_text_file(
     table = pd.read_csv(filename)
     number_of_sources = 0
 
-    for index, row in table.iterrows(): 
+    for index, row in table.iterrows():
         client.create_source(
             position=ICRS(
                 ra=float(row["ra"]) * u.deg,
