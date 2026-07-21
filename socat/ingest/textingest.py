@@ -1,7 +1,6 @@
 import pickle
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from astropy import units as u
 from astropy.coordinates import ICRS

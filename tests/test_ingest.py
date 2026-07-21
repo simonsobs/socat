@@ -5,6 +5,7 @@ Test ingestion of catalogs of various types.
 import os
 
 import numpy as np
+import pandas as pd
 from astropy import units as u
 from astropy.coordinates import ICRS
 from astropy.io import fits
@@ -44,15 +45,16 @@ def text_catalog(tmp_path):
     n_sources = 10
     data = np.zeros(
         n_sources,
-        dtype=[("ra", "f8"), ("dec", "f8"), ("name", "U20"), ("monitored", "S20")],
+        dtype=[("ra", "f8"), ("dec", "f8"), ("name", "U20"), ("monitored", "U20")],
     )
     data["ra"] = np.random.uniform(0, 360, n_sources)
     data["dec"] = np.random.uniform(-90, 90, n_sources)
     data["name"] = np.array([f"Source_{i}" for i in range(n_sources)], dtype="U20")
     data["monitored"] = np.random.choice(["True", "False"], size=n_sources)
 
+    data = pd.DataFrame(data)
     text_path = tmp_path / "text_catalog.txt"
-    np.savetxt(text_path, data, fmt="%f %f %s %s", header="ra dec name monitored")
+    data.to_csv(text_path, index=False)
 
     yield text_path
 
