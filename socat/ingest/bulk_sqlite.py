@@ -26,6 +26,12 @@ The database file is built on local node disk and then copied to the
 requested destination -- SQLite (especially anything that touches the WAL
 file) doesn't behave reliably over network filesystems like Lustre/NFS,
 and a scratch/home mount is exactly where the final --output usually lives.
+
+Ephemerides are committed one object (parquet row group) at a time, together
+with a row in a `_bulk_ingest_progress` bookkeeping table in the same
+transaction. If a build dies partway, rerunning with the same --build-dir
+and --resume skips every row group already recorded there and picks up
+where it left off; the bookkeeping table is dropped once the build finishes.
 """
 
 import shutil
@@ -59,11 +65,48 @@ def create_schema(db_path: Path) -> None:
 
 
 def _tune_for_bulk_load(conn: sqlite3.Connection) -> None:
-    conn.execute("PRAGMA journal_mode=MEMORY")
+    # An on-disk rollback journal (not MEMORY) so a process killed
+    # mid-transaction leaves a consistent database that --resume can reopen.
+    conn.execute("PRAGMA journal_mode=TRUNCATE")
     conn.execute("PRAGMA synchronous=OFF")
     conn.execute("PRAGMA foreign_keys=OFF")
     conn.execute("PRAGMA temp_store=MEMORY")
     conn.execute("PRAGMA cache_size=-500000")  # ~500MB page cache
+
+
+_PROGRESS_TABLE = "_bulk_ingest_progress"
+
+
+def _create_progress_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        f"CREATE TABLE IF NOT EXISTS {_PROGRESS_TABLE} "
+        "(file TEXT, row_group INTEGER, n_rows INTEGER, downsample INTEGER, "
+        "PRIMARY KEY (file, row_group))"
+    )
+    conn.commit()
+
+
+def _completed_row_groups(
+    conn: sqlite3.Connection, downsample: int
+) -> set[tuple[str, int]]:
+    """
+    Row groups already committed by a previous (interrupted) build.
+
+    Raises
+    ------
+    ValueError
+        If the partial build used a different downsample factor.
+    """
+    rows = conn.execute(
+        f"SELECT file, row_group, downsample FROM {_PROGRESS_TABLE}"
+    ).fetchall()
+    mismatched = {d for _, _, d in rows if d != downsample}
+    if mismatched:
+        raise ValueError(
+            f"Existing partial build used downsample={sorted(mismatched)}, "
+            f"but this run requested downsample={downsample}"
+        )
+    return {(f, g) for f, g, _ in rows}
 
 
 def _finalize_pragmas(conn: sqlite3.Connection) -> None:
@@ -151,10 +194,23 @@ def load_solar_system_objects(
     conn: sqlite3.Connection,
     designations: dict[str, tuple[int | None, str]],
 ) -> dict[str, str]:
-    """Insert one row per unique SSO, return designation -> sso_id.hex."""
+    """
+    Insert one row per unique SSO, return designation -> sso_id.hex.
+    SSOs already in the table (from an interrupted build) are reused
+    rather than inserted again.
+    """
+    existing = {
+        (mpc_id, name): sso_id
+        for sso_id, mpc_id, name in conn.execute(
+            "SELECT sso_id, MPC_id, name FROM solarsystem_objects"
+        )
+    }
     sso_ids: dict[str, str] = {}
     rows = []
     for designation, (mpc_id, name) in designations.items():
+        if (mpc_id, name) in existing:
+            sso_ids[designation] = existing[(mpc_id, name)]
+            continue
         sso_id_hex = uuid7.create().hex
         sso_ids[designation] = sso_id_hex
         rows.append((sso_id_hex, mpc_id, name, True, False))
@@ -173,12 +229,19 @@ def load_ephemerides(
     sso_ids: dict[str, str],
     designations: dict[str, tuple[int | None, str]],
     chunk_rows: int = 500_000,
+    downsample: int = 1,
 ) -> int:
     """
     Bulk-load ephemeris points into `moving_sources`, one object (row
     group) at a time so peak memory stays bounded regardless of the
-    total row count across all files.
+    total row count across all files. Each object's rows are committed
+    together with its entry in the progress table, so row groups already
+    recorded there (by an interrupted build) are skipped. `downsample`
+    keeps every Nth point of each object, as socat-jpl-parqet does.
+    Returns the number of points inserted by this call.
     """
+    _create_progress_table(conn)
+    done = _completed_row_groups(conn, downsample)
     total = 0
     insert_sql = (
         "INSERT INTO moving_sources "
@@ -188,10 +251,15 @@ def load_ephemerides(
     for path in parquet_paths:
         pf = pq.ParquetFile(path)
         n_groups = pf.metadata.num_row_groups
+        file_key = str(Path(path).resolve())
         for i in tqdm(range(n_groups), desc=f"Ingesting {path.name}"):
+            if (file_key, i) in done:
+                continue
             table = pf.read_row_group(
                 i, columns=["designation", "datetime_utc", "ra_deg", "dec_deg"]
             )
+            if downsample > 1:
+                table = table.take(np.arange(0, table.num_rows, downsample))
             designation = table.column("designation")[0].as_py()
             mpc_id, name = designations[designation]
             sso_id_hex = sso_ids[designation]
@@ -216,6 +284,10 @@ def load_ephemerides(
 
             for start in range(0, len(rows), chunk_rows):
                 conn.executemany(insert_sql, rows[start : start + chunk_rows])
+            conn.execute(
+                f"INSERT INTO {_PROGRESS_TABLE} VALUES (?,?,?,?)",
+                (file_key, i, len(rows), downsample),
+            )
             conn.commit()
 
             total += len(rows)
@@ -223,22 +295,37 @@ def load_ephemerides(
 
 
 def build(
-    fits_path: Path,
+    fits_path: Path | None,
     ephem_paths: list[Path],
     output_path: Path,
     build_dir: Path | None = None,
+    downsample: int = 1,
+    resume: bool = False,
 ) -> dict:
     """
-    Build a full SOCat SQLite database from an ACT FITS catalog and one
-    or more JPL ephemeris parquet files, writing the result to
-    `output_path`. Returns a dict of row counts and elapsed time.
+    Build a full SOCat SQLite database from an (optional) ACT FITS catalog
+    and one or more JPL ephemeris parquet files, writing the result to
+    `output_path`. With `resume`, an existing partial database in
+    `build_dir` (left behind by an interrupted build) is continued instead
+    of started over. Returns a dict of row counts and elapsed time; n_ephem
+    counts only points inserted by this call.
+
+    Raises
+    ------
+    ValueError
+        If `resume` is set without an explicit `build_dir`.
     """
+    if resume and build_dir is None:
+        raise ValueError("resume requires an explicit build_dir")
     build_dir = Path(build_dir or tempfile.mkdtemp(prefix="socat_build_", dir="/tmp"))
     build_dir.mkdir(parents=True, exist_ok=True)
     build_path = build_dir / output_path.name
 
     if build_path.exists():
-        build_path.unlink()
+        if resume:
+            print(f"Resuming partial build at {build_path}")
+        else:
+            build_path.unlink()
 
     t0 = time.time()
     create_schema(build_path)
@@ -246,8 +333,15 @@ def build(
     conn = sqlite3.connect(str(build_path))
     _tune_for_bulk_load(conn)
 
-    n_fixed = load_fixed_sources(conn, fits_path)
-    print(f"Loaded {n_fixed} fixed sources ({time.time() - t0:.1f}s elapsed)")
+    n_fixed = 0
+    if fits_path is not None:
+        (n_existing,) = conn.execute("SELECT COUNT(*) FROM fixed_sources").fetchone()
+        if n_existing:
+            n_fixed = n_existing
+            print(f"Keeping {n_fixed} fixed sources from the partial build")
+        else:
+            n_fixed = load_fixed_sources(conn, fits_path)
+            print(f"Loaded {n_fixed} fixed sources ({time.time() - t0:.1f}s elapsed)")
 
     designations = collect_sso_designations(ephem_paths)
     sso_ids = load_solar_system_objects(conn, designations)
@@ -255,9 +349,13 @@ def build(
         f"Loaded {len(sso_ids)} solar system objects ({time.time() - t0:.1f}s elapsed)"
     )
 
-    n_ephem = load_ephemerides(conn, ephem_paths, sso_ids, designations)
+    n_ephem = load_ephemerides(
+        conn, ephem_paths, sso_ids, designations, downsample=downsample
+    )
     print(f"Loaded {n_ephem} ephemeris points ({time.time() - t0:.1f}s elapsed)")
 
+    conn.execute(f"DROP TABLE {_PROGRESS_TABLE}")
+    conn.commit()
     _finalize_pragmas(conn)
     conn.execute("ANALYZE")
     conn.commit()
@@ -295,8 +393,9 @@ def main():  # pragma: no cover
     parser.add_argument(
         "--fits-file",
         type=Path,
-        required=True,
-        help="ACT-compatible FITS point source catalog (fixed sources)",
+        default=None,
+        help="ACT-compatible FITS point source catalog (fixed sources); "
+        "omit to build an SSO-only database",
     )
     parser.add_argument(
         "--ephem-file",
@@ -314,13 +413,30 @@ def main():  # pragma: no cover
         help="Local scratch dir to build in before copying to --output "
         "(default: a fresh temp dir under /tmp)",
     )
+    parser.add_argument(
+        "-d",
+        "--downsample",
+        type=int,
+        default=1,
+        help="Keep every Nth ephemeris point per object (e.g., 2 halves the cadence)",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Continue an interrupted build left in --build-dir instead of "
+        "starting over (requires --build-dir)",
+    )
     args = parser.parse_args()
+    if args.resume and args.build_dir is None:
+        parser.error("--resume requires --build-dir")
 
     build(
         fits_path=args.fits_file,
         ephem_paths=args.ephem_files,
         output_path=args.output,
         build_dir=args.build_dir,
+        downsample=args.downsample,
+        resume=args.resume,
     )
 
 

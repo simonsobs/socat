@@ -190,3 +190,95 @@ def test_build_end_to_end(tmp_path, act_fits_catalog, jpl_ephem_parquet):
         t_max=Time("2025-01-01T10:00:00"),
     )
     assert sorted(s.name for s in sso) == ["Ceres", "Pallas"]
+
+
+def test_build_downsample_without_fits(tmp_path, jpl_ephem_parquet):
+    output_path = tmp_path / "socat.db"
+    summary = bulk_sqlite.build(
+        fits_path=None,
+        ephem_paths=[jpl_ephem_parquet],
+        output_path=output_path,
+        build_dir=tmp_path / "build",
+        downsample=2,
+    )
+    assert summary["n_fixed_sources"] == 0
+    assert summary["n_sso"] == 2
+    # 5 points per object, keep rows 0, 2, 4.
+    assert summary["n_ephem"] == 6
+
+    conn = sqlite3.connect(str(output_path))
+    times = [
+        t
+        for (t,) in conn.execute(
+            "SELECT time FROM moving_sources WHERE name = 'Ceres' ORDER BY time"
+        )
+    ]
+    tables = {n for (n,) in conn.execute("SELECT name FROM sqlite_master")}
+    conn.close()
+    assert times == [
+        "2025-01-01 00:00:00.000000",
+        "2025-01-01 04:00:00.000000",
+        "2025-01-01 08:00:00.000000",
+    ]
+    assert bulk_sqlite._PROGRESS_TABLE not in tables
+
+
+def test_build_resume_after_crash(
+    tmp_path, monkeypatch, act_fits_catalog, jpl_ephem_parquet
+):
+    output_path = tmp_path / "output" / "socat.db"
+    build_dir = tmp_path / "build"
+
+    # Simulate a crash while reading the second object's ephemeris.
+    real_read_row_group = pq.ParquetFile.read_row_group
+
+    def crashing_read_row_group(self, i, *args, **kwargs):
+        if i == 1 and "datetime_utc" in (kwargs.get("columns") or []):
+            raise RuntimeError("simulated crash")
+        return real_read_row_group(self, i, *args, **kwargs)
+
+    monkeypatch.setattr(pq.ParquetFile, "read_row_group", crashing_read_row_group)
+    with pytest.raises(RuntimeError, match="simulated crash"):
+        bulk_sqlite.build(
+            fits_path=act_fits_catalog,
+            ephem_paths=[jpl_ephem_parquet],
+            output_path=output_path,
+            build_dir=build_dir,
+        )
+    monkeypatch.undo()
+    assert not output_path.exists()
+
+    partial = sqlite3.connect(str(build_dir / output_path.name))
+    assert partial.execute("SELECT COUNT(*) FROM moving_sources").fetchone() == (5,)
+    partial.close()
+
+    # Resuming with a different downsample would mix cadences.
+    with pytest.raises(ValueError, match="downsample"):
+        bulk_sqlite.build(
+            fits_path=act_fits_catalog,
+            ephem_paths=[jpl_ephem_parquet],
+            output_path=output_path,
+            build_dir=build_dir,
+            downsample=2,
+            resume=True,
+        )
+
+    summary = bulk_sqlite.build(
+        fits_path=act_fits_catalog,
+        ephem_paths=[jpl_ephem_parquet],
+        output_path=output_path,
+        build_dir=build_dir,
+        resume=True,
+    )
+    # Only Pallas's 5 points are inserted on the resumed run.
+    assert summary["n_ephem"] == 5
+    assert summary["n_fixed_sources"] == 10
+
+    conn = sqlite3.connect(str(output_path))
+    assert conn.execute("SELECT COUNT(*) FROM fixed_sources").fetchone() == (10,)
+    assert conn.execute("SELECT COUNT(*) FROM solarsystem_objects").fetchone() == (2,)
+    assert conn.execute(
+        "SELECT name, COUNT(*) FROM moving_sources GROUP BY name ORDER BY name"
+    ).fetchall() == [("Ceres", 5), ("Pallas", 5)]
+    assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
+    conn.close()
