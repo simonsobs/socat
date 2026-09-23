@@ -224,10 +224,10 @@ class RegisteredMovingSourceTable(SQLModel, table=True):
         nullable=False,
         ondelete="CASCADE",
     )
-    # get_box_sso()/get_monitored_ssos()/get_pointing_ssos() have no
-    # sso_id to filter on (that's what they're looking up) -- they filter
-    # by time directly, so it needs its own leading index too, not just
-    # as the second column of the composite above.
+    # get_box_sso()/get_monitored_ssos()/get_pointing_ssos() search for
+    # *which* SSOs fall in a time window, so their WHERE clause has no
+    # sso_id -- only time (and ra/dec). The (sso_id, time) composite index
+    # can't serve a time-only filter, so time needs its own index.
     time: datetime = Field(index=True, nullable=False)
     ra_deg: float = Field(nullable=False)
     dec_deg: float = Field(nullable=False)
