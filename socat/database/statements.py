@@ -18,6 +18,7 @@ from socat.database.sources import (
     RegisteredFixedSourceTable,
     RegisteredMovingSourceTable,
     SolarSystemObjectTable,
+    utc_datetime,
 )
 
 
@@ -162,8 +163,8 @@ def get_box_sso(
                 RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
             )
             .where(
-                t_min.datetime <= RegisteredMovingSourceTable.time,
-                RegisteredMovingSourceTable.time <= t_max.datetime,
+                utc_datetime(t_min) <= RegisteredMovingSourceTable.time,
+                RegisteredMovingSourceTable.time <= utc_datetime(t_max),
                 float(lower_left.ra.to_value("deg"))
                 <= RegisteredMovingSourceTable.ra_deg,
                 RegisteredMovingSourceTable.ra_deg <= 360.0,
@@ -181,8 +182,8 @@ def get_box_sso(
                 RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
             )
             .where(
-                t_min.datetime <= RegisteredMovingSourceTable.time,
-                RegisteredMovingSourceTable.time <= t_max.datetime,
+                utc_datetime(t_min) <= RegisteredMovingSourceTable.time,
+                RegisteredMovingSourceTable.time <= utc_datetime(t_max),
                 0.0 <= RegisteredMovingSourceTable.ra_deg,
                 RegisteredMovingSourceTable.ra_deg
                 <= float(upper_right.ra.to_value("deg")),
@@ -203,8 +204,8 @@ def get_box_sso(
                 RegisteredMovingSourceTable.sso_id == SolarSystemObjectTable.sso_id,
             )
             .where(
-                t_min.datetime <= RegisteredMovingSourceTable.time,
-                RegisteredMovingSourceTable.time <= t_max.datetime,
+                utc_datetime(t_min) <= RegisteredMovingSourceTable.time,
+                RegisteredMovingSourceTable.time <= utc_datetime(t_max),
                 float(lower_left.ra.to_value("deg"))
                 <= RegisteredMovingSourceTable.ra_deg,
                 RegisteredMovingSourceTable.ra_deg
@@ -269,8 +270,8 @@ def get_monitored_ssos(t_min: Time, t_max: Time) -> select:
         )
         .where(
             SolarSystemObjectTable.monitored,
-            t_min.datetime <= RegisteredMovingSourceTable.time,
-            RegisteredMovingSourceTable.time <= t_max.datetime,
+            utc_datetime(t_min) <= RegisteredMovingSourceTable.time,
+            RegisteredMovingSourceTable.time <= utc_datetime(t_max),
         )
         .distinct()
     )
@@ -301,8 +302,8 @@ def get_pointing_ssos(t_min: Time, t_max: Time) -> select:
         )
         .where(
             SolarSystemObjectTable.pointing,
-            t_min.datetime <= RegisteredMovingSourceTable.time,
-            RegisteredMovingSourceTable.time <= t_max.datetime,
+            utc_datetime(t_min) <= RegisteredMovingSourceTable.time,
+            RegisteredMovingSourceTable.time <= utc_datetime(t_max),
         )
         .distinct()
     )
@@ -508,7 +509,7 @@ def update_ephem(
             "sso_id": sso_id,
             "MPC_id": MPC_id,
             "name": name,
-            "time": time.datetime if time is not None else None,
+            "time": utc_datetime(time) if time is not None else None,
             "ra_deg": position.ra.to_value("deg") if position is not None else None,
             "dec_deg": position.dec.to_value("deg") if position is not None else None,
             "flux_mJy": flux.to_value("mJy") if flux is not None else None,
@@ -552,7 +553,7 @@ def get_ephem_points(sso_id: uuid.UUID, t_min: Time, t_max: Time) -> select:
         raise ValueError("t_min must be less than or equal to t_max")
 
     return select(RegisteredMovingSourceTable).where(
-        t_min.datetime <= RegisteredMovingSourceTable.time,
-        RegisteredMovingSourceTable.time <= t_max.datetime,
+        utc_datetime(t_min) <= RegisteredMovingSourceTable.time,
+        RegisteredMovingSourceTable.time <= utc_datetime(t_max),
         sso_id == RegisteredMovingSourceTable.sso_id,
     )

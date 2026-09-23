@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 import astropy.units as u
 import uuid7 as uuid
@@ -8,6 +8,15 @@ from astropydantic import AstroPydanticICRS, AstroPydanticQuantity, AstroPydanti
 from pydantic import BaseModel
 from sqlalchemy import Index
 from sqlmodel import Field, SQLModel
+
+
+def utc_datetime(time: Time) -> datetime:
+    """
+    Convert an astropy Time to a timezone-aware UTC datetime, the form
+    moving_sources.time is stored and compared in. Times in other scales
+    (e.g. TDB) are converted to UTC first rather than reinterpreted.
+    """
+    return time.utc.to_datetime(timezone=UTC)
 
 
 class RegisteredSource(BaseModel):

@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 import astropy.units as u
 import pytest
 import uuid7 as uuid
@@ -5,6 +7,17 @@ from astropy.coordinates import ICRS
 from astropy.time import Time
 
 from socat.client.db import AstorqueryClient, EphemClient, SolarSystemClient
+from socat.database.sources import utc_datetime
+
+
+def test_utc_datetime_is_timezone_aware_utc():
+    dt = utc_datetime(Time("2025-01-01T00:00:00", scale="utc"))
+    assert dt == datetime(2025, 1, 1, tzinfo=UTC)
+    assert dt.utcoffset() == timedelta(0)
+
+    # Non-UTC scales are converted to UTC rather than relabelled.
+    tdb = Time("2025-01-01T00:01:09.184", scale="tdb")
+    assert abs(utc_datetime(tdb) - dt) < timedelta(milliseconds=5)
 
 
 def test_fixed_source_crud_and_queries(db_client):
