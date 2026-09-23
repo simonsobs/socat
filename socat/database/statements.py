@@ -147,15 +147,6 @@ def get_box_sso(
         Database statement.
     """
     if lower_left.ra > upper_right.ra:
-        # Each branch joins against every matching ephemeris point, so
-        # without its own .distinct() a single object with N matching
-        # ephem points produces N duplicate rows here -- and the
-        # .distinct() on the outer `select(...).from_statement(union_stmt)`
-        # below does NOT fix that: from_statement() replaces the executed
-        # SQL wholesale, so that outer .distinct() is a no-op. union_all
-        # (rather than union) is also insufficient on its own: an object
-        # can legitimately have ephem points on both sides of RA=0 within
-        # the same time window, and union_all wouldn't merge those.
         right_box = (
             select(SolarSystemObjectTable)
             .outerjoin(
