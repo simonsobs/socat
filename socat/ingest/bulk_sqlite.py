@@ -4,18 +4,9 @@ catalog (fixed sources) and JPL Horizons batched-ephemeris parquet files
 (solar system objects), e.g. the ones produced by sotrplib's
 sotrplib/solar_system/download_ephem_from_horizons.py.
 
-Why not the other ingest modules (socat.ingest.actfits.ingest_fits_file,
-socat.ingest.jplparquet.ingest_jpl_parquet_file)? Both go through a
-ClientBase (create_source()/create_sso()/create_ephem()), which for the DB
-client means one INSERT + COMMIT per row -- appropriate for adding a
-handful of sources to an existing catalog, but not for building a database
-from scratch. A real ephemeris ingest is a different scale: at these
-files' native ~2-hour cadence over 2015-2033, two ephemeris files hold on
-the order of tens of millions of rows across a few hundred objects, and
-one-commit-per-row would take on the order of days. This module instead
-bulk-loads via raw sqlite3.executemany with SQLite tuned for bulk writes
-(no WAL/fsync, foreign keys off during load), which gets the whole build
-down to minutes.
+This module bulk-loads via raw sqlite3.executemany with 
+SQLite tuned for bulk writes (no WAL/fsync, foreign keys off during load), 
+which is much faster than the act-fits or jpl-parquet loading scripts.
 
 The table schema itself is still created from socat's own SQLModel
 metadata (see socat.database.sources), so its indexes -- moving_sources
