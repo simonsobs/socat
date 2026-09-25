@@ -51,6 +51,7 @@ socat-websky-csv = "socat.ingest.webskycsv:main"
 socat-migrate = "socat.migrate:migrate"
 socat-jpl-parqet = "socat.ingest.jplparquet:main"
 socat-build-db = "socat.ingest.bulk_sqlite:main"
+socat-text = "socat.ingest.textingest:main"
 
 [tool.ruff.lint]
 preview = true
