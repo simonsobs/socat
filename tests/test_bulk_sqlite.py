@@ -282,3 +282,128 @@ def test_build_resume_after_crash(
     ).fetchall() == [("Ceres", 5), ("Pallas", 5)]
     assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
     conn.close()
+
+
+def test_load_fixed_sources_twice_does_not_duplicate(tmp_path, act_fits_catalog):
+    db_path = tmp_path / "socat.db"
+    bulk_sqlite.create_schema(db_path)
+    conn = sqlite3.connect(str(db_path))
+    bulk_sqlite._tune_for_bulk_load(conn)
+
+    assert bulk_sqlite.load_fixed_sources(conn, act_fits_catalog) == 10
+    assert bulk_sqlite.load_fixed_sources(conn, act_fits_catalog) == 0
+    assert conn.execute("SELECT COUNT(*) FROM fixed_sources").fetchone() == (10,)
+    conn.close()
+
+
+def _open_with_ssos(tmp_path, parquet_path):
+    db_path = tmp_path / "socat.db"
+    bulk_sqlite.create_schema(db_path)
+    conn = sqlite3.connect(str(db_path))
+    bulk_sqlite._tune_for_bulk_load(conn)
+    designations = bulk_sqlite.collect_sso_designations([parquet_path])
+    sso_ids = bulk_sqlite.load_solar_system_objects(conn, designations)
+    return db_path, conn, designations, sso_ids
+
+
+def test_load_ephemerides_same_file_twice(tmp_path, jpl_ephem_parquet):
+    _, conn, designations, sso_ids = _open_with_ssos(tmp_path, jpl_ephem_parquet)
+
+    n_ephem = bulk_sqlite.load_ephemerides(
+        conn, [jpl_ephem_parquet, jpl_ephem_parquet], sso_ids, designations
+    )
+    assert n_ephem == 10
+    assert conn.execute("SELECT COUNT(*) FROM moving_sources").fetchone() == (10,)
+    conn.close()
+
+
+def test_load_ephemerides_tops_up_partial_object(tmp_path, jpl_ephem_parquet):
+    """An object with some points already stored (but no progress-table
+    entry) only gets the points it is missing."""
+    _, conn, designations, sso_ids = _open_with_ssos(tmp_path, jpl_ephem_parquet)
+    conn.executemany(
+        "INSERT INTO moving_sources "
+        "(ephem_id, sso_id, MPC_id, name, time, ra_deg, dec_deg, flux_mJy) "
+        "VALUES (?,?,?,?,?,?,?,?)",
+        [
+            (
+                "a" * 32,
+                sso_ids["1 Ceres"],
+                1,
+                "Ceres",
+                "2025-01-01 00:00:00.000000",
+                10.0,
+                5.0,
+                None,
+            ),
+            (
+                "b" * 32,
+                sso_ids["1 Ceres"],
+                1,
+                "Ceres",
+                "2025-01-01 02:00:00.000000",
+                10.01,
+                5.01,
+                None,
+            ),
+        ],
+    )
+    conn.commit()
+
+    n_ephem = bulk_sqlite.load_ephemerides(
+        conn, [jpl_ephem_parquet], sso_ids, designations
+    )
+    assert n_ephem == 8
+    assert conn.execute(
+        "SELECT name, COUNT(*), COUNT(DISTINCT time) FROM moving_sources "
+        "GROUP BY name ORDER BY name"
+    ).fetchall() == [("Ceres", 5, 5), ("Pallas", 5, 5)]
+    conn.close()
+
+
+class _CrashingConnection:
+    """Proxy that dies on the Nth executemany, i.e. partway through
+    inserting one object's chunks."""
+
+    def __init__(self, conn, crash_on):
+        self._conn = conn
+        self._calls = 0
+        self._crash_on = crash_on
+
+    def executemany(self, *args):
+        self._calls += 1
+        if self._calls == self._crash_on:
+            raise RuntimeError("simulated crash")
+        return self._conn.executemany(*args)
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
+def test_load_ephemerides_crash_mid_object(tmp_path, jpl_ephem_parquet):
+    db_path, conn, designations, sso_ids = _open_with_ssos(tmp_path, jpl_ephem_parquet)
+
+    # chunk_rows=2 -> Ceres is 3 executemany calls; die on its second.
+    with pytest.raises(RuntimeError, match="simulated crash"):
+        bulk_sqlite.load_ephemerides(
+            _CrashingConnection(conn, crash_on=2),
+            [jpl_ephem_parquet],
+            sso_ids,
+            designations,
+            chunk_rows=2,
+        )
+    # Abandon the connection as a killed process would; its open
+    # transaction is never committed.
+    conn.close()
+
+    conn = sqlite3.connect(str(db_path))
+    bulk_sqlite._tune_for_bulk_load(conn)
+    n_ephem = bulk_sqlite.load_ephemerides(
+        conn, [jpl_ephem_parquet], sso_ids, designations, chunk_rows=2
+    )
+    assert n_ephem == 10
+    assert conn.execute(
+        "SELECT name, COUNT(*), COUNT(DISTINCT time) FROM moving_sources "
+        "GROUP BY name ORDER BY name"
+    ).fetchall() == [("Ceres", 5, 5), ("Pallas", 5, 5)]
+    conn.close()

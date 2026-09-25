@@ -4,8 +4,8 @@ catalog (fixed sources) and JPL Horizons batched-ephemeris parquet files
 (solar system objects), e.g. the ones produced by sotrplib's
 sotrplib/solar_system/download_ephem_from_horizons.py.
 
-This module bulk-loads via raw sqlite3.executemany with 
-SQLite tuned for bulk writes (no WAL/fsync, foreign keys off during load), 
+This module bulk-loads via raw sqlite3.executemany with
+SQLite tuned for bulk writes (no WAL/fsync, foreign keys off during load),
 which is much faster than the act-fits or jpl-parquet loading scripts.
 
 The table schema itself is still created from socat's own SQLModel
@@ -17,6 +17,11 @@ The database file is built on local node disk and then copied to the
 requested destination -- SQLite (especially anything that touches the WAL
 file) doesn't behave reliably over network filesystems like Lustre/NFS,
 and a scratch/home mount is exactly where the final --output usually lives.
+
+Every loader checks what is already in the database before inserting, so
+rerunning against a partial build never duplicates rows: fixed sources are
+matched by name, SSOs by (MPC ID, name), and ephemeris points by
+(sso_id, time).
 
 Ephemerides are committed one object (parquet row group) at a time, together
 with a row in a `_bulk_ingest_progress` bookkeeping table in the same
@@ -40,19 +45,7 @@ from sqlmodel import SQLModel
 from tqdm import tqdm
 
 _TIME_FMT = "%Y-%m-%d %H:%M:%S.%f"
-
-
-def create_schema(db_path: Path) -> None:
-    """
-    Create SOCat's tables via its own SQLModel metadata, so the on-disk
-    schema (including indexes) always matches whatever socat currently
-    defines.
-    """
-    from socat.database import ALL_TABLES  # noqa: F401  (registers metadata)
-
-    engine = create_engine(f"sqlite:///{db_path}", future=True)
-    SQLModel.metadata.create_all(bind=engine)
-    engine.dispose()
+_PROGRESS_TABLE = "_bulk_ingest_progress"
 
 
 def _tune_for_bulk_load(conn: sqlite3.Connection) -> None:
@@ -65,7 +58,10 @@ def _tune_for_bulk_load(conn: sqlite3.Connection) -> None:
     conn.execute("PRAGMA cache_size=-500000")  # ~500MB page cache
 
 
-_PROGRESS_TABLE = "_bulk_ingest_progress"
+def _finalize_pragmas(conn: sqlite3.Connection) -> None:
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA journal_mode=DELETE")
+    conn.execute("PRAGMA synchronous=NORMAL")
 
 
 def _create_progress_table(conn: sqlite3.Connection) -> None:
@@ -100,10 +96,41 @@ def _completed_row_groups(
     return {(f, g) for f, g, _ in rows}
 
 
-def _finalize_pragmas(conn: sqlite3.Connection) -> None:
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA journal_mode=DELETE")
-    conn.execute("PRAGMA synchronous=NORMAL")
+def _existing_ephem_times(conn: sqlite3.Connection, sso_id_hex: str) -> set[str]:
+    """
+    Times already stored for one SSO, in the _TIME_FMT string form they
+    are written in. Served by the (sso_id, time) index.
+    """
+    return {
+        t
+        for (t,) in conn.execute(
+            "SELECT time FROM moving_sources WHERE sso_id = ?", (sso_id_hex,)
+        )
+    }
+
+
+def _parse_designation(designation: str) -> tuple[int | None, str]:
+    """Split a designation like '1 Ceres' into MPC ID and name."""
+    parts = str(designation).split(maxsplit=1)
+    try:
+        mpc_id = int(parts[0])
+    except ValueError:
+        mpc_id = None
+    name = parts[1] if len(parts) > 1 else str(mpc_id)
+    return mpc_id, name
+
+
+def create_schema(db_path: Path) -> None:
+    """
+    Create SOCat's tables via its own SQLModel metadata, so the on-disk
+    schema (including indexes) always matches whatever socat currently
+    defines.
+    """
+    from socat.database import ALL_TABLES  # noqa: F401  (registers metadata)
+
+    engine = create_engine(f"sqlite:///{db_path}", future=True)
+    SQLModel.metadata.create_all(bind=engine)
+    engine.dispose()
 
 
 def load_fixed_sources(
@@ -117,6 +144,8 @@ def load_fixed_sources(
     Load an ACT point-source FITS catalog into the `fixed_sources` table.
     Mirrors socat.ingest.actfits.ingest_fits_file's flagging logic, just
     vectorized and bulk-inserted instead of one create_source() per row.
+    Sources whose name is already in the table are skipped. Returns the
+    number of sources inserted by this call.
     """
     data = fits.open(fits_path)[hdu].data
     ra = np.asarray(data["RADeg"], dtype=float)
@@ -126,6 +155,7 @@ def load_fixed_sources(
     monitored = flux_mJy >= monitored_flux_threshold_mJy
     pointing = flux_mJy >= pointing_flux_threshold_mJy
 
+    existing = {name for (name,) in conn.execute("SELECT name FROM fixed_sources")}
     rows = [
         (
             uuid7.create().hex,
@@ -137,6 +167,7 @@ def load_fixed_sources(
             bool(pointing[i]),
         )
         for i in range(len(data))
+        if names[i] not in existing
     ]
     conn.executemany(
         "INSERT INTO fixed_sources "
@@ -146,17 +177,6 @@ def load_fixed_sources(
     )
     conn.commit()
     return len(rows)
-
-
-def _parse_designation(designation: str) -> tuple[int | None, str]:
-    """Split a designation like '1 Ceres' into MPC ID and name."""
-    parts = str(designation).split(maxsplit=1)
-    try:
-        mpc_id = int(parts[0])
-    except ValueError:
-        mpc_id = None
-    name = parts[1] if len(parts) > 1 else str(mpc_id)
-    return mpc_id, name
 
 
 def collect_sso_designations(
@@ -227,8 +247,11 @@ def load_ephemerides(
     group) at a time so peak memory stays bounded regardless of the
     total row count across all files. Each object's rows are committed
     together with its entry in the progress table, so row groups already
-    recorded there (by an interrupted build) are skipped. `downsample`
-    keeps every Nth point of each object, as socat-jpl-parqet does.
+    recorded there (by an interrupted build) are skipped. Within any other
+    row group, points whose time is already stored for that SSO are
+    skipped too, so an object is only ever topped up from where its
+    existing ephemeris leaves off, never duplicated. `downsample` keeps
+    every Nth point of each object, as socat-jpl-parqet does.
     Returns the number of points inserted by this call.
     """
     _create_progress_table(conn)
@@ -255,9 +278,12 @@ def load_ephemerides(
             mpc_id, name = designations[designation]
             sso_id_hex = sso_ids[designation]
 
-            times = table.column("datetime_utc").to_pylist()
+            times = [
+                t.strftime(_TIME_FMT) for t in table.column("datetime_utc").to_pylist()
+            ]
             ras = table.column("ra_deg").to_pylist()
             decs = table.column("dec_deg").to_pylist()
+            existing_times = _existing_ephem_times(conn, sso_id_hex)
 
             rows = [
                 (
@@ -265,12 +291,13 @@ def load_ephemerides(
                     sso_id_hex,
                     mpc_id,
                     name,
-                    t.strftime(_TIME_FMT),
+                    t,
                     ra,
                     dec,
                     None,
                 )
                 for t, ra, dec in zip(times, ras, decs)
+                if t not in existing_times
             ]
 
             for start in range(0, len(rows), chunk_rows):
@@ -280,6 +307,7 @@ def load_ephemerides(
                 (file_key, i, len(rows), downsample),
             )
             conn.commit()
+            done.add((file_key, i))
 
             total += len(rows)
     return total
@@ -324,15 +352,10 @@ def build(
     conn = sqlite3.connect(str(build_path))
     _tune_for_bulk_load(conn)
 
-    n_fixed = 0
     if fits_path is not None:
-        (n_existing,) = conn.execute("SELECT COUNT(*) FROM fixed_sources").fetchone()
-        if n_existing:
-            n_fixed = n_existing
-            print(f"Keeping {n_fixed} fixed sources from the partial build")
-        else:
-            n_fixed = load_fixed_sources(conn, fits_path)
-            print(f"Loaded {n_fixed} fixed sources ({time.time() - t0:.1f}s elapsed)")
+        n_new = load_fixed_sources(conn, fits_path)
+        print(f"Loaded {n_new} new fixed sources ({time.time() - t0:.1f}s elapsed)")
+    (n_fixed,) = conn.execute("SELECT COUNT(*) FROM fixed_sources").fetchone()
 
     designations = collect_sso_designations(ephem_paths)
     sso_ids = load_solar_system_objects(conn, designations)
