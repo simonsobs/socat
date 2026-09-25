@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 import astropy.units as u
 import uuid7 as uuid
@@ -6,7 +6,17 @@ from astropy.coordinates import ICRS
 from astropy.time import Time
 from astropydantic import AstroPydanticICRS, AstroPydanticQuantity, AstroPydanticTime
 from pydantic import BaseModel
+from sqlalchemy import Index
 from sqlmodel import Field, SQLModel
+
+
+def utc_datetime(time: Time) -> datetime:
+    """
+    Convert an astropy Time to a timezone-aware UTC datetime, the form
+    moving_sources.time is stored and compared in. Times in other scales
+    (e.g. TDB) are converted to UTC first rather than reinterpreted.
+    """
+    return time.utc.to_datetime(timezone=UTC)
 
 
 class RegisteredSource(BaseModel):
@@ -190,6 +200,13 @@ class RegisteredMovingSourceTable(SQLModel, table=True):
     """
 
     __tablename__ = "moving_sources"
+    __table_args__ = (
+        # get_ephem_points()/get_source_generator() filter by a known
+        # sso_id first, then narrow by time -- this composite index
+        # serves both that and plain sso_id-only lookups (leftmost
+        # prefix), so no separate single-column sso_id index is needed.
+        Index("idx_moving_sources_sso_time", "sso_id", "time"),
+    )
 
     ephem_id: uuid.UUID = Field(primary_key=True, default_factory=uuid.create)
     sso_id: uuid.UUID = Field(
@@ -207,7 +224,11 @@ class RegisteredMovingSourceTable(SQLModel, table=True):
         nullable=False,
         ondelete="CASCADE",
     )
-    time: datetime
+    # get_box_sso()/get_monitored_ssos()/get_pointing_ssos() search for
+    # *which* SSOs fall in a time window, so their WHERE clause has no
+    # sso_id -- only time (and ra/dec). The (sso_id, time) composite index
+    # can't serve a time-only filter, so time needs its own index.
+    time: datetime = Field(index=True, nullable=False)
     ra_deg: float = Field(nullable=False)
     dec_deg: float = Field(nullable=False)
     flux_mJy: float | None = Field(nullable=True)

@@ -10,7 +10,7 @@ exclude=["*alembic*"]
 
 [project]
 name = "socat"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.11"
 dependencies = [
     "sqlmodel",
@@ -22,11 +22,13 @@ dependencies = [
     "pydantic_settings",
     "asyncer",
     "astropy",
+    "numpy",
     "scipy",
     "astroquery",
     "astropydantic",
     "pandas",
     "pyarrow",
+    "tqdm",
     "uuid7-standard",
 ]
 
@@ -48,6 +50,7 @@ socat-act-fits = "socat.ingest.actfits:main"
 socat-websky-csv = "socat.ingest.webskycsv:main"
 socat-migrate = "socat.migrate:migrate"
 socat-jpl-parqet = "socat.ingest.jplparquet:main"
+socat-build-db = "socat.ingest.bulk_sqlite:main"
 socat-text = "socat.ingest.textingest:main"
 
 [tool.ruff.lint]

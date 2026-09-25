@@ -15,6 +15,7 @@ from socat.database import (
     SolarSystemObject,
     statements,
 )
+from socat.database.sources import utc_datetime
 
 
 async def create_ephem(
@@ -58,7 +59,7 @@ async def create_ephem(
         sso_id=sso_id,
         MPC_id=MPC_id,
         name=name,
-        time=time.datetime,
+        time=utc_datetime(time),
         ra_deg=position.ra.to_value("deg"),
         dec_deg=position.dec.to_value("deg"),
         flux_mJy=flux,

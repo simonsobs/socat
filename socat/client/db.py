@@ -30,6 +30,7 @@ from socat.database.session import (
     create_sync_session_factory,
     create_sync_session_interface,
 )
+from socat.database.sources import utc_datetime
 
 from .core import (
     AstroqueryClientBase,
@@ -506,7 +507,7 @@ class EphemClient(EphemClientBase):
             sso_id=sso_id,
             MPC_id=MPC_id,
             name=name,
-            time=time.datetime,
+            time=utc_datetime(time),
             ra_deg=position.ra.to_value("deg"),
             dec_deg=position.dec.to_value("deg"),
             flux_mJy=flux_mJy,
