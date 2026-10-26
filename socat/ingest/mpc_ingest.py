@@ -1,52 +1,86 @@
 """
-Ingest JPL ephemeris parquet files into mock SOCat moving-source clients.
+Ingest MPC ephemeris parquet files into mock SOCat moving-source clients.
 """
 
 import pickle
 from pathlib import Path
 
 import pandas as pd
+import re
+import argparse as ap
 from astropy import units as u
 from astropy.coordinates import ICRS
 from astropy.time import Time
 from tqdm import tqdm
 
 from socat.client.core import ClientBase
+from socat.client.mock import Client
+
+client = Client()
 
 
 def _parse_designation(designation: str) -> tuple[int | None, str | None]:
-    """Split a designation like ``'1 Ceres'`` into MPC ID and name."""
-    parts = str(designation).split(maxsplit=1)
-    if not parts:
+    """Split a designation like ``'1 Ceres'`` into MPC ID and name.
+
+    Parameters
+    ----------
+    designation : str
+        The designation string to parse.
+
+    Returns
+    -------
+    tuple[int | None, str | None]
+        The MPC ID and name, or `None` if not found.
+
+    Examples
+    --------
+    '1 Ceres'   -> (1, 'Ceres')
+
+    '2011 KE'   -> (None, '2011 KE')
+    """
+    
+    designation = str(designation).strip()
+
+    if not designation:
         return None, None
 
-    try:
-        mpc_id = int(parts[0])
-    except ValueError:
-        mpc_id = None
+    # standard unpacked provisional designation
+    provisional = re.fullmatch(
+        r"\d{4}\s+[A-HJ-Y][A-HJ-Z]\d*",
+        designation,
+    )
 
-    if len(parts) > 1:
-        name = parts[1]
-    else:
-        name = str(mpc_id)
+    if provisional:
+        return None, designation
 
-    return mpc_id, name
+    # numbered asteroid, optionally followed by a name
+    numbered = re.fullmatch(
+        r"\(?(\d+)\)?(?:\s+(.+))?",
+        designation,
+    )
 
+    if numbered:
+        mpc_id = int(numbered.group(1))
+        name = numbered.group(2) or str(mpc_id)
+        return mpc_id, name
 
-def ingest_jpl_parquet_file(
+    # Name or other designation
+    return None, designation
+
+def ingest_mpc_parquet_file(
     client: ClientBase,
     filename: Path,
     downsample: int = 1,
 ) -> tuple[int, int]:
     """
-    Ingest a JPL Horizons parquet file into mock SOCat moving-source clients.
+    Ingest an MPC parquet file into mock SOCat moving-source clients.
 
     Parameters
     ----------
     client : ClientBase
         SOCat client that will hold both the SSO entries and the time-dependent ephemeris positions.
     filename : Path
-        Path to the JPL parquet file.
+        Path to the MPC parquet file.
     downsample : int
         Downsample factor for the input ephem (e.g., 10 means keep every 10th row).
 
@@ -60,8 +94,9 @@ def ingest_jpl_parquet_file(
     ValueError
         If the input file is missing required columns.
     """
+
     data = pd.read_parquet(filename)
-    required_columns = {"designation", "julian_day", "ra_deg", "dec_deg"}
+    required_columns = {"encke_id", "designation", "time_utc", "skycoord.ra", "skycoord.dec", "delta"}
     missing_columns = required_columns.difference(data.columns)
     if missing_columns:
         raise ValueError(
@@ -71,21 +106,21 @@ def ingest_jpl_parquet_file(
     number_of_ssos = 0
     number_of_ephems = 0
 
-    for designation, rows in data.groupby("designation", sort=False):
-        mpc_id, name = _parse_designation(designation)
+    for encke_id, rows in data.groupby("encke_id", sort=False):
+        mpc_id, name = _parse_designation(encke_id)
         sso = client.create_sso(name=name, MPC_id=mpc_id, flags={"monitored": True})
         number_of_ssos += 1
 
         for _, row in tqdm(
             rows[::downsample].iterrows(),
-            desc=f"Ingesting {designation}",
+            desc=f"Ingesting {encke_id}",
             total=len(rows[::downsample]),
         ):
             flux = None  # Default flux if not provided
             if "flux_mJy" in row.index and pd.notna(row["flux_mJy"]):
                 flux = row["flux_mJy"] * u.mJy
 
-            unix_time = Time(row["julian_day"], format="jd")
+            unix_time = Time(row["time_utc"], format="isot", scale="utc")
 
             client.create_ephem(
                 sso_id=sso.sso_id,
@@ -93,8 +128,8 @@ def ingest_jpl_parquet_file(
                 name=name,
                 time=unix_time,
                 position=ICRS(
-                    ra=float(row["ra_deg"]) * u.deg,
-                    dec=float(row["dec_deg"]) * u.deg,
+                    ra=float(row["skycoord.ra"]) * u.deg,
+                    dec=float(row["skycoord.dec"]) * u.deg,
                 ),
                 flux=flux,
             )
@@ -102,23 +137,31 @@ def ingest_jpl_parquet_file(
 
     return number_of_ssos, number_of_ephems
 
-
 def build_mock_database(filename: Path, downsample: int = 1) -> dict:
-    """Build a serializable mock database from a JPL parquet file."""
-    from socat.client.settings import SOCatClientSettings
+    """Build a serializable mock database from an MPC parquet file.
 
-    settings = SOCatClientSettings()
-    client = settings.client
+    Parameters
+    ----------
+    filename : Path
+        Path to the MPC parquet file.
+    downsample : int, optional
+        Downsample factor the input parquet file, by default 1
 
-    number_of_ssos, number_of_ephems = ingest_jpl_parquet_file(
+    Returns
+    -------
+    dict
+        Dictionary containing the mock database.
+    """
+
+    number_of_ssos, number_of_ephems = ingest_mpc_parquet_file(
         client,
         filename=filename,
         downsample=int(downsample),
     )
 
     return {
-        "solar_system": client.sso,
-        "ephem": client.ephem,
+        "solar_system": client._sso,
+        "ephem": client._ephem,
         "meta": {
             "source_file": str(filename),
             "number_of_ssos": number_of_ssos,
@@ -126,20 +169,22 @@ def build_mock_database(filename: Path, downsample: int = 1) -> dict:
         },
     }
 
-
-def main():  # pragma: no cover
-    import argparse as ap
+def main() -> None:  # pragma: no cover
+    """Read command line arguments to build mock MPC database. 
+    
+    Parses command line arguments and ingests the specified MPC parquet file into a mock SOCat moving-source client.
+    """
 
     parser = ap.ArgumentParser(
-        prog="socat-jpl-parqet",
-        description="Ingest a JPL ephemeris parquet file into mock SOCat moving-source clients",
+        prog="socat-mpc-parquet",
+        description="Ingest an MPC ephemeris parquet file into mock SOCat moving-source clients",
     )
 
     parser.add_argument(
         "-f",
         "--file",
         type=Path,
-        help="Input parquet file downloaded from JPL Horizons",
+        help="Input parquet file from MPC",
         required=True,
     )
 
@@ -174,7 +219,7 @@ def main():  # pragma: no cover
         with open(args.output, "wb") as handle:
             pickle.dump(database, handle)
 
-        print(f"Wrote serialized mock JPL database to {args.output}")
+        print(f"Wrote serialized mock MPC database to {args.output}")
 
 
 if __name__ == "__main__":  # pragma: no cover
