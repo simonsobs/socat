@@ -2,12 +2,12 @@
 Ingest MPC ephemeris parquet files into mock SOCat moving-source clients.
 """
 
+import argparse as ap
 import pickle
+import re
 from pathlib import Path
 
 import pandas as pd
-import re
-import argparse as ap
 from astropy import units as u
 from astropy.coordinates import ICRS
 from astropy.time import Time
@@ -38,7 +38,7 @@ def _parse_designation(designation: str) -> tuple[int | None, str | None]:
 
     '2011 KE'   -> (None, '2011 KE')
     """
-    
+
     designation = str(designation).strip()
 
     if not designation:
@@ -66,6 +66,7 @@ def _parse_designation(designation: str) -> tuple[int | None, str | None]:
 
     # Name or other designation
     return None, designation
+
 
 def ingest_mpc_parquet_file(
     client: ClientBase,
@@ -96,7 +97,14 @@ def ingest_mpc_parquet_file(
     """
 
     data = pd.read_parquet(filename)
-    required_columns = {"encke_id", "designation", "time_utc", "skycoord.ra", "skycoord.dec", "delta"}
+    required_columns = {
+        "encke_id",
+        "designation",
+        "time_utc",
+        "skycoord.ra",
+        "skycoord.dec",
+        "delta",
+    }
     missing_columns = required_columns.difference(data.columns)
     if missing_columns:
         raise ValueError(
@@ -137,6 +145,7 @@ def ingest_mpc_parquet_file(
 
     return number_of_ssos, number_of_ephems
 
+
 def build_mock_database(filename: Path, downsample: int = 1) -> dict:
     """Build a serializable mock database from an MPC parquet file.
 
@@ -169,9 +178,10 @@ def build_mock_database(filename: Path, downsample: int = 1) -> dict:
         },
     }
 
+
 def main() -> None:  # pragma: no cover
-    """Read command line arguments to build mock MPC database. 
-    
+    """Read command line arguments to build mock MPC database.
+
     Parses command line arguments and ingests the specified MPC parquet file into a mock SOCat moving-source client.
     """
 
