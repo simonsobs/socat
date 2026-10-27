@@ -4,7 +4,6 @@ Ingest MPC ephemeris parquet files into mock SOCat moving-source clients.
 
 import argparse as ap
 import pickle
-import re
 from pathlib import Path
 
 import pandas as pd
@@ -16,63 +15,16 @@ from tqdm import tqdm
 from socat.client.core import ClientBase
 from socat.client.mock import Client
 
+from .utils import _parse_designation
+
 client = Client()
-
-
-def _parse_designation(designation: str) -> tuple[int | None, str | None]:
-    """Split a designation like ``'1 Ceres'`` into MPC ID and name.
-
-    Parameters
-    ----------
-    designation : str
-        The designation string to parse.
-
-    Returns
-    -------
-    tuple[int | None, str | None]
-        The MPC ID and name, or `None` if not found.
-
-    Examples
-    --------
-    '1 Ceres'   -> (1, 'Ceres')
-
-    '2011 KE'   -> (None, '2011 KE')
-    """
-
-    designation = str(designation).strip()
-
-    if not designation:
-        return None, None
-
-    # standard unpacked provisional designation
-    provisional = re.fullmatch(
-        r"\d{4}\s+[A-HJ-Y][A-HJ-Z]\d*",
-        designation,
-    )
-
-    if provisional:
-        return None, designation
-
-    # numbered asteroid, optionally followed by a name
-    numbered = re.fullmatch(
-        r"\(?(\d+)\)?(?:\s+(.+))?",
-        designation,
-    )
-
-    if numbered:
-        mpc_id = int(numbered.group(1))
-        name = numbered.group(2) or str(mpc_id)
-        return mpc_id, name
-
-    # Name or other designation
-    return None, designation
 
 
 def ingest_mpc_parquet_file(
     client: ClientBase,
     filename: Path,
     downsample: int = 1,
-) -> tuple[int, int]:
+) -> tuple[list[int], list[int]]:
     """
     Ingest an MPC parquet file into mock SOCat moving-source clients.
 
@@ -87,8 +39,8 @@ def ingest_mpc_parquet_file(
 
     Returns
     -------
-    tuple[int, int]
-        Number of SSOs created and number of ephemeris points created.
+    tuple[list[int], list[int]]
+        Number of SSOs created and number of ephemeris points created at each index in the array.
 
     Raises
     ------
@@ -111,23 +63,25 @@ def ingest_mpc_parquet_file(
             f"Missing required columns in {filename}: {sorted(missing_columns)}"
         )
 
-    number_of_ssos = 0
-    number_of_ephems = 0
+    number_of_ssos = []
+    number_of_ephems = []
 
-    for encke_id, rows in data.groupby("encke_id", sort=False):
-        mpc_id, name = _parse_designation(encke_id)
+    for ssos, (encke_id, rows) in enumerate(data.groupby("encke_id", sort=False, dropna=False), start = 1):
+        # Handle MPC (Encke) IDs that don't exist
+        if pd.isna(encke_id):
+            mpc_id, name = _parse_designation(rows["designation"].iloc[0])
+        else:
+            mpc_id, name = _parse_designation(encke_id)
         sso = client.create_sso(name=name, MPC_id=mpc_id, flags={"monitored": True})
-        number_of_ssos += 1
+    
+        number_of_ssos.append(ssos)
+        ephems = 0
 
         for _, row in tqdm(
             rows[::downsample].iterrows(),
-            desc=f"Ingesting {encke_id}",
+            desc=f"Ingesting {encke_id}" if mpc_id is not None else f"Ingesting {name}",
             total=len(rows[::downsample]),
         ):
-            flux = None  # Default flux if not provided
-            if "flux_mJy" in row.index and pd.notna(row["flux_mJy"]):
-                flux = row["flux_mJy"] * u.mJy
-
             unix_time = Time(row["time_utc"], format="isot", scale="utc")
 
             client.create_ephem(
@@ -138,10 +92,11 @@ def ingest_mpc_parquet_file(
                 position=ICRS(
                     ra=float(row["skycoord.ra"]) * u.deg,
                     dec=float(row["skycoord.dec"]) * u.deg,
-                ),
-                flux=flux,
+                )
             )
-            number_of_ephems += 1
+            
+            ephems += 1
+        number_of_ephems.append(ephems)
 
     return number_of_ssos, number_of_ephems
 
