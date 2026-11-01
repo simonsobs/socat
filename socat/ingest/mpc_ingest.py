@@ -66,14 +66,16 @@ def ingest_mpc_parquet_file(
     number_of_ssos = []
     number_of_ephems = []
 
-    for ssos, (encke_id, rows) in enumerate(data.groupby("encke_id", sort=False, dropna=False), start = 1):
+    for ssos, (encke_id, rows) in enumerate(
+        data.groupby("encke_id", sort=False, dropna=False), start=1
+    ):
         # Handle MPC (Encke) IDs that don't exist
         if pd.isna(encke_id):
             mpc_id, name = _parse_designation(rows["designation"].iloc[0])
         else:
             mpc_id, name = _parse_designation(encke_id)
         sso = client.create_sso(name=name, MPC_id=mpc_id, flags={"monitored": True})
-    
+
         number_of_ssos.append(ssos)
         ephems = 0
 
@@ -92,9 +94,9 @@ def ingest_mpc_parquet_file(
                 position=ICRS(
                     ra=float(row["skycoord.ra"]) * u.deg,
                     dec=float(row["skycoord.dec"]) * u.deg,
-                )
+                ),
             )
-            
+
             ephems += 1
         number_of_ephems.append(ephems)
 

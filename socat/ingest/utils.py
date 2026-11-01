@@ -16,7 +16,7 @@ def _parse_designation(designation: str) -> tuple[int | None, str | None]:
 
     Notes
     -----
-    Can also handle the MPC packed provisional designation format, e.g., ``'2011 KE'``. 
+    Can also handle the MPC packed provisional designation format, e.g., ``'2011 KE'``.
     In that case, the MPC ID will be `None` and the name will be the packed provisional designation.
 
     Examples
