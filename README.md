@@ -3,7 +3,7 @@ SOCAT
 
 The Source CATalog. 
 
-Contains information about sources that are being monitored by an obseratory, 
+Contains information about sources that are being monitored by an observatory, 
 or that are being used to crossmatch detected sources with.
 
 
@@ -19,9 +19,17 @@ export socat_client_client_type=db
 export socat_model_database_name=socat.db
 ```
 
-then run `socat-migrate` to create the socat.db in your working dir.
+You'll need to install `socat` if it's not already in your environment.
+For example, build a virtual environment and run `pip install -e socat` or just run the scripts by
+calling running the files themselves (see `pyproject.toml` for the paths).
+
+Below we assume you have `socat` installed in your env.
+
+Run `socat-migrate` to create the socat.db in your working dir.
 
 Once created, you can add sources via the following example ingest scripts:
+
+ `socat-text` was written to read in a csv point source catalog which has columns `ra`,`dec`,`name`,`monitored`.
 
  `socat-act-fits` was written to read in an ACT point source catalog which is simply stored as a fits file with certain columns.
 
