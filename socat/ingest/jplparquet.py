@@ -13,24 +13,7 @@ from tqdm import tqdm
 
 from socat.client.core import ClientBase
 
-
-def _parse_designation(designation: str) -> tuple[int | None, str | None]:
-    """Split a designation like ``'1 Ceres'`` into MPC ID and name."""
-    parts = str(designation).split(maxsplit=1)
-    if not parts:
-        return None, None
-
-    try:
-        mpc_id = int(parts[0])
-    except ValueError:
-        mpc_id = None
-
-    if len(parts) > 1:
-        name = parts[1]
-    else:
-        name = str(mpc_id)
-
-    return mpc_id, name
+from .utils import _parse_designation
 
 
 def ingest_jpl_parquet_file(

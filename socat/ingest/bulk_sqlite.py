@@ -44,6 +44,8 @@ from sqlalchemy import create_engine
 from sqlmodel import SQLModel
 from tqdm import tqdm
 
+from .utils import _parse_designation
+
 _TIME_FMT = "%Y-%m-%d %H:%M:%S.%f"
 _PROGRESS_TABLE = "_bulk_ingest_progress"
 
@@ -107,17 +109,6 @@ def _existing_ephem_times(conn: sqlite3.Connection, sso_id_hex: str) -> set[str]
             "SELECT time FROM moving_sources WHERE sso_id = ?", (sso_id_hex,)
         )
     }
-
-
-def _parse_designation(designation: str) -> tuple[int | None, str]:
-    """Split a designation like '1 Ceres' into MPC ID and name."""
-    parts = str(designation).split(maxsplit=1)
-    try:
-        mpc_id = int(parts[0])
-    except ValueError:
-        mpc_id = None
-    name = parts[1] if len(parts) > 1 else str(mpc_id)
-    return mpc_id, name
 
 
 def create_schema(db_path: Path) -> None:

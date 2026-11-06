@@ -52,6 +52,7 @@ socat-migrate = "socat.migrate:migrate"
 socat-jpl-parqet = "socat.ingest.jplparquet:main"
 socat-build-db = "socat.ingest.bulk_sqlite:main"
 socat-text = "socat.ingest.textingest:main"
+socat-mpc-parquet = "socat.ingest.mpc_ingest:main"
 
 [tool.ruff.lint]
 preview = true
