@@ -100,6 +100,15 @@ Project Leads:
 
 Project Helpers:
 - AF
+- RCV
+
+Sharp Edges
+-----------
+
+The `mpc_ingest.py` script made in [PR #43](https://github.com/simonsobs/socat/pull/43) is currently 
+not production ready due to the ongoing development of the MPC API. It should therefore not be used on
+any parquet files for ingestion into `socat`.
+
 
 Status
 ------
